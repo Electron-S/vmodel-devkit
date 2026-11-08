@@ -23,8 +23,12 @@ Run every VM call as its own Bash command (no `VM=` variables, `;`/`&&` chains o
    shows "verified by <record>" once the gate passes). Never relax, skip or delete a test to make it pass. If a test
    really is wrong, change it and add `test_changes` (file, since_record = baseline record id named by the validator,
    reason, requirements, impact) to the defect.
-5. `VM lint $ARGUMENTS` (it flags failing TEST ids the defect does not link), then re-verify from the root-cause gate
+5. `VM lint $ARGUMENTS` (ERROR: invalid citations, evidence integrity; WARNING: failing TEST ids the defect does
+   not link, UNKNOWN per-TEST results), then re-verify from the root-cause gate
    forward with the gate loop of `/vmodel:start` (lint -> verifier review for G1-G4 -> `VM gate`). Gates whose inputs
    changed are STALE and must be re-reviewed.
 6. When the gate passes, leave `defects.json` as it is and report what failed, why, what changed, and the new validator
-   result, including the "verified by" record `VM status` shows for the defect.
+   result, including the "verified by" record `VM status` shows for the defect. Report every ERROR and WARNING line of
+   the defect trace check (`VM status` / the `## Defect trace check` section of `VM report`) as it is: evidence
+   errors (`evidence_integrity`, `invalid_citation`) and trace warnings (`unlinked_failing_test`,
+   `unknown_test_result`) must not be dropped, even when the work item is PARTIALLY_VERIFIED.

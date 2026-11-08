@@ -165,6 +165,40 @@ def write_evidence(project, ledger, run_dir: Path, *, wi: str, gate: str, kind: 
     return {"path": project.rel(path), "sha256": sha256_file(path)}
 
 
+def check_evidence(project, ledger, rel: str, expected_sha: str | None) -> list[str]:
+    """Problems of one evidence record against the signed ledger (empty list = intact).
+
+    Checks that record.json exists, matches the hash the ledger recorded for it, carries a valid validator signature,
+    and that every file it lists still has its recorded hash. Shared by audit, verify-evidence and the defect check.
+    Records of any earlier validator version are checked the same way: nothing here depends on the core hash.
+    """
+    from .ledger import verify_sig
+    from .textio import ArtifactError, load_json
+
+    problems = []
+    path = project.root / rel
+    if not path.is_file():
+        return [f"{rel}: missing"]
+    if expected_sha and sha256_file(path) != expected_sha:
+        problems.append(f"{rel}: record file hash differs from the ledger")
+    try:
+        rec = load_json(path)
+    except ArtifactError as exc:
+        return [str(exc)]
+    sig = rec.pop("sig", None)
+    if not verify_sig(ledger.key, rec, sig):
+        problems.append(f"{rel}: invalid signature (not written by the validator)")
+    for name, meta in (rec.get("files") or {}).items():
+        f = path.parent / name
+        if meta.get("missing"):
+            continue
+        if not f.is_file():
+            problems.append(f"{rel}: {name} missing")
+        elif sha256_file(f) != meta.get("sha256"):
+            problems.append(f"{rel}: {name} content differs from its recorded hash")
+    return problems
+
+
 def git_info(root: Path) -> dict:
     git = shutil.which("git")
     if not git:

@@ -13,14 +13,14 @@ from . import VERSION
 from .gates import (GATE_ORDER, ID_KINDS, hash_for_review, implemented_gates, open_context, run_gate)
 from .hashing import sha256_file, short
 from .integrity import check_self, plugin_root
-from .ledger import Ledger, LedgerError, verify_sig
+from .ledger import Ledger, LedgerError
 from .project import Project, ProjectError
-from .runner import utc_now
+from .runner import check_evidence, utc_now
 from .schema_lite import validate
 from .setup_project import (SetupError, env_summary, init_project, install_claude, new_work_item, next_id,
                             repin_lock, uninstall)
-from .status import (impact_view, project_status, render_impact, render_status, render_trace, report_markdown,
-                     trace_view)
+from .status import (impact_view, project_status, render_impact, render_problem, render_status, render_trace,
+                     report_markdown, trace_view)
 from .textio import ArtifactError, load_json, read_stdin_bytes, read_text, setup_stdio, write_text
 
 EXIT = {"PASSED": 0, "FAILED": 1, "BLOCKED": 3, "REVIEW_REQUIRED": 4}
@@ -163,28 +163,36 @@ def cmd_lint(args) -> int:
         except ArtifactError as exc:
             problems.append(str(exc))
     problems += [f"trace: {d}" for d in TraceGraph.build(arts).dangling()]
+    lines = [f"ERROR {pr}" for pr in problems]  # schema, encoding and trace problems are errors
+    n_err, n_warn = len(problems), 0
     defects = _items(arts.get("defects.json"), "defects")
     if defects:  # rework records are checked against what the signed ledger says actually failed
+        ledger = Ledger(p)
+        ledger_error = None
         try:
-            entries = Ledger(p).entries()
+            entries = ledger.entries()
         except (LedgerError, ArtifactError, ProjectError) as exc:
-            problems.append(f"ledger: {exc}")
+            ledger_error = str(exc)
             entries = []
-        for d in defect_trace(entries, args.wi, defects):
-            for rid, tests in d["failing_tests_by_record"].items():
-                missing = [t for t in tests if t in d["unlinked_failing_tests"]]
-                if missing:
-                    problems.append(f"rework: {d['id']} does not link failing test(s) of {rid} in 'related': "
-                                    f"{', '.join(missing)}")
-            if d["unknown_records"] and entries:
-                problems.append(f"rework: {d['id']} cites {', '.join(d['unknown_records'])}, which are not gate "
-                                f"evaluations of {args.wi}")
+
+        def check(path: str, sha: str | None) -> list[str]:
+            try:
+                return check_evidence(p, ledger, path, sha)
+            except LedgerError as exc:
+                return [f"{path}: {exc}"]
+
+        for d in defect_trace(entries, args.wi, defects, evidence_check=check, ledger_error=ledger_error):
+            n_err += len(d["errors"])
+            n_warn += len(d["warnings"])
+            lines += [render_problem(pr) for pr in [*d["errors"], *d["warnings"]]]
     present = sorted(arts)
     out(f"{args.wi}: {len(present)} artifact(s) present: {', '.join(present)}")
-    for pr in problems:
-        out(f"  - {pr}")
-    out("lint OK (not a gate decision)" if not problems else f"{len(problems)} problem(s) (not a gate decision)")
-    return 0 if not problems else 1
+    for ln in lines:
+        out(f"  - {ln}")
+    # Exit code policy unchanged: any error or warning -> 1 (the labels tell them apart).
+    out("lint OK (not a gate decision)" if not lines else
+        f"{len(lines)} problem(s): {n_err} error(s), {n_warn} warning(s) (not a gate decision)")
+    return 0 if not lines else 1
 
 
 def cmd_hash(args) -> int:
@@ -268,28 +276,7 @@ def cmd_report(args) -> int:
 
 
 def _check_evidence(p: Project, ledger: Ledger, rel: str, expected_sha: str | None) -> list[str]:
-    problems = []
-    path = p.root / rel
-    if not path.is_file():
-        return [f"{rel}: missing"]
-    if expected_sha and sha256_file(path) != expected_sha:
-        problems.append(f"{rel}: record file hash differs from the ledger")
-    try:
-        rec = load_json(path)
-    except ArtifactError as exc:
-        return [str(exc)]
-    sig = rec.pop("sig", None)
-    if not verify_sig(ledger.key, rec, sig):
-        problems.append(f"{rel}: invalid signature (not written by the validator)")
-    for name, meta in (rec.get("files") or {}).items():
-        f = path.parent / name
-        if meta.get("missing"):
-            continue
-        if not f.is_file():
-            problems.append(f"{rel}: {name} missing")
-        elif sha256_file(f) != meta.get("sha256"):
-            problems.append(f"{rel}: {name} content differs from its recorded hash")
-    return problems
+    return check_evidence(p, ledger, rel, expected_sha)
 
 
 def cmd_audit(args) -> int:

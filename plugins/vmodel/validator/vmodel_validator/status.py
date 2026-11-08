@@ -10,6 +10,7 @@ from .hashing import short
 from .integrity import IntegrityReport
 from .ledger import Ledger, LedgerError
 from .project import Project
+from .runner import check_evidence
 from .trace import item_hashes
 
 MVP_NOTE = ("MVP scope: only G1-G5 are implemented. G6 (integration) and G7 (system) are extension gates, "
@@ -75,18 +76,42 @@ def next_action(wi: str, gates: list[dict]) -> str:
     return "all gates passed"
 
 
+def defect_views(ctx: Ctx, ledger_error: str | None = None) -> list[dict]:
+    """defect_trace() with the evidence-integrity check of the records each DEFECT relies on (display only)."""
+    def check(path: str, sha: str | None) -> list[str]:
+        try:
+            return check_evidence(ctx.project, ctx.ledger, path, sha)
+        except LedgerError as exc:
+            return [f"{path}: {exc}"]
+
+    return defect_trace(ctx.entries, ctx.wi, _items(ctx.arts.get("defects.json"), "defects"),
+                        evidence_check=check, ledger_error=ledger_error)
+
+
+def defect_check_counts(defects: list[dict]) -> dict:
+    return {"errors": sum(len(d.get("errors") or []) for d in defects),
+            "warnings": sum(len(d.get("warnings") or []) for d in defects)}
+
+
+def render_problem(p: dict) -> str:
+    """'ERROR [invalid_citation] ...' / 'WARNING [unlinked_failing_test] ...': the same labels in status, lint, report."""
+    return f"{p['severity'].upper()} [{p['category']}] {p['detail']}"
+
+
 def project_status(project: Project, wi: str | None = None) -> dict:
     ctxs, meta = _contexts(project, wi)
     out: dict[str, Any] = {"project": str(project.root), **meta, "mvp_note": MVP_NOTE, "work_items": []}
+    ledger_error = None if meta["ledger"]["ok"] else meta["ledger"]["error"]
     for ctx in ctxs:
         cache: dict[str, dict] = {}
         gates = [gate_state(ctx, g, cache) for g in GATE_ORDER]
         wi_doc = ctx.arts.get("workitem.json")
         wi_doc = wi_doc if isinstance(wi_doc, dict) else {}
         profile = wi_doc.get("profile", "STANDARD")
+        defects = defect_views(ctx, ledger_error)
         item = {"id": ctx.wi, "title": wi_doc.get("title"), "profile": profile,
                 "status": wi_status(gates, profile), "gates": gates, "next_action": next_action(ctx.wi, gates),
-                "defects": defect_trace(ctx.entries, ctx.wi, _items(ctx.arts.get("defects.json"), "defects"))}
+                "defects": defects, "defect_checks": defect_check_counts(defects)}
         if item["status"] == "BLOCKED" and not isinstance(gates_def()["profiles"].get(profile), dict):
             item["profile_note"] = f"unknown profile {profile!r} in workitem.json"
             item["next_action"] = f"fix the profile in {ctx.wi}/workitem.json (STANDARD)"
@@ -96,15 +121,36 @@ def project_status(project: Project, wi: str | None = None) -> dict:
     return out
 
 
-def render_defect(d: dict) -> str:
-    closure = f"verified by {d['verified_by']}" if d["verified_by"] else "not verified yet"
-    line = (f"{d['id']} [{d['claimed_status']}; {closure}] {d['gate']} root cause {d['root_cause_phase']}; "
-            f"failing tests (ledger): {', '.join(d['failing_tests']) or '-'}")
-    if d["unlinked_failing_tests"]:
-        line += f"; NOT linked by the defect: {', '.join(d['unlinked_failing_tests'])}"
-    if d["unknown_records"]:
-        line += f"; unknown records: {', '.join(d['unknown_records'])}"
-    return line
+def tests_summary(d: dict) -> str:
+    """Failing TEST ids from the valid failure records; N/A for gates that run no tests; UNKNOWN never reads as '-'."""
+    if any(p["category"] == "evidence_integrity" and p.get("record") is None for p in d.get("errors") or []):
+        return "failing tests (ledger): cannot be verified (ledger integrity failed)"
+    valid = [c for c in d.get("citations") or [] if c.get("valid")]
+    if not valid:
+        return "failing tests (ledger): none (no valid failure record cited)"
+    if all(c["test_results"] == "not_applicable" for c in valid):
+        return f"failing tests (ledger): N/A ({'/'.join(sorted({str(c['gate']) for c in valid}))} does not run tests)"
+    unsure = [c for c in valid if c["test_results"] in ("unknown", "partial")]
+    text = f"failing tests (ledger): {', '.join(d['failing_tests']) or ('none confirmed' if unsure else 'none')}"
+    if unsure:
+        unknown = sorted({t for c in unsure for t in c["unknown_tests"]})
+        text += f"; UNKNOWN: {', '.join(unknown) or 'no per-TEST results recorded'}"
+    return text
+
+
+def closure_text(d: dict) -> str:
+    if d["verified_by"]:
+        return f"verified by {d['verified_by']}"
+    if d.get("verification_withheld"):
+        return f"not verified: {d['verification_withheld']} withheld (evidence integrity error)"
+    return "not verified yet"
+
+
+def render_defect(d: dict) -> list[str]:
+    lines = [f"{d['id']} [{d['claimed_status']}; {closure_text(d)}] {d['gate']} root cause {d['root_cause_phase']}; "
+             f"{tests_summary(d)}"]
+    lines += [f"    {render_problem(p)}" for p in [*(d.get("errors") or []), *(d.get("warnings") or [])]]
+    return lines
 
 
 def render_status(st: dict) -> str:
@@ -121,7 +167,9 @@ def render_status(st: dict) -> str:
         lines.append("No work items. Create one with 'vmodel new-wi --title ... --request ...'.")
     for w in st["work_items"]:
         lines.append("")
-        lines.append(f"{w['id']} [{w['status']}] {w['title'] or ''} (profile {w['profile']})")
+        dc = w.get("defect_checks") or defect_check_counts(w.get("defects") or [])
+        lines.append(f"{w['id']} [{w['status']}] {w['title'] or ''} (profile {w['profile']}); "
+                     f"defect checks: {dc['errors']} error(s), {dc['warnings']} warning(s)")
         for g in w["gates"]:
             extra = ""
             if g.get("record_id"):
@@ -140,7 +188,7 @@ def render_status(st: dict) -> str:
             if g.get("failing_tests"):
                 lines.append(f"      failing tests: {', '.join(g['failing_tests'])}")
         for d in w.get("defects") or []:
-            lines.append(f"  {render_defect(d)}")
+            lines += [f"  {ln}" for ln in render_defect(d)]
         lines.append(f"  next: {w['next_action']}")
         if w.get("profile_note"):
             lines.append(f"  note: {w['profile_note']}")
@@ -232,6 +280,14 @@ def render_impact(iv: dict) -> str:
 
 
 # ---------------------------------------------------------------- report
+def report_closure(d: dict) -> str:
+    return closure_text(d)
+
+
+def report_closure_details(d: dict) -> list[str]:
+    return []
+
+
 def report_markdown(project: Project, wi: str) -> str:
     st = project_status(project, wi)
     w = st["work_items"][0]
@@ -284,19 +340,33 @@ def report_markdown(project: Project, wi: str) -> str:
         md += ["", "Dangling references:", ""] + [f"- {d}" for d in tv["dangling"]]
     defects = _items(ctx.arts.get("defects.json"), "defects")
     crs = _items(ctx.arts.get("change-requests.json"), "change_requests")
+    views = w["defects"]  # the same derivation as `vmodel status`
     md += ["", "## Defects", ""]
     if not defects:
         md.append("None recorded.")
-    for d, dt in zip(defects, defect_trace(ctx.entries, wi, defects)):
-        closure = f" — verified by {dt['verified_by']}" if dt["verified_by"] else " — not verified yet"
-        md.append(f"- {d.get('id')} [{d.get('status')}{closure}] {d.get('gate')} {str(d.get('description', ''))[:200]} "
+    for d, dt in zip(defects, views):
+        md.append(f"- {d.get('id')} [{d.get('status')} — {report_closure(dt)}] {d.get('gate')} "
+                  f"{str(d.get('description', ''))[:200]} "
                   f"(root cause {d.get('root_cause_phase')}: {str(d.get('root_cause', ''))[:200]})")
-        for rid, tests in dt["failing_tests_by_record"].items():
-            md.append(f"  - failing tests in {rid} (from the signed ledger): {', '.join(tests) or 'none'}")
-        if dt["unlinked_failing_tests"]:
-            md.append(f"  - not linked by the defect (`related`): {', '.join(dt['unlinked_failing_tests'])}")
-        if dt["unknown_records"]:
-            md.append(f"  - cites records that are not gate evaluations of {wi}: {', '.join(dt['unknown_records'])}")
+        md += [f"  - {ln}" for ln in report_closure_details(dt)]
+        for c in dt.get("citations") or []:
+            if not c.get("valid"):
+                continue
+            if c["test_results"] == "not_applicable":
+                tests = f"N/A ({c['gate']} does not run tests)"
+            else:
+                tests = ", ".join(c["failing_tests"]) or "none"
+                if c["test_results"] in ("unknown", "partial"):
+                    tests += (f"; UNKNOWN (not executed or not recorded): "
+                              f"{', '.join(c['unknown_tests']) or 'no per-TEST results recorded'}")
+            md.append(f"  - failing tests in {c['record']} (from the signed ledger): {tests}")
+    md += ["", "## Defect trace check", "",
+           "Evidence errors (ERROR) and traceability warnings (WARNING) derived from the signed ledger. "
+           "`vmodel lint` exits 1 while any remain; gate decisions do not depend on them.", ""]
+    problems = [p for dt in views for p in [*(dt.get("errors") or []), *(dt.get("warnings") or [])]]
+    if not problems:
+        md.append(f"None ({len(views)} defect(s) checked).")
+    md += [f"- {render_problem(p)}" for p in problems]
     md += ["", "## Change requests", ""]
     if not crs:
         md.append("None recorded.")

@@ -258,32 +258,138 @@ def failed_checks(record: dict, limit: int = 8) -> list[dict]:
             for c in record.get("checks") or [] if isinstance(c, dict) and c.get("status") in ("fail", "blocked")]
 
 
-def defect_trace(entries: list[Entry], wi: str, defects: list[dict]) -> list[dict]:
-    """Defect view derived from the signed ledger: what failed in the records a DEFECT cites, which failing TEST ids
-    the DEFECT does not link, and the first PASS of its gate after the failure (the closure evidence)."""
+def is_failure_record(rec: dict) -> bool:
+    """A gate evaluation that requires a DEFECT before re-evaluation (the rework precondition) and is therefore the
+    only valid failure evidence a DEFECT can cite (D35): FAILED, or BLOCKED after three identical failures."""
+    return rec.get("status") == "FAILED" or (
+        rec.get("status") == "BLOCKED" and rec.get("blocked_reason") == "three_consecutive_identical_failures")
+
+
+# Gates whose records carry per-TEST results (G6/G7 join when implemented). Other gates' failures are N/A for tests.
+TEST_EXECUTING_GATES = ("G5",)
+NOT_EXECUTED = re.compile(r"^(TEST-\d{3,}): not executed$")
+DEFECT_CHECK_CATEGORIES = {"evidence_integrity": "error", "invalid_citation": "error",
+                           "unlinked_failing_test": "warning", "unknown_test_result": "warning"}
+
+
+def _problem(category: str, record: str | None, detail: str, tests: list[str] | None = None) -> dict:
+    p = {"severity": DEFECT_CHECK_CATEGORIES[category], "category": category, "record": record, "detail": detail}
+    if tests is not None:
+        p["tests"] = tests
+    return p
+
+
+def citation_view(entry: Entry | None, rid: str, wi: str) -> dict:
+    """Is a cited record valid failure evidence, and what does its signed content say about each TEST?"""
+    if entry is None:
+        return {"record": rid, "valid": False, "reason": "is not in the signed ledger"}
+    rec = entry.record
+    c: dict[str, Any] = {"record": rid, "gate": rec.get("gate"), "status": rec.get("status")}
+    if rec.get("type") != "gate":
+        return {**c, "valid": False, "reason": f"is a {rec.get('type')} record, not a gate evaluation"}
+    if rec.get("work_item") != wi:
+        return {**c, "valid": False, "reason": f"is a gate evaluation of {rec.get('work_item')}, not of {wi}"}
+    if not is_failure_record(rec):
+        why = f" ({rec['blocked_reason']})" if rec.get("blocked_reason") else ""
+        return {**c, "valid": False, "reason": f"is a {rec.get('gate')} {rec.get('status')}{why} record, not a failure"}
+    c["valid"] = True
+    if rec.get("gate") not in TEST_EXECUTING_GATES:
+        return {**c, "test_results": "not_applicable", "failing_tests": [], "unknown_tests": []}
+    mapping = [ch for ch in rec.get("checks") or [] if isinstance(ch, dict) and ch.get("id") == "G5.TEST_MAPPING"]
+    not_run = sorted({m.group(1) for ch in mapping for it in ch.get("items") or []
+                      if isinstance(it, str) and (m := NOT_EXECUTED.match(it))})
+    ex = rec.get("executed_tests")
+    if not isinstance(ex, dict) or not ex:
+        results = "unknown"  # no per-TEST results in the signed record (e.g. no JUnit produced)
+    else:
+        results = "partial" if not_run else "recorded"
+    return {**c, "test_results": results, "failing_tests": failing_tests(rec), "unknown_tests": not_run}
+
+
+def defect_trace(entries: list[Entry], wi: str, defects: list[dict],
+                 evidence_check: Callable[[str, str | None], list[str]] | None = None,
+                 ledger_error: str | None = None) -> list[dict]:
+    """Defect view derived from the signed ledger (display only, never used for gate decisions).
+
+    Per DEFECT: which cited records are valid failure evidence, the failing / UNKNOWN TEST ids they record, which
+    failing TEST ids the DEFECT does not link, and the first PASS of the failure's gate after it (`verified_by`, the
+    closure evidence). Problems carry the categories of DEFECT_CHECK_CATEGORIES: errors = evidence integrity and
+    invalid citations, warnings = unlinked failing tests and unknown per-TEST results. `evidence_check(path, sha)`
+    returns the problems of an evidence record; if the evidence behind the failure or the verifying PASS does not
+    match the ledger, `verified_by` is withheld. `ledger_error` means the ledger itself failed verification.
+    """
     by_id = {e.id: e for e in entries}
     out = []
     for d in defects:
+        did = d.get("id")
         found = _str_list(d.get("found_in_records"))
-        cited = [by_id[r] for r in found if r in by_id and by_id[r].record.get("work_item") == wi
-                 and by_id[r].record.get("type") == "gate"]
-        per_record = {e.id: failing_tests(e.record) for e in cited}
-        failing = sorted({t for ts in per_record.values() for t in ts})
         linked = set(_str_list(d.get("related")))
-        verified_by = None
-        if cited:
-            last = max(cited, key=lambda e: e.seq)
-            last_seq = last.seq
+        view: dict[str, Any] = {"id": did, "gate": d.get("gate"), "claimed_status": d.get("status"),
+                                "root_cause_phase": d.get("root_cause_phase"), "found_in_records": found}
+        errors: list[dict] = []
+        warnings: list[dict] = []
+        if ledger_error:
+            errors.append(_problem("evidence_integrity", None,
+                                   f"{did}: the signed ledger failed its integrity check ({ledger_error}); "
+                                   "the cited records cannot be verified"))
+            view.update(citations=[{"record": r, "valid": None, "reason": "ledger integrity failed"} for r in found],
+                        unknown_records=[], failing_tests_by_record={}, failing_tests=[], unlinked_failing_tests=[],
+                        closure_gate=None, verified_by=None, verification_withheld=None, errors=errors,
+                        warnings=warnings)
+            out.append(view)
+            continue
+        citations = [citation_view(by_id.get(r), r, wi) for r in dict.fromkeys(found)]
+        valid = [by_id[c["record"]] for c in citations if c["valid"]]
+        for c in citations:
+            if not c["valid"]:
+                errors.append(_problem("invalid_citation", c["record"],
+                                       f"{did} cites {c['record']}, which {c['reason']}; it is not failure evidence "
+                                       "(ignored for failing tests and closure)"))
+        per_record = {c["record"]: c["failing_tests"] for c in citations if c["valid"]}
+        failing = sorted({t for ts in per_record.values() for t in ts})
+        for c in citations:
+            if not c["valid"]:
+                continue
+            missing = [t for t in c["failing_tests"] if t not in linked]
+            if missing:
+                warnings.append(_problem(
+                    "unlinked_failing_test", c["record"],
+                    f"{did} does not link failing test(s) of {c['record']} in 'related': {', '.join(missing)}", missing))
+            if c["test_results"] in ("unknown", "partial"):
+                what = ", ".join(c["unknown_tests"]) or "no per-TEST results recorded"
+                warnings.append(_problem(
+                    "unknown_test_result", c["record"],
+                    f"{did}: per-TEST results of {c['record']} are UNKNOWN (not executed or not recorded): {what}",
+                    c["unknown_tests"]))
+        closure_gate = verified_by = None
+        if valid:
+            last = max(valid, key=lambda e: e.seq)
             # the gate of the signed failure record, not the agent-written `gate` field
-            for e in gate_entries(entries, wi, str(last.record.get("gate"))):
-                if e.seq > last_seq and e.record.get("type") == "gate" and e.record.get("status") == "PASSED":
+            closure_gate = str(last.record.get("gate"))
+            for e in gate_entries(entries, wi, closure_gate):
+                if e.seq > last.seq and e.record.get("type") == "gate" and e.record.get("status") == "PASSED":
                     verified_by = e.id
                     break
-        out.append({"id": d.get("id"), "gate": d.get("gate"), "claimed_status": d.get("status"),
-                    "root_cause_phase": d.get("root_cause_phase"), "found_in_records": found,
-                    "unknown_records": sorted(set(found) - {e.id for e in cited}),
-                    "failing_tests_by_record": per_record, "failing_tests": failing,
-                    "unlinked_failing_tests": [t for t in failing if t not in linked], "verified_by": verified_by})
+        withheld = None
+        if evidence_check is not None:
+            relied = {e.id: e for e in [*valid, *([by_id[verified_by]] if verified_by else [])]}
+            for e in relied.values():
+                probs = [p for ev in e.record.get("evidence") or [] if isinstance(ev, dict)
+                         for p in evidence_check(str(ev.get("path")), ev.get("sha256"))]
+                if probs:
+                    errors.append(_problem("evidence_integrity", e.id,
+                                           f"{did} relies on {e.id}, whose evidence does not match the signed ledger: "
+                                           + "; ".join(probs[:4])))
+            if verified_by and any(p["category"] == "evidence_integrity" for p in errors):
+                withheld, verified_by = verified_by, None
+        view.update(citations=citations,
+                    unknown_records=sorted(r for r in set(found) if not (
+                        r in by_id and by_id[r].record.get("work_item") == wi and by_id[r].record.get("type") == "gate")),
+                    failing_tests_by_record=per_record, failing_tests=failing,
+                    unlinked_failing_tests=[t for t in failing if t not in linked],
+                    closure_gate=closure_gate, verified_by=verified_by, verification_withheld=withheld,
+                    errors=errors, warnings=warnings)
+        out.append(view)
     return out
 
 
@@ -1143,9 +1249,7 @@ def preconditions(ctx: Ctx, gate: str, cache: dict) -> list[str]:
                 and not unblocked_after(ctx.entries, ctx.wi, gate, last.seq):
             reasons.append(f"{gate} is BLOCKED after 3 identical failures ({last.id}); stop and report to the user. "
                            "Only the user can resume with 'vmodel unblock' in a terminal")
-        needs_defect = rec.get("status") == "FAILED" or (
-            rec.get("status") == "BLOCKED" and rec.get("blocked_reason") == "three_consecutive_identical_failures")
-        if needs_defect:
+        if is_failure_record(rec):  # needs a DEFECT; the same definition decides valid failure evidence (D35)
             refs = {r for d in _defects(ctx) for r in _str_list(d.get("found_in_records"))}
             if last.id not in refs:
                 reasons.append(f"rework record missing: {last.id} ({gate} {rec.get('status')}) must be referenced by a "
