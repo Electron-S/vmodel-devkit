@@ -1,8 +1,8 @@
 {
   "name": "vmodel",
   "version": "0.1.4",
-  "core_hash": "sha256:f837a4659776df5a66a881892a94b3f162a6affdb4e6d1b1c5dfca85a7cf4a1d",
-  "created_at": "2026-11-08T21:31:05+00:00",
+  "core_hash": "sha256:5dd1d010cc57c477c6a96e3c989eed49d09fc31c51e09f5d785d9b132db1e997",
+  "created_at": "2026-11-08T21:58:49+00:00",
   "files": {
     "README.md": "sha256:1f4323d494ac7e2377120eecc3a7128564f2bbcdf1bbb65f7da0f1b3b30aabf2",
     ".claude-plugin/plugin.json": "sha256:fe180dc1b512754a92c022ce471c29b6facc3334ba195fd299c897c870aa15c6",
@@ -24,7 +24,7 @@
     "validator/vmodel.py": "sha256:8eb280c727eff2b0f4b5bcaacb8197191468ffcd25d7d495db704743c9b40738",
     "validator/vmodel_validator/__init__.py": "sha256:222dd088fd1ede0d136dd3a10c1c94c1414b89906847cc57d74cf047937f551a",
     "validator/vmodel_validator/cli.py": "sha256:8c1a411402f2d1ed5c1e9fe7d496a87012d606fa40c842b1e9d7c92c9a018cf4",
-    "validator/vmodel_validator/gates.py": "sha256:be8bbb50bd91d83c2b67d1caa45d1a626b146e062336365b1cf40bf15d74000c",
+    "validator/vmodel_validator/gates.py": "sha256:fc5180ce5993b18d58d93d4f65a809c498dbeaf657de24eade50411d22494a23",
     "validator/vmodel_validator/hashing.py": "sha256:71063153673dc4df8d8564a3caa9ca86afd75ea5dcc5a387a400c1f243883475",
     "validator/vmodel_validator/hook.py": "sha256:6d0e09bd64d2416799c446118ac29a931ad65634eb6b2244774d06d9a0f3b1ac",
     "validator/vmodel_validator/integrity.py": "sha256:57e5856bd372b1873350e5e8849f93b375a4d5dfe10b3809cb359c4f65844e48",
@@ -33,7 +33,7 @@
     "validator/vmodel_validator/runner.py": "sha256:e1afbeb4afdbc7ddec3d2e2954601808ed4695c7a90746e898f7a5034e03dd3c",
     "validator/vmodel_validator/schema_lite.py": "sha256:1a907e63fee030739b2462edfb37f071919deae67222e0322e6e8e65e675112e",
     "validator/vmodel_validator/setup_project.py": "sha256:ebb10da120260e77e07adddf78e045f9dd7f347b580bdc829caae1c37a7299a7",
-    "validator/vmodel_validator/status.py": "sha256:bece00d87366dd79fb2f09a15d0dab7e473533af473f124c0cc1d285ba0090ab",
+    "validator/vmodel_validator/status.py": "sha256:268f979ff0b721ae8847978ae97fa418abd243c6685146dba500e873027250c3",
     "validator/vmodel_validator/textio.py": "sha256:82b8657053ff5c6d6427769f97bef753885260b9fbddc5f057c3a739de03ab24",
     "validator/vmodel_validator/trace.py": "sha256:d7873b8c948dd9bbf4de4178f049807ea4e5d6d3c0d59ecfc12c57eb0253ae9a",
     "validator/vmodel_validator/data/VMODEL.md": "sha256:e77992f542fb29104dcaa1cda00b4c9e21a450020678a5c2ea9f785e2b223c09",

@@ -105,7 +105,7 @@ def closure_view(d: dict, gates: dict[str, dict]) -> dict:
 
     Display only, from the signed ledger and the current gate state; first match wins:
     UNKNOWN              the ledger failed its integrity check: nothing is guessed.
-    VERIFICATION_FAILED  `last_verification` is a failure: among the gates the DEFECT cites failures of, the latest
+    VERIFICATION_FAILED  `last_verification` is a failure: for some gate the DEFECT cites a failure of, the latest
                          PASSED-or-failure evaluation since its first cited failure is FAILED or a 3-strike BLOCKED
                          (REVIEW_REQUIRED and environment BLOCKED are neutral, as in the 3-strike count).
     UNKNOWN              a PASS exists (`verification_withheld`) but its evidence or the cited failure's does not match
@@ -115,7 +115,7 @@ def closure_view(d: dict, gates: dict[str, dict]) -> dict:
     REVERIFY_REQUIRED    verified once, but that gate is not PASSED now (STALE, REVIEW_REQUIRED, BLOCKED ...).
     FIX_APPLIED / OPEN   no verification yet (claim `fixed` / `open`).
     `verified_by` and `verification_history` keep the past successes in every state. `closure_action` names the
-    next step (re-verify, rework, unblock, resolve_block, check_integrity) or is None. 'verified by' is worded only
+    next step (reverify, rework, unblock, resolve_block, check_integrity) or is None. 'verified by' is worded only
     for CLOSED; past successes read 'previously passed in'.
     """
     vb, gate, claimed = d.get("verified_by"), d.get("closure_gate"), d.get("claimed_status")
@@ -139,7 +139,7 @@ def closure_view(d: dict, gates: dict[str, dict]) -> dict:
         state, now_status = ("CLOSED" if now.get("status") == "PASSED" else "REVERIFY_REQUIRED"), now.get("status")
         record = now.get("record_id")
         if state == "REVERIFY_REQUIRED":
-            action = "resolve_block" if now_status == "BLOCKED" else "re-verify"
+            action = "resolve_block" if now_status == "BLOCKED" else "reverify"
     else:
         state, now_status = ("FIX_APPLIED" if claimed == "fixed" else "OPEN"), None
     note = None

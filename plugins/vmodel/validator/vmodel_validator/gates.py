@@ -316,8 +316,9 @@ def defect_trace(entries: list[Entry], wi: str, defects: list[dict],
     failing TEST ids the DEFECT does not link, and the closure evidence `verified_by`: the first PASS, after the latest
     cited failure, of the most downstream gate that failed (a G5 PASS also implies G4 passed before it). For the
     display states (status.closure_view) it also keeps `verification_history` (that gate's PASSes since the DEFECT's
-    first cited failure on it, i.e. past successes) and `last_verification` (the latest PASSED or failure evaluation,
-    since the first cited failure, of any gate the DEFECT cites a failure of; `failure` = is_failure_record). Problems
+    first cited failure on it, i.e. past successes) and `last_verification`: over the gates the DEFECT cites failures
+    of, each gate's latest PASSED-or-failure evaluation since the first cited failure; the most recent of those that is
+    a failure, else the most recent one (`failure` = is_failure_record). Problems
     carry the categories of DEFECT_CHECK_CATEGORIES (one per DEFECT and category for the trace warnings): errors =
     evidence integrity and invalid citations, warnings = unlinked failing tests and unknown per-TEST results.
     `evidence_check(path, sha)` returns the problems of an evidence record (an exception counts as a problem); if the
@@ -405,20 +406,27 @@ def defect_trace(entries: list[Entry], wi: str, defects: list[dict],
                     history.append(e.id)
                     if verified_by is None and e.seq > last.seq:
                         verified_by = e.id
-            # Decisive = PASSED or a failure record on a gate this DEFECT cites a failure of. REVIEW_REQUIRED and
-            # environment BLOCKED are skipped, as in the 3-strike count (consecutive_same_failures).
+            # Decisive = PASSED or a failure record on a gate this DEFECT cites a failure of, after its first cited
+            # failure. REVIEW_REQUIRED and environment BLOCKED are skipped, as in the 3-strike count
+            # (consecutive_same_failures). Per gate the latest decisive result counts, so an upstream re-pass (G4)
+            # does not hide a downstream failure (G5) that has not been re-run yet.
             cited_gates = {str(e.record.get("gate")) for e in valid}
             start = min(e.seq for e in valid)
+            latest_by_gate: dict[str, tuple[int, dict]] = {}
             for e in entries:
                 rec = e.record
                 if (e.seq <= start or rec.get("type") != "gate" or rec.get("work_item") != wi
                         or str(rec.get("gate")) not in cited_gates):
                     continue
                 if rec.get("status") == "PASSED" or is_failure_record(rec):
-                    attempt = {"record": e.id, "gate": rec.get("gate"), "status": rec.get("status"),
-                               "failure": is_failure_record(rec)}
+                    a = {"record": e.id, "gate": rec.get("gate"), "status": rec.get("status"),
+                         "failure": is_failure_record(rec)}
                     if rec.get("blocked_reason"):
-                        attempt["blocked_reason"] = rec["blocked_reason"]
+                        a["blocked_reason"] = rec["blocked_reason"]
+                    latest_by_gate[str(rec.get("gate"))] = (e.seq, a)
+            failed_gates = [x for x in latest_by_gate.values() if x[1]["failure"]]
+            pick = max(failed_gates or list(latest_by_gate.values()), key=lambda x: x[0], default=None)
+            attempt = pick[1] if pick else None
         withheld = None
         if evidence_check is not None:
             relied = {e.id: e for e in [*valid, *([by_id[verified_by]] if verified_by else [])]}

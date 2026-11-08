@@ -278,6 +278,27 @@ class DisplayStateReviewRed(FailedG5Case):
         self.set_defect(status="open")  # claim note in a non-closed state
         self.assertNotIn("verified by", self.status_text().split("DEFECT-001", 1)[1])
 
+    def test_upstream_repass_does_not_hide_a_downstream_failure(self):
+        """Re-review of c4e4da5: after G5 failed again, a G4 re-pass must not turn VERIFICATION_FAILED into FIX_APPLIED
+        while G5 still stands FAILED (a DEFECT citing only G5 already stayed VERIFICATION_FAILED)."""
+        self.sb.add_defect(self.failed, "G5", related=["REQ-002", *self.failing], status="fixed")
+        self.sb.add_defect(self.reject_g4(), "G4")  # the claimed fix is rejected (the bug is still there)
+        self.gate_g4()
+        self.assertEqual(self.state(), "FIX_APPLIED")
+        again = self.sb.gate("G5")[1]
+        self.assertEqual(again["status"], "FAILED")
+        self.assertEqual(self.state(), "VERIFICATION_FAILED")
+        self.sb.add_defect(again["record_id"], "G5")
+        self.gate_g4()  # re-reviewed, G5 not re-run
+        self.assertEqual(self.gates()["G5"], "FAILED")
+        d = self.defect()
+        self.assertEqual((d.get("closure_state"), (d.get("last_verification") or {}).get("record"),
+                          d.get("closure_action")), ("VERIFICATION_FAILED", again["record_id"], "rework"))
+        self.s["wf"].write_text(self.s["good"], encoding="utf-8")
+        self.gate_g4()
+        self.assertEqual(self.sb.gate("G5")[1]["status"], "PASSED")
+        self.assertEqual(self.state(), "CLOSED")
+
     def test_three_strike_then_user_unblock_says_rework(self):
         if os.name != "posix":
             self.skipTest("the user unblock needs a pseudo terminal (POSIX)")
