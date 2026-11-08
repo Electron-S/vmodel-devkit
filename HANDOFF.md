@@ -1,14 +1,14 @@
 # HANDOFF
 
-다음 세션이 이 파일만 읽고 이어갈 수 있게 정리한 인수인계입니다. 마지막 갱신: 2026-11-08(3차, 0.1.3 실제 재작업 세션 검증 후).
+다음 세션이 이 파일만 읽고 이어갈 수 있게 정리한 인수인계입니다. 마지막 갱신: 2026-11-08(4차, v0.1.3 릴리스 확정 후).
 
 ## 현재 상태 한 줄
-기준 버전 0.1.2는 태그 `v0.1.2`(커밋 `bbd6a3d`)입니다. 그 위의 **0.1.3**(F1~F4 수정)을 이번에 실제 Claude 재작업 세션 1회(drill-3)로 검증했습니다. G5 FAILED 상태에서 DEFECT 기록, 수정, 재리뷰, G4·G5 PASS까지 진행해 PARTIALLY_VERIFIED가 됐고, 독립 audit·verify도 통과했습니다. 코드 수정은 필요 없었습니다. 회귀는 WSL 103/103, Windows(cp949) 103 실행·실패 0·skip 4(이전과 같은 4건)입니다. `v0.1.3` 태그는 아직 없고 사용자 결정을 기다립니다. WorkMind·G6/G7·LITE/STRICT는 손대지 않았습니다.
+**기준 버전은 0.1.3**입니다. 태그 `v0.1.3`(커밋 `0df13b7`)으로 확정했고 `main`도 fast-forward로 같은 커밋까지 올렸습니다(로컬만, 푸시 안 함). 0.1.3은 실제 Claude 재작업 세션 1회(drill-3)로 검증됐고(G5 FAILED → DEFECT → 수정 → 재리뷰 → G4·G5 PASS → PARTIALLY_VERIFIED), 확정 직전 재검증에서 하네스 103/103, 릴리스 사본·기록·소스 해시 일치, drill-3 원장 audit OK를 다시 확인했습니다. v0.1.4 범위(3개 항목)와 G6/G7 계획은 PLAN.md(§v0.1.4, §확장)에, 실패 TEST 추적 정책 결정은 DECISIONS D35에 있습니다. 둘 다 코드는 아직 손대지 않았고, 사용자의 별도 지시 후 시작합니다. 원격 푸시는 사용자가 보류했습니다. WorkMind·G6/G7·LITE/STRICT는 손대지 않았습니다.
 
 ## Git
-- `v0.1.2` 태그(annotated, 태그 객체 `f1ea8f7`) → 커밋 `bbd6a3d`. 로컬 태그이며 원격에 푸시하지 않았습니다.
-- 브랜치 `rework-drill-0.1.3`: `021ddcb`(0.1.3 코드·드릴 결과) 다음에 이번 검증 문서·증거 커밋 1개가 있습니다(`git log --oneline main..rework-drill-0.1.3`). 코드·릴리스 파일은 `021ddcb`와 같습니다.
-- `main`은 v0.1.2 그대로입니다. 병합·푸시하지 않았고 `v0.1.3` 태그도 없습니다.
+- `v0.1.3` 태그(annotated, 태그 객체 `ef72f9a`) → 커밋 `0df13b7`. `v0.1.2` 태그(태그 객체 `f1ea8f7`) → 커밋 `bbd6a3d`는 그대로입니다. 두 태그 모두 로컬이며 원격에 푸시하지 않았습니다.
+- `main`은 `bbd6a3d..0df13b7`을 fast-forward로 받은 뒤, 그 위에 문서 커밋 1개(v0.1.4 계획, D35, 이 HANDOFF 갱신)가 더 있습니다(`git log --oneline v0.1.3..main`). `rework-drill-0.1.3`은 `0df13b7`에 그대로 있습니다. `origin/main`은 아직 `bbd6a3d`라서 main이 3커밋 앞서 있습니다. 푸시는 사용자가 보류했습니다(아래 미완료 1).
+- 플러그인 코드·릴리스 파일은 `021ddcb`와 `0df13b7`이 같습니다(`0df13b7`은 검증 문서·증거 커밋).
 
 ## 바로 쓰는 명령
 ```bash
@@ -45,8 +45,9 @@ python3 scripts/e2e/rework_drill.py run --work <dir> --phase s3 --prompt-file <p
 - 드릴 샌드박스는 세션 스크래치에 있어 다음 세션에서는 사라질 수 있습니다. drill-1의 S1 산출물은 `test-results/drill/s1-drill-1/`에 사본이 있지만, 그 사본만으로 포크하려면 `rework_drill.py fork`의 `--source` 형식(프로젝트 폴더)에 맞춰 재구성해야 합니다.
 
 ## 미완료·다음 작업 (사용자 결정 필요)
-1. `v0.1.3` 태그 여부(권장: 이번 문서 커밋에 태그, 코드는 `021ddcb`와 같음). main 병합·푸시도 사용자 결정입니다.
-2. 다음 버전 후보(작게): D32 (C) 파생 표시 상태, D34의 guard `/dev/null` 예외, 측정 스크립트의 다중 result 집계. 각각 재현 테스트부터 만듭니다.
+1. ~~`v0.1.3` 태그~~ → 완료(2026-11-08, `0df13b7`, main fast-forward). 원격 푸시는 **사용자가 보류**했습니다(2026-11-08). 푸시 전에 다음을 점검해 보여 드리고 사용자가 따로 결정합니다: 원격 저장소 정보(`git remote -v`, 공개 여부, 원격 브랜치·태그 `git ls-remote`), 포함될 커밋과 파일(`git log origin/main..main`, `git diff --stat origin/main..main`, 태그 `v0.1.2`·`v0.1.3`), 민감정보(드릴·`~/.vmodel-devkit` 서명 키 값을 전체 이력과 대조, API 키·토큰·이메일 패턴, 증거 파일의 로컬 경로).
+2. v0.1.4(PLAN.md §v0.1.4, 사용자가 정한 우선순위, **코드 수정은 별도 지시 후 시작**): ① STALE Gate에 대한 결함 검증 상태 표시 개선(D32 C, OPEN/FIX_APPLIED/VERIFIED/CLOSED 파생) ② Guard의 읽기 명령 오탐 수정(D34, 확정 중 재확인: verifier는 `.vmodel`과 무관한 `cat src/... 2>/dev/null`도 거부됨) ③ 실패 TEST 추적 및 증거 참조 정확성 개선(**D35, 사용자가 P1 채택**: 미연결은 경고, TEST별 결과를 모르면 UNKNOWN, 실패가 아닌 기록 인용은 무효, 증거 오류와 추적성 경고 구분, 최종 보고에 누락 사항 표시). 각각 v0.1.3에서 실패하는 재현 테스트(RED)부터 만들고, Gate 판정과 기존 하네스 103개는 그대로 유지합니다. 측정 스크립트의 다중 result 집계는 플러그인 밖이라 별도입니다.
+2-1. Extension 계획(PLAN.md §확장): M5 G6(0.2.0 제안) → M6 G7(0.3.0, 이때 STANDARD WI가 처음 COMPLETED 가능) → M7 실제 세션 E2E. 착수 전 결정 사항이 PLAN에 정리돼 있습니다.
 3. 남은 실제 세션 검증: 링크 누락 → 경고 → 보완 경로, 반복 표본, 주입 없는 G5 FAILED, drill-1(G4 FAILED)에서 시작하는 재작업, 상한 도달 시 멈춤.
 4. 남은 미검증 항목(TEST_RESULTS §6, §9.13): Python 3.11, Windows에서 Claude Code 세션 자체, Windows 절대경로 deny 규칙, 대화형 세션, 마켓플레이스 설치 상태의 세션.
 5. Extension(G6/G7, LITE/STRICT, CI 독립 재검증, WorkMind 적용)은 자동으로 진입하지 않습니다.
