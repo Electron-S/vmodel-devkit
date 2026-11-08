@@ -1,18 +1,30 @@
 {
   "mode": "green",
   "plugin": {
-    "path": "/home/cyyoo/develop/vmodel-devkit/plugins/vmodel",
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/18a7f4ec-42f4-4dd0-9eb3-76f6a3d98b0c/scratchpad/wt-final/plugins/vmodel",
     "release_manifest": null
   },
-  "git_head": "817b9aa",
-  "worktree_dirty": true,
+  "git_head": "8ac43c8",
+  "worktree_dirty": false,
   "python": "3.12.3",
-  "tests": 46,
-  "expectations_met": 46,
+  "tests": 59,
+  "expectations_met": 59,
   "violations": 0,
-  "seconds": 245.3
+  "seconds": 291.3
 }
 
+OK  expect=ok   got=ok      test_guard_redirects.GuardDevNullRed.test_main_session_reads_with_output_discarded
+OK  expect=ok   got=ok      test_guard_redirects.GuardDevNullRed.test_verifier_reads_with_output_discarded
+OK  expect=ok   got=ok      test_guard_redirects.GuardDifferentialAccept.test_no_write_detection_is_lost_except_pure_devnull_redirections
+OK  expect=ok   got=ok      test_guard_redirects.GuardFileRedirectRed.test_ampersand_redirects_into_protected_paths_denied
+OK  expect=ok   got=ok      test_guard_redirects.GuardFileRedirectRed.test_redirection_between_verb_and_flag_denied
+OK  expect=ok   got=ok      test_guard_redirects.GuardFileRedirectRed.test_verifier_ampersand_redirects_to_files_denied
+OK  expect=ok   got=ok      test_guard_redirects.GuardWritesChar.test_devnull_between_verb_and_flag_stays_denied
+OK  expect=ok   got=ok      test_guard_redirects.GuardWritesChar.test_fd_duplication_is_not_a_write
+OK  expect=ok   got=ok      test_guard_redirects.GuardWritesChar.test_non_bash_tools_keep_the_old_rule
+OK  expect=ok   got=ok      test_guard_redirects.GuardWritesChar.test_other_rules_ignore_devnull_suffix
+OK  expect=ok   got=ok      test_guard_redirects.GuardWritesChar.test_verifier_writes_stay_denied
+OK  expect=ok   got=ok      test_guard_redirects.GuardWritesChar.test_writes_into_protected_paths_stay_denied
 OK  expect=ok   got=ok      test_defect_closure.DefectClosureBlockedRed.test_blocked_gate_does_not_say_re_verify
 OK  expect=ok   got=ok      test_defect_closure.DefectClosureInvariant.test_display_commands_do_not_touch_ledger_or_manifests
 OK  expect=ok   got=ok      test_defect_closure.DefectClosureRed.test_claim_open_but_verified_is_annotated
@@ -55,6 +67,7 @@ OK  expect=ok   got=ok      test_defect_evidence.DefectTestResultsRed.test_g4_re
 OK  expect=ok   got=ok      test_defect_evidence.DefectTestResultsRed.test_g5_failure_without_junit_is_unknown_not_dash
 OK  expect=ok   got=ok      test_defect_evidence.DefectTestResultsRed.test_partially_executed_g5_separates_failing_and_unknown
 OK  expect=ok   got=ok      test_defect_evidence.DefectTestResultsRed.test_unknown_results_are_named_in_lint_and_report
+OK  expect=ok   got=ok      test_defect_evidence.DefectTestResultsRed.test_unknown_warning_names_only_the_runs_that_still_decide
 OK  expect=ok   got=ok      test_defect_evidence.SkillReportingRed.test_final_report_steps_carry_errors_and_warnings
 OK  expect=ok   got=ok      test_version_compat.GateDecisionInvariant.test_manifest_hashes_are_computed_identically
 OK  expect=ok   got=ok      test_version_compat.GateDecisionInvariant.test_same_history_gives_the_same_gate_decisions

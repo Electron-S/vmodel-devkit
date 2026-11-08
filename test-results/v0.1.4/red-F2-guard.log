@@ -7,13 +7,13 @@
       "core_hash": "sha256:0208c7988516f050d2eabf8c50704d9e36be7c4d6eb94b4ff098dc7c2c73e0ea"
     }
   },
-  "git_head": "e6fc892",
-  "worktree_dirty": true,
+  "git_head": "8ac43c8",
+  "worktree_dirty": false,
   "python": "3.12.3",
   "tests": 11,
   "expectations_met": 11,
   "violations": 0,
-  "seconds": 15.3
+  "seconds": 17.1
 }
 
 OK  expect=FAIL got=FAIL    test_guard_redirects.GuardDevNullRed.test_main_session_reads_with_output_discarded

@@ -7,13 +7,13 @@
       "core_hash": "sha256:0208c7988516f050d2eabf8c50704d9e36be7c4d6eb94b4ff098dc7c2c73e0ea"
     }
   },
-  "git_head": "817b9aa",
-  "worktree_dirty": true,
+  "git_head": "8ac43c8",
+  "worktree_dirty": false,
   "python": "3.12.3",
-  "tests": 28,
-  "expectations_met": 28,
+  "tests": 29,
+  "expectations_met": 29,
   "violations": 0,
-  "seconds": 122.1
+  "seconds": 134.9
 }
 
 OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceChar.test_invalid_citations_alone_do_not_satisfy_the_rework_precondition
@@ -28,7 +28,7 @@ OK  expect=FAIL got=FAIL    test_defect_evidence.DefectEvidenceRed.test_mixed_ci
 OK  expect=FAIL got=FAIL    test_defect_evidence.DefectEvidenceRed.test_passed_record_alone_is_an_invalid_citation
       AssertionError: 'R00014' is not None : 0.1.3 showed R00014
 OK  expect=FAIL got=FAIL    test_defect_evidence.DefectEvidenceRed.test_report_always_has_the_defect_trace_check_section
-      AssertionError: '## Defect trace check' not found in "# WI-001 — 단어 빈도 기능\n\n- Status: **IN_PROGRESS** (profile STANDARD)\n- Generated: 2026-11-08T16:30:35+00:00 by vmodel 0.1.3 (release, core `0208c7988516`)\n- Validator integrity: OK; ledger: OK\n\n> MVP scope: only G1-G5 are implemented. G6 (integration) and G7 (system) are extension gates, so a work item can reach PARTIALLY_VERIFIED at most. T
+      AssertionError: '## Defect trace check' not found in "# WI-001 — 단어 빈도 기능\n\n- Status: **IN_PROGRESS** (profile STANDARD)\n- Generated: 2026-11-08T16:42:40+00:00 by vmodel 0.1.3 (release, core `0208c7988516`)\n- Validator integrity: OK; ledger: OK\n\n> MVP scope: only G1-G5 are implemented. G6 (integration) and G7 (system) are extension gates, so a work item can reach PARTIALLY_VERIFIED at most. T
 OK  expect=FAIL got=FAIL    test_defect_evidence.DefectEvidenceRed.test_review_required_record_is_an_invalid_citation
       AssertionError: Lists differ: [] != [('invalid_citation', 'R00013')]
 OK  expect=FAIL got=FAIL    test_defect_evidence.DefectEvidenceRed.test_unlinked_failing_tests_are_trace_warnings_everywhere
@@ -66,5 +66,7 @@ OK  expect=FAIL got=FAIL    test_defect_evidence.DefectTestResultsRed.test_parti
       AssertionError: Tuples differ: (None, None, None) != ('partial', ['TEST-001'], ['TEST-002', 'TE[76 chars]09'])
 OK  expect=FAIL got=FAIL    test_defect_evidence.DefectTestResultsRed.test_unknown_results_are_named_in_lint_and_report
       AssertionError: 0 != 1 : WI-001: 6 artifact(s) present: architecture.json, defects.json, design.json, requirements.json, tests.json, workitem.json
+OK  expect=FAIL got=FAIL    test_defect_evidence.DefectTestResultsRed.test_unknown_warning_names_only_the_runs_that_still_decide
+      AssertionError: Lists differ: [] != [('unknown_test_result', ['R00015'], ['TES[100 chars]9'])]
 OK  expect=FAIL got=FAIL    test_defect_evidence.SkillReportingRed.test_final_report_steps_carry_errors_and_warnings
       AssertionError: Regex didn't match: '(?s)every ERROR and WARNING.{0,200}defect trace check' not found in '---\nname: start\ndescription: Start or continue VModel DevKit V-Model development (requirements -> architecture -> design & test specs -> implementation -> unit verification, each gated by an independent validator). Use when the user asks to develop or implement a feature, substantively chang

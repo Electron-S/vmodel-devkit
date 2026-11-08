@@ -1,6 +1,6 @@
 # TEST_RESULTS
 
-마지막 갱신: 2026-11-08(3차). 현재 버전: VModel DevKit **0.1.3** (core `sha256:0208c798…`, `releases/vmodel-0.1.3.json`) — 하네스와 **실제 Claude 재작업 세션 1회**(§9, drill-3)로 검증. 기준 버전 **0.1.2** (core `sha256:a0555e32…`, 태그 `v0.1.2` → 커밋 `bbd6a3d`)는 §3의 E2E-3과 §8의 실전 재작업 드릴에서 실제 세션으로 검증. 0.1.0·0.1.1은 E2E-1·2에서 쓴 이전 릴리스.
+마지막 갱신: 2026-11-09(4차). 현재 버전: VModel DevKit **0.1.4** (core `sha256:b1fee43f…`, `releases/vmodel-0.1.4.json`, 브랜치 `v0.1.4-dev`) — 하네스(WSL·Windows)와 drill-3 실제 원장 복사본으로 검증(§10). 실제 Claude 세션은 0.1.4로 돌리지 않았다. 이전 버전 **0.1.3** (core `sha256:0208c798…`, `releases/vmodel-0.1.3.json`) — 하네스와 **실제 Claude 재작업 세션 1회**(§9, drill-3)로 검증. 기준 버전 **0.1.2** (core `sha256:a0555e32…`, 태그 `v0.1.2` → 커밋 `bbd6a3d`)는 §3의 E2E-3과 §8의 실전 재작업 드릴에서 실제 세션으로 검증. 0.1.0·0.1.1은 E2E-1·2에서 쓴 이전 릴리스.
 
 "실측"은 이 PC에서 실제로 실행한 결과, "미검증"은 실행하지 않은 것입니다. 추정은 따로 표시합니다.
 
@@ -10,6 +10,8 @@
 
 | 환경 | 결과 | 비고 |
 |---|---|---|
+| WSL2 Ubuntu 24.04, Python 3.12.3, pytest 9.0.3, ruff — **0.1.4** (`8ac43c8`, 작업 트리 clean worktree) | **162/162 통과** (실측, 504초, skip 0, `test-results/wsl-harness-0.1.4.log`) | 기존 103(기대값 무수정) + 신규 59. 0.1.3 릴리스는 `dist/`가 없는 worktree라 git 태그 `v0.1.3`에서 해시 대조로 복원(`helpers.old_release`) |
+| Windows 11, Python 3.13.14 venv, 로캘 cp949, `%TEMP%\vmodel 한글 테스트\devkit-0.1.4`(`git archive 8ac43c8` + 불변 `dist/vmodel-0.1.3` 복사) — **0.1.4** | **162 실행, 실패 0, 오류 0, skip 5** (실측, 1174초, `test-results/windows-t18-harness-0.1.4.log`) | skip 4건은 이전과 같음(ruff 미설치 1, pty 2, 심볼릭 링크 권한 1) + `OldEvidenceAccept`(재고정에 pty 필요) 1. 0.1.3 대비 차등·판정 불변식 테스트는 복사한 `dist/vmodel-0.1.3`으로 Windows에서도 실행·통과 |
 | WSL2 Ubuntu 24.04, Python 3.12.3, pytest 9.0.3, ruff — **0.1.3, drill-3 실제 세션 후 재실행** | **103/103 통과** (실측, 196초, skip 0) | 코드 변경 없음(작업 트리 clean, Core `0208c798…`, `dist/vmodel-0.1.3` 43개 파일 해시가 `releases/vmodel-0.1.3.json`과 일치). 신규 실패 없음 |
 | WSL2 Ubuntu 24.04, Python 3.12.3, pytest 9.0.3, ruff — **0.1.3** | **103/103 통과** (실측, 227초) | 기존 94 + 신규 9(`test_rework_flow.py`). 신규 중 6개는 0.1.2 코드에서, 1개(`verified_by` 기준 Gate)는 중간 수정본에서 먼저 실패(RED) 확인 후 수정. 나머지 2개는 Validator 불변식 특성 테스트 |
 | WSL2 Ubuntu 24.04, Python 3.12.3, pytest 9.0.3, ruff — 0.1.2 기준 | **94/94 통과** (실측, 159초, 태그 전) | 샌드박스 경로에 한글+공백 포함 |
@@ -349,3 +351,63 @@ S2 수정과 로직이 같고 주석 위치만 다르다. 테스트 파일, requ
 **태그를 붙일 준비는 됐다고 판단한다. 다만 태그·병합·푸시는 하지 않았고, 결정은 사용자에게 남긴다.**
 - 근거: 실제 세션 1회에서 F1·F3·F4가 의도대로 동작했고, F2는 조회와 완전 연결까지 실측했다. 독립 audit·verify가 통과했고, 회귀는 WSL 103/103, Windows 103 실행·실패 0·skip 4다(§9.11). Validator Core·릴리스 사본은 변경되지 않았다. 이번에 발견한 4건은 모두 안전 측 오탐이거나 측정·표시 문제라서 릴리스를 막을 결함이 아니다.
 - 단서: 표본이 1회이고, G5 실패는 합성 픽스처이며, auto 권한 모드의 헤드리스 세션에서만 확인했다. `v0.1.3` 태그는 코드가 같으므로 이 검증 결과 문서 커밋에 붙이는 것을 권한다.
+
+
+## 10. v0.1.4 검증 (2026-11-09, 릴리스 0.1.4, 실제 Claude 세션 없음)
+
+범위: F1 결함 종료 상태, F2 guard 오탐·리디렉션 우회, F3 실패 TEST 증거 정확성(DECISIONS D36, `docs/v0.1.4/WORKITEM.md`). 모델 호출이 드는 헤드리스 실행은 하지 않았다(비용 0). 독립 검토는 이 세션의 서브에이전트(Verification Agent, 별도 컨텍스트, 저장소 읽기 전용)로 했다.
+
+### 10.1 기준선과 커밋
+- 시작: `main` = `e6fc892`, 태그 `v0.1.3` = `0df13b7`, 원격 미푸시. 착수 전 0.1.3 코드 하네스 103/103 통과(189초, `test-results/v0.1.4/baseline-0.1.3-harness.log`).
+- 브랜치 `v0.1.4-dev`: `68f64e7` F2 → `14f46b5` F3 → `2d4f5c6` F1 → `817b9aa` 검토 반영 → `4c13447`·`89ead99` 재검토 반영 → `8ac43c8` 버전·릴리스·문서 → (이 문서 커밋). 항목마다 독립 커밋이다.
+
+### 10.2 RED → GREEN (`scripts/red_green.py`, 클래스 접미사로 기대 결과 고정)
+RED 대상은 "고치기 전의 작업 트리"가 아니라 불변 릴리스 `dist/vmodel-0.1.3`(core `0208c798…`, `releases/vmodel-0.1.3.json`과 43개 파일 일치)이다. 최종 로그는 깨끗한 `8ac43c8` worktree에서 다시 만들었다(`worktree_dirty: false`).
+
+| 모듈 | 0.1.3 대상 RED | 0.1.4 GREEN |
+|---|---|---|
+| `test_guard_redirects` (F2) | 11/11 기대 충족: Red 5 FAIL, Char 6 통과 | 12/12 (차등 인수 1 포함) |
+| `test_defect_closure` (F1) | 15/15: Red 14 FAIL, Invariant 1 통과 | 15/15 |
+| `test_defect_evidence` (F3) | 29/29: Red 25 FAIL, Char 4 통과 | 29/29 |
+| `test_version_compat` | 2/2: Invariant 2 통과(0.1.3 대 0.1.3) | 3/3 (Accept 1 포함) |
+| 합계 | 57 기대 충족, 위반 0 | 59/59, 위반 0, skip 0 (291초) |
+
+로그: `test-results/v0.1.4/red-*.log`, `green-all.log`. Red는 모두 assertion 실패(FAIL)이며 ERROR로 끝난 것은 없다. 검토 지적으로 추가한 테스트 중 4개는 0.1.3뿐 아니라 직전 수정본(`68f64e7` 전 작업 트리, `817b9aa`, `4c13447`)에서도 실패를 확인한 뒤 고쳤다(WORKITEM §8).
+
+### 10.3 회귀
+- WSL 전체 하네스 162/162(§1). 기존 103개는 기대값을 바꾸지 않았다. 기존 테스트가 고정한 문구(`DEFECT-001 [fixed — verified by R…]`, `does not link failing test(s) of R…`, `failing tests in R… (from the signed ledger): …`, verifier 지침 정규식)는 유지했다.
+- 커밋별: `68f64e7` 115/115(208초), `817b9aa` 157/157(440초), `8ac43c8` 162/162. 모두 깨끗한 worktree.
+- Windows cp949: §1.
+- `claude plugin validate --strict plugins/vmodel` 통과(README 마켓플레이스 설치 줄 권고 경고 1건은 이전과 같음). ruff: 지적 1건(cli.py의 미사용 import `open_context`)은 0.1.3부터 있던 것이고 손대지 않았다.
+
+### 10.4 불변식 (Gate 판정·원장·manifest)
+- 0.1.3 릴리스와 0.1.4에 같은 재작업 이력(무효 인용·미연결 포함 결함, 수정, PASS, 표시 명령, REVIEW_REQUIRED, 전제 조건 BLOCKED)을 돌려 원장 투영(기록 종류, Gate, 상태, blocked_reason, 실패 서명, 체크별 상태, TEST별 결과)이 같음(`GateDecisionInvariant`).
+- 같은 프로젝트에서 두 코어의 `vmodel hash WI G1~G5`(파일별 해시와 manifest 해시)가 같음.
+- status·status --json·lint·report·trace·impact·SessionStart 훅은 원장·head·manifest·Gate 상태를 바꾸지 않음(`DefectClosureInvariant`).
+- 무효 인용만 있는 결함은 0.1.3처럼 재평가 전제 조건에서 BLOCKED(기록 없음)(`DefectEvidenceChar`).
+
+### 10.5 독립 검토 요약 (상세 WORKITEM §8, D36)
+- F2: 주요 1(첫 수정본이 `sed >/dev/null 2>&1 -i …`류 쓰기를 통과시킴, bash로 원장 변조 확인) 외 3건 → 수정. 재검토 퍼저 2,483건에서 0.1.3 대비 손실 0. 0.1.3부터 있던 `x2>&파일` 빈틈 추가 수정. 알려진 오탐 2종은 D36.
+- F3: 주요 2(깨진 증거로 status·lint·report 종료 코드 2, G4 재PASS가 G5 실패 결함을 종료) 외 → 수정. 재검토에서 수정이 만든 회귀 1건(오래된 결과가 최근 UNKNOWN을 가림)과 표현 문제 1건 → 수정, 재재검토 통과.
+- F1: 주요 1(위와 같은 원인의 잘못된 CLOSED) 외 3건 → 수정, 재검토 통과. 반영하지 않은 1건: VERIFIED 이름 변경 제안(사용자 결정 사항).
+
+### 10.6 Validator·Audit 확인: drill-3 실제 원장 (0.1.3 서명, 복사본)
+명령: `python3 -I test-results/v0.1.4/drill3_check.py <drill-3> <work> dist/vmodel-0.1.3 dist/vmodel-0.1.4 <out>`. 결과: `test-results/v0.1.4/drill3-check-0.1.4.json`. 원본 샌드박스(이전 세션 스크래치, 서명 키 포함)는 읽기만 했고 다이제스트가 전후 같다. 앵커도 복사본 경로 이름으로 복사해 롤백 검사를 켠 상태로 확인했다. 모델 호출 없음(G5 재검증은 Validator가 pytest를 직접 실행).
+- 0.1.3 기준선: PARTIALLY_VERIFIED, audit OK, 원장 18건, 증거 기록 6건.
+- 0.1.4로 바꾸면 재고정 전 모든 Gate BLOCKED(무결성). 사용자 TTY 재고정(pty) → 원장에 lock 기록 1건.
+- 재고정 뒤 audit OK, 0.1.3 증거 6건 `verify-evidence` 모두 OK. G1~G5 STALE("validator core changed"), DEFECT-001 `VERIFIED [claimed fixed; verified by R00013 but G5 is now STALE: re-verify]`, lint OK.
+- 0.1.4로 G1~G5 재검증 → 모두 PASSED, `CLOSED [claimed fixed; verified by R00013, G5 PASSED (R00024)]`.
+- P-F1 재확인(통과 뒤 status를 open으로 수정): G4·G5 STALE, `VERIFIED [claimed open; … G5 is now STALE: re-verify]` + `note: defects.json says open, …`. 0.1.3은 같은 상황에서 `[open; verified by R00013]`이었다(`test-results/drill/s3-drill-3/probe-f1-f2.json`).
+- P-F2 재확인(TEST-011·012 링크 제거): `WARNING [unlinked_failing_test] … TEST-011, TEST-012`, lint 종료 코드 1, 경고 1건.
+- 복원 후 CLOSED, 최종 audit OK(원장 24건, 증거 8건). 이전 18줄은 바이트 그대로이고, 기존 gate 기록은 모두 `0.1.3`/`0208c798…`, 새 기록은 `0.1.4`.
+
+### 10.7 릴리스
+- `python3 scripts/release.py` → `dist/vmodel-0.1.4/`(43개 파일, core `sha256:b1fee43f…`), `releases/vmodel-0.1.4.json`. 검토 반영으로 공개 전 한 번 `--force` 재빌드했다(첫 빌드 core `d53ca7c0…`는 버림, 기록 파일은 최종본만 커밋).
+- 0.1.0~0.1.3 릴리스 사본 43개 파일씩 각 기록과 해시 일치, `releases/vmodel-0.1.0~0.1.3.json` git 변경 없음, 태그 `v0.1.2`·`v0.1.3` 그대로.
+
+### 10.8 미검증·한계
+- 0.1.4로 실제 Claude 세션(헤드리스·대화형)을 돌리지 않았다. guard 변경이 실제 세션의 auto 권한 분류기와 함께 어떻게 동작하는지는 미검증이다(하네스는 훅을 CLI로 직접 호출). 비용 승인 후 선택 사항.
+- guard 알려진 오탐 2종과 두 버전 공통 미탐 목록(D36). guard는 최선 노력 보호다.
+- Windows `NUL`·PowerShell `$null` 리디렉션 허용은 범위 밖(차단 유지).
+- 0.1.4로 재고정한 프로젝트를 0.1.3으로 열면 무결성 BLOCKED다(코드상 동작, 실측은 업그레이드 방향만).
+- Python 3.11 미검증(§6과 같음).

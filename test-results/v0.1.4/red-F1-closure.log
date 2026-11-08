@@ -7,13 +7,13 @@
       "core_hash": "sha256:0208c7988516f050d2eabf8c50704d9e36be7c4d6eb94b4ff098dc7c2c73e0ea"
     }
   },
-  "git_head": "2d4f5c6",
-  "worktree_dirty": true,
+  "git_head": "8ac43c8",
+  "worktree_dirty": false,
   "python": "3.12.3",
   "tests": 15,
   "expectations_met": 15,
   "violations": 0,
-  "seconds": 84.5
+  "seconds": 87.3
 }
 
 OK  expect=FAIL got=FAIL    test_defect_closure.DefectClosureBlockedRed.test_blocked_gate_does_not_say_re_verify
@@ -28,13 +28,13 @@ OK  expect=FAIL got=FAIL    test_defect_closure.DefectClosureRed.test_invalid_or
 OK  expect=FAIL got=FAIL    test_defect_closure.DefectClosureRed.test_open_and_fix_applied_before_verification
       AssertionError: Tuples differ: (None, None) != ('OPEN', None)
 OK  expect=FAIL got=FAIL    test_defect_closure.DefectClosureRed.test_report_shows_the_same_closure_state_as_status
-      AssertionError: 'closure: CLOSED' not found in '# WI-001 — 단어 빈도 기능\n\n- Status: **PARTIALLY_VERIFIED** (profile STANDARD)\n- Generated: 2026-11-08T16:15:54+00:00 by vmodel 0.1.3 (release, core `0208c7988516`)\n- Validator integrity: OK; ledger: OK\n\n> MVP scope: only G1-G5 are implemented. G6 (integration) and G7 (system) are extension gates, so a work item can reach PARTIALLY_VERIFIED at most. 
+      AssertionError: 'closure: CLOSED' not found in '# WI-001 — 단어 빈도 기능\n\n- Status: **PARTIALLY_VERIFIED** (profile STANDARD)\n- Generated: 2026-11-08T16:41:10+00:00 by vmodel 0.1.3 (release, core `0208c7988516`)\n- Validator integrity: OK; ledger: OK\n\n> MVP scope: only G1-G5 are implemented. G6 (integration) and G7 (system) are extension gates, so a work item can reach PARTIALLY_VERIFIED at most. 
 OK  expect=FAIL got=FAIL    test_defect_closure.DefectClosureRed.test_source_change_after_closure_shows_verified_not_closed
       AssertionError: Tuples differ: (None, None, 'R00015') != ('VERIFIED', 'STALE', 'R00015')
 OK  expect=FAIL got=FAIL    test_defect_closure.DefectClosureRed.test_upstream_artifact_change_keeps_it_from_closed
       AssertionError: None != 'VERIFIED'
 OK  expect=FAIL got=FAIL    test_defect_closure.DefectClosureReviewRed.test_claim_note_appears_in_the_report
-      AssertionError: 'note: defects.json says open' not found in '# WI-001 — 단어 빈도 기능\n\n- Status: **PARTIALLY_VERIFIED** (profile STANDARD)\n- Generated: 2026-11-08T16:16:10+00:00 by vmodel 0.1.3 (release, core `0208c7988516`)\n- Validator integrity: OK; ledger: OK\n\n> MVP scope: only G1-G5 are implemented. G6 (integration) and G7 (system) are extension gates, so a work item can reach PARTIALLY_VERIF
+      AssertionError: 'note: defects.json says open' not found in '# WI-001 — 단어 빈도 기능\n\n- Status: **PARTIALLY_VERIFIED** (profile STANDARD)\n- Generated: 2026-11-08T16:41:28+00:00 by vmodel 0.1.3 (release, core `0208c7988516`)\n- Validator integrity: OK; ledger: OK\n\n> MVP scope: only G1-G5 are implemented. G6 (integration) and G7 (system) are extension gates, so a work item can reach PARTIALLY_VERIF
 OK  expect=FAIL got=FAIL    test_defect_closure.DefectClosureReviewRed.test_failure_after_the_pass_is_verified_not_closed
       AssertionError: Tuples differ: (None, None) != ('VERIFIED', 'FAILED')
 OK  expect=FAIL got=FAIL    test_defect_closure.DefectClosureReviewRed.test_ledger_failure_is_unknown_not_unverified
