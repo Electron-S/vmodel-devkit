@@ -373,15 +373,15 @@ def defect_trace(entries: list[Entry], wi: str, defects: list[dict],
             warnings.append({**w, "records": recs})
         # per TEST the latest cited G5 result counts: an older run's results never hide a newer run's UNKNOWNs
         runs = sorted((c for c in ok if c["test_results"] != "not_applicable"), key=lambda c: by_id[c["record"]].seq)
-        latest: dict[str, bool] = {}  # TEST id -> result unknown in the latest cited run that names it
+        latest: dict[str, str | None] = {}  # TEST id -> the latest cited run naming it as UNKNOWN (None: result known)
         for c in runs:
-            latest.update({t: False for t in c.get("recorded_tests") or []})
-            latest.update({t: True for t in c["unknown_tests"]})
-        unknown = sorted(t for t, u in latest.items() if u)
+            latest.update({t: None for t in c.get("recorded_tests") or []})
+            latest.update({t: c["record"] for t in c["unknown_tests"]})
+        unknown = sorted(t for t, r in latest.items() if r)
         no_results = bool(runs) and runs[-1]["test_results"] == "unknown" and not runs[-1]["unknown_tests"]
-        unsure = [c for c in runs if c["test_results"] in ("unknown", "partial")]
         if unknown or no_results:
-            recs = [c["record"] for c in unsure]
+            named = set(latest.values()) | ({runs[-1]["record"]} if no_results else set())
+            recs = [c["record"] for c in runs if c["record"] in named]
             w = _problem("unknown_test_result", recs[0] if len(recs) == 1 else None,
                          f"{did}: per-TEST results of {', '.join(recs)} are UNKNOWN (not executed or not recorded): "
                          + (", ".join(unknown) or "no per-TEST results recorded"), unknown)

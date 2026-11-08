@@ -213,6 +213,19 @@ class DefectTestResultsRed(unittest.TestCase):
         self.assertIn("WARNING [unknown_test_result]", report.split("## Defect trace check", 1)[-1])
         self.assertIn(f"failing tests in {res['record_id']} (from the signed ledger): none; UNKNOWN", report)
 
+    def test_unknown_warning_names_only_the_runs_that_still_decide(self):
+        self.sb.advance("G4")
+        self.set_argv(["{python}", "-c", "import sys; sys.exit(1)", "{junit}"])
+        first, _, _ = self.run_g5()
+        self.sb.add_defect(first["record_id"], "G5", related=["REQ-001"])
+        self.sb.regate_g4()
+        second = self.sb.gate("G5")[1]
+        self.assertEqual(second["status"], "FAILED")
+        self.sb.add_defect(second["record_id"], "G5")
+        warns = self.defect().get("warnings") or []
+        self.assertEqual([(w.get("category"), w.get("records"), w.get("tests")) for w in warns],
+                         [("unknown_test_result", [second["record_id"]], UNIT_TESTS)])
+
     def test_g4_review_reject_is_not_applicable(self):
         self.sb.advance("G3")
         self.sb.put_code()
