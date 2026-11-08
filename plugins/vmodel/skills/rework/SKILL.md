@@ -20,8 +20,10 @@ Run every VM call as its own Bash command (no `VM=` variables, `;`/`&&` chains o
 4. Fix at the root-cause phase and update every affected artifact downstream. In the same step set the defect `status`
    to `fixed` — before the re-review: `defects.json` is a G4/G5 input, so editing it after a gate passed makes G4/G5
    STALE again and costs another review. `fixed` is only your claim (shown as FIX_APPLIED); the validator proves the
-   closure: `VM status` shows the defect CLOSED, "verified by <record>", once the gate passes. VERIFIED means that
-   gate passed after the failure but is no longer PASSED (e.g. STALE): re-run it. Never relax, skip or delete a test to make it pass. If a test
+   closure: `VM status` shows the defect CLOSED, "verified by <record>", once the gate passes. Other states are not
+   closed: REVERIFY_REQUIRED (it passed once, but the gate is not PASSED now, e.g. STALE: re-run it),
+   VERIFICATION_FAILED (the re-verification failed: cite that record and rework), UNKNOWN (ledger or evidence integrity
+   failed: stop and report). Never relax, skip or delete a test to make it pass. If a test
    really is wrong, change it and add `test_changes` (file, since_record = baseline record id named by the validator,
    reason, requirements, impact) to the defect.
 5. `VM lint $ARGUMENTS` (ERROR: invalid citations, evidence integrity; WARNING: failing TEST ids the defect does

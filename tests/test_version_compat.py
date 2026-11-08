@@ -127,7 +127,7 @@ class OldEvidenceAccept(unittest.TestCase):
                 self.assertIn("validator core changed since this PASS", gates[g]["notes"])
             d = sb.status()["work_items"][0]["defects"][0]
             self.assertEqual((d["verified_by"], d.get("closure_state"), d.get("closure_gate_status")),
-                             (passed["record_id"], "VERIFIED", "STALE"))
+                             (passed["record_id"], "REVERIFY_REQUIRED", "STALE"))  # D37 (was VERIFIED)
 
             # re-verification with the new core: new records carry the new version, old ones are untouched
             for g in GATES:

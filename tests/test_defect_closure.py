@@ -1,4 +1,5 @@
-"""v0.1.4 F1: derived defect closure state OPEN / FIX_APPLIED / VERIFIED / CLOSED (D32 option C, D36).
+"""v0.1.4 F1: derived defect closure state (D32 option C, D36; state names revised by D37: the former VERIFIED is now
+REVERIFY_REQUIRED or VERIFICATION_FAILED, a withheld verification is UNKNOWN, see test_defect_display_states.py).
 
 defects.json keeps `open` / `fixed` (the agent's claim). The validator derives the closure from the signed ledger and
 the *current* gate state, so a past "verified by" no longer reads as valid once the gate went STALE (drill-3 P-F1).
@@ -32,7 +33,7 @@ class DefectClosureRed(FailedG5Case):
         self.assertTrue(self.defect_line().startswith("DEFECT-001 CLOSED"), self.defect_line())
 
     def test_source_change_after_closure_shows_verified_not_closed(self):
-        """P-F1 reproduced: G4/G5 STALE after the closure -> VERIFIED with the current gate state, not CLOSED."""
+        """P-F1 reproduced: G4/G5 STALE after the closure -> REVERIFY_REQUIRED (D37; was VERIFIED), not CLOSED."""
         res = self.close_defect()
         wf = self.s["wf"]
         wf.write_bytes(wf.read_bytes() + b"\n")
@@ -40,9 +41,9 @@ class DefectClosureRed(FailedG5Case):
         self.assertEqual((g["G4"], g["G5"]), ("STALE", "STALE"))
         d = self.defect()
         self.assertEqual((d.get("closure_state"), d.get("closure_gate_status"), d["verified_by"]),
-                         ("VERIFIED", "STALE", res["record_id"]))
+                         ("REVERIFY_REQUIRED", "STALE", res["record_id"]))
         line = self.defect_line()
-        self.assertTrue(line.startswith("DEFECT-001 VERIFIED"), line)
+        self.assertTrue(line.startswith("DEFECT-001 REVERIFY_REQUIRED"), line)
         self.assertIn("G5 is now STALE", line)
         self.assertIn("re-verify", line)
         self.assertNotIn("CLOSED", line)
@@ -54,7 +55,7 @@ class DefectClosureRed(FailedG5Case):
         self.sb.save("tests.json", tests)
         self.assertEqual(self.gates()["G3"], "STALE")
         d = self.defect()
-        self.assertEqual(d.get("closure_state"), "VERIFIED")
+        self.assertEqual(d.get("closure_state"), "REVERIFY_REQUIRED")
         self.assertNotEqual(d.get("closure_gate_status"), "PASSED")
 
     def test_claim_open_but_verified_is_annotated(self):
@@ -77,15 +78,15 @@ class DefectClosureRed(FailedG5Case):
         self.assertIn("closure: CLOSED", report)
         wf = self.s["wf"]
         wf.write_bytes(wf.read_bytes() + b"\n")
-        self.assertEqual(self.defect().get("closure_state"), "VERIFIED")
+        self.assertEqual(self.defect().get("closure_state"), "REVERIFY_REQUIRED")
         report = self.report()
-        self.assertIn("closure: VERIFIED", report)
+        self.assertIn("closure: REVERIFY_REQUIRED", report)
         self.assertIn("G5 is now STALE", report)
         self.assertNotIn("closure: CLOSED", report)
 
     def test_invalid_or_withheld_verification_is_never_closed(self):
         """Closure follows only valid failure evidence (F3): a PASSED record cited as 'failure', or a verifying PASS
-        whose evidence no longer matches the ledger, must not produce VERIFIED/CLOSED."""
+        whose evidence no longer matches the ledger, must not produce a verified state (D37: the latter is UNKNOWN)."""
         self.sb.add_defect(self.s["g4_pass"], "G4", status="fixed")
         self.s["wf"].write_text(self.s["good"], encoding="utf-8")
         self.gate_g4()
@@ -97,7 +98,7 @@ class DefectClosureRed(FailedG5Case):
         ev = self.sb.root / res["evidence"][0]["path"]
         (ev.parent / "stdout.bin").write_bytes(b"edited output")
         d = self.defect()
-        self.assertEqual((d.get("closure_state"), d["verified_by"]), ("FIX_APPLIED", None))
+        self.assertEqual((d.get("closure_state"), d["verified_by"]), ("UNKNOWN", None))
         self.assertIn("withheld", self.defect_line())
 
 
@@ -129,15 +130,15 @@ class DefectClosureReviewRed(FailedG5Case):
                          ("CLOSED", first["record_id"], again["record_id"]))
         self.assertIn(f"G5 PASSED ({again['record_id']})", self.defect_line())
 
-    def test_failure_after_the_pass_is_verified_not_closed(self):
+    def test_failure_after_the_pass_is_verified_not_closed(self):  # D37: VERIFICATION_FAILED (was VERIFIED)
         self.close_defect()
         wf = self.s["wf"]
         wf.write_text(self.s["good"].replace("if n <= 0:", "if n < 0:"), encoding="utf-8")
         self.gate_g4()
         self.assertEqual(self.sb.gate("G5")[1]["status"], "FAILED")
         d = self.defect()
-        self.assertEqual((d.get("closure_state"), d.get("closure_gate_status")), ("VERIFIED", "FAILED"))
-        self.assertIn("G5 is now FAILED", self.defect_line())
+        self.assertEqual((d.get("closure_state"), d.get("closure_gate_status")), ("VERIFICATION_FAILED", "FAILED"))
+        self.assertIn("G5 re-verification", self.defect_line())
 
     def test_ledger_failure_is_unknown_not_unverified(self):
         self.close_defect()
@@ -162,7 +163,7 @@ class DefectClosureReviewRed(FailedG5Case):
         wf.write_bytes(wf.read_bytes() + b"\n")
         code, out = self.sb.hook("session-start", {"hook_event_name": "SessionStart", "cwd": str(self.sb.root)})
         self.assertEqual(code, 0, out)
-        self.assertIn("DEFECT-001 VERIFIED", out)
+        self.assertIn("DEFECT-001 REVERIFY_REQUIRED", out)
         self.assertIn("G5 is now STALE", out)
 
 
@@ -184,7 +185,7 @@ class DefectClosureBlockedRed(unittest.TestCase):
             init_py.write_text(init_py.read_text(encoding="utf-8") + "# changed core\n", encoding="utf-8")
             st = sb.status()
             d = st["work_items"][0]["defects"][0]
-            self.assertEqual((d.get("closure_state"), d.get("closure_gate_status")), ("VERIFIED", "BLOCKED"))
+            self.assertEqual((d.get("closure_state"), d.get("closure_gate_status")), ("REVERIFY_REQUIRED", "BLOCKED"))
             line = [ln.strip() for ln in sb.vm("status", "WI-001")[1].splitlines()
                     if ln.strip().startswith("DEFECT-001")][0]
             self.assertIn("resolve the block", line)
