@@ -316,8 +316,8 @@ def defect_trace(entries: list[Entry], wi: str, defects: list[dict],
     failing TEST ids the DEFECT does not link, and the closure evidence `verified_by`: the first PASS, after the latest
     cited failure, of the most downstream gate that failed (a G5 PASS also implies G4 passed before it). For the
     display states (status.closure_view) it also keeps `verification_history` (that gate's PASSes since the DEFECT's
-    first cited failure on it, i.e. past successes) and `last_verification` (that gate's latest evaluation since then,
-    with `failure` = is_failure_record). Problems
+    first cited failure on it, i.e. past successes) and `last_verification` (the latest PASSED or failure evaluation,
+    since the first cited failure, of any gate the DEFECT cites a failure of; `failure` = is_failure_record). Problems
     carry the categories of DEFECT_CHECK_CATEGORIES (one per DEFECT and category for the trace warnings): errors =
     evidence integrity and invalid citations, warnings = unlinked failing tests and unknown per-TEST results.
     `evidence_check(path, sha)` returns the problems of an evidence record (an exception counts as a problem); if the
@@ -392,7 +392,7 @@ def defect_trace(entries: list[Entry], wi: str, defects: list[dict],
             warnings.append({**w, "records": recs})
         closure_gate = verified_by = None
         history: list[str] = []  # PASSes of the closure gate since the defect's first failure on it (past successes)
-        attempt: dict | None = None  # the latest evaluation of the closure gate since that failure
+        attempt: dict | None = None  # the latest decisive re-verification of the cited gates since the first failure
         if valid:
             # baseline = the latest cited failure; closure gate = the most downstream gate that failed, from the signed
             # records (not the agent-written `gate`), so a G4 re-pass cannot close a defect whose G5 still fails
@@ -401,15 +401,24 @@ def defect_trace(entries: list[Entry], wi: str, defects: list[dict],
                                key=lambda g: GATE_ORDER.index(g) if g in GATE_ORDER else -1)
             first = min((e for e in valid if str(e.record.get("gate")) == closure_gate), key=lambda e: e.seq)
             for e in gate_entries(entries, wi, closure_gate):
-                if e.seq <= first.seq or e.record.get("type") != "gate":
-                    continue
-                if e.record.get("status") == "PASSED":
+                if e.seq > first.seq and e.record.get("type") == "gate" and e.record.get("status") == "PASSED":
                     history.append(e.id)
                     if verified_by is None and e.seq > last.seq:
                         verified_by = e.id
-                attempt = {"record": e.id, "status": e.record.get("status"), "failure": is_failure_record(e.record)}
-                if e.record.get("blocked_reason"):
-                    attempt["blocked_reason"] = e.record["blocked_reason"]
+            # Decisive = PASSED or a failure record on a gate this DEFECT cites a failure of. REVIEW_REQUIRED and
+            # environment BLOCKED are skipped, as in the 3-strike count (consecutive_same_failures).
+            cited_gates = {str(e.record.get("gate")) for e in valid}
+            start = min(e.seq for e in valid)
+            for e in entries:
+                rec = e.record
+                if (e.seq <= start or rec.get("type") != "gate" or rec.get("work_item") != wi
+                        or str(rec.get("gate")) not in cited_gates):
+                    continue
+                if rec.get("status") == "PASSED" or is_failure_record(rec):
+                    attempt = {"record": e.id, "gate": rec.get("gate"), "status": rec.get("status"),
+                               "failure": is_failure_record(rec)}
+                    if rec.get("blocked_reason"):
+                        attempt["blocked_reason"] = rec["blocked_reason"]
         withheld = None
         if evidence_check is not None:
             relied = {e.id: e for e in [*valid, *([by_id[verified_by]] if verified_by else [])]}

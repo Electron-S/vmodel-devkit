@@ -51,7 +51,7 @@ class DisplayStateRed(FailedG5Case):
         self.assertEqual(d.get("verification_history"), [res["record_id"]])  # past success kept separately
         line = self.defect_line()
         self.assert_not_done(line)
-        self.assertIn(f"previously verified by {res['record_id']}", line)
+        self.assertIn(f"previously passed in {res['record_id']}", line)
         self.assertIn("G5 is now STALE", line)
         self.assertIn("re-verify", line)
 
@@ -79,7 +79,7 @@ class DisplayStateRed(FailedG5Case):
         line = self.defect_line()
         self.assert_not_done(line)
         self.assertIn(again["record_id"], line)
-        self.assertIn(f"previously verified by {res['record_id']}", line)
+        self.assertIn(f"previously passed in {res['record_id']}", line)
 
     def test_failed_fix_attempt_is_verification_failed_until_a_pass(self):
         """Claimed fixed, re-evaluated, FAILED again: not FIX_APPLIED (that reads as 'awaiting verification')."""
@@ -134,7 +134,7 @@ class DisplayStateRed(FailedG5Case):
         wf.write_bytes(wf.read_bytes() + b"\n")
         report = self.report()
         self.assertIn("closure: REVERIFY_REQUIRED", report)
-        self.assertIn(f"DEFECT-001 [fixed — previously verified by {res['record_id']}", report)
+        self.assertIn(f"DEFECT-001 [fixed — previously passed in {res['record_id']}", report)
         self.assertNotIn("closure: VERIFIED", report)
         self.assertNotIn("closure: CLOSED", report)
         code, out = self.sb.hook("session-start", {"hook_event_name": "SessionStart", "cwd": str(self.sb.root)})
@@ -195,6 +195,139 @@ class DisplayStateSkillWordingRed(unittest.TestCase):
             self.assertNotRegex(text, r"\bVERIFIED means\b", name)
 
 
+class DisplayStateReviewRed(FailedG5Case):
+    """Findings of the independent review of 73d158e (2026-11-09), reproduced before the fix (they also fail there)."""
+
+    def state(self) -> str:
+        return self.defect().get("closure_state")
+
+    def reject_g4(self) -> str:
+        self.sb.review("G4", verdict="reject")
+        res = self.sb.gate("G4")[1]
+        self.assertEqual(res["status"], "FAILED", res)
+        return res["record_id"]
+
+    def test_upstream_failure_cited_after_the_closure_is_verification_failed(self):
+        """Finding 1: the defect itself cites a later G4 failure -> the fix no longer verifies, not 'not verified yet'."""
+        res = self.close_defect()
+        g4_fail = self.reject_g4()
+        self.sb.add_defect(g4_fail, "G4")
+        d = self.defect()
+        self.assertEqual(d.get("closure_state"), "VERIFICATION_FAILED")
+        self.assertEqual(((d.get("last_verification") or {}).get("record"), (d.get("last_verification") or {}).get("gate")),
+                         (g4_fail, "G4"))
+        line = self.defect_line()
+        self.assertIn(f"G4 re-verification {g4_fail} FAILED", line)
+        self.assertIn(f"previously passed in {res['record_id']}", line)
+
+    def test_claimed_fix_rejected_at_g4_is_verification_failed_until_it_passes(self):
+        """Finding 1: the claimed fix is rejected by the G4 review and that failure is cited."""
+        self.sb.add_defect(self.failed, "G5", related=["REQ-002", *self.failing], status="fixed")
+        self.s["wf"].write_text(self.s["good"], encoding="utf-8")
+        g4_fail = self.reject_g4()
+        self.sb.add_defect(g4_fail, "G4")
+        self.assertEqual(self.state(), "VERIFICATION_FAILED")
+        self.gate_g4()
+        self.assertEqual(self.state(), "FIX_APPLIED")  # the re-verification moved past G4; G5 not re-run yet
+        self.assertEqual(self.sb.gate("G5")[1]["status"], "PASSED")
+        self.assertEqual(self.state(), "CLOSED")
+
+    def test_review_required_after_a_failed_reverification_does_not_reset_it(self):
+        """Finding 4: REVIEW_REQUIRED is neutral (as for the 3-strike counter); the last decisive result is the failure."""
+        self.s["wf"].write_text(self.s["good"], encoding="utf-8")
+        first = self.reject_g4()
+        self.sb.add_defect(first, "G4", status="fixed")
+        second = self.reject_g4()
+        self.assertEqual(self.state(), "VERIFICATION_FAILED")
+        self.sb.add_defect(second, "G4")  # changes defects.json, so the next G4 run lacks a matching review
+        res = self.sb.gate("G4")[1]
+        self.assertEqual(res["status"], "REVIEW_REQUIRED", res)
+        d = self.defect()
+        self.assertEqual((d.get("closure_state"), (d.get("last_verification") or {}).get("record")),
+                         ("VERIFICATION_FAILED", second))
+
+    def test_withheld_pass_is_not_shown_as_a_past_success(self):
+        """Finding 3: a PASS whose evidence does not match the ledger is named as withheld, not as 'previously ...'."""
+        res = self.close_defect()
+        ev = self.sb.root / res["evidence"][0]["path"]
+        (ev.parent / "stdout.bin").write_bytes(b"edited output")
+        self.s["wf"].write_text(self.s["good"].replace("if n <= 0:", "if n < 0:"), encoding="utf-8")
+        self.gate_g4()
+        self.assertEqual(self.sb.gate("G5")[1]["status"], "FAILED")
+        self.assertEqual(self.state(), "VERIFICATION_FAILED")
+        line = self.defect_line()
+        self.assertNotIn(f"previously verified by {res['record_id']}", line)
+        self.assertNotIn(f"previously passed in {res['record_id']}", line)
+        self.assertIn(f"{res['record_id']} withheld", line)
+        details = [ln for ln in self.report().splitlines() if "closure: VERIFICATION_FAILED" in ln][0]
+        self.assertNotIn(f"previously verified by {res['record_id']}", details)
+        self.assertNotIn(f"previously passed in {res['record_id']}", details)
+
+    def test_verified_by_wording_is_reserved_for_closed(self):
+        """'verified by R...' must mean 'verified now': a past PASS of a STALE gate is worded differently."""
+        res = self.close_defect()
+        self.assertIn(f"verified by {res['record_id']}", self.defect_line())
+        wf = self.s["wf"]
+        wf.write_bytes(wf.read_bytes() + b"\n")
+        self.assertEqual(self.state(), "REVERIFY_REQUIRED")
+        self.assertNotIn("verified by", self.defect_line())
+        lines = [ln for ln in self.report().splitlines() if "DEFECT-001" in ln or "closure:" in ln]
+        self.assertTrue(lines)
+        for ln in lines:
+            self.assertNotIn("verified by", ln)
+        self.set_defect(status="open")  # claim note in a non-closed state
+        self.assertNotIn("verified by", self.status_text().split("DEFECT-001", 1)[1])
+
+    def test_three_strike_then_user_unblock_says_rework(self):
+        if os.name != "posix":
+            self.skipTest("the user unblock needs a pseudo terminal (POSIX)")
+        self.sb.add_defect(self.failed, "G5", related=["REQ-002", *self.failing], status="fixed")
+        for _ in range(2):
+            self.gate_g4()
+            last = self.sb.gate("G5")[1]
+            self.sb.add_defect(last["record_id"], "G5")
+        self.assertIn("the user must unblock", self.defect_line())
+        out = self.sb.run_tty("unblock", "WI-001", "G5", "--reason", "user reviewed")
+        self.assertIn(b"unblocked", out)
+        self.assertEqual(self.state(), "VERIFICATION_FAILED")
+        line = self.defect_line()
+        self.assertNotIn("unblock", line)
+        self.assertIn("rework", line)
+        self.s["wf"].write_text(self.s["good"], encoding="utf-8")
+        self.gate_g4()
+        self.assertEqual(self.sb.gate("G5")[1]["status"], "PASSED")
+        self.assertEqual(self.state(), "CLOSED")
+
+
+@unittest.skipUnless(has_pytest(), "pytest not installed")
+class DisplayStateReviewBlockedRed(unittest.TestCase):
+    def test_integrity_block_after_a_failed_reverification_does_not_say_unblock(self):
+        """Finding 2: `vmodel unblock` only lifts a 3-strike block; an integrity block must be resolved instead."""
+        sb = Sandbox()
+        try:
+            sb.plugin = copy_plugin(sb.tmp)
+            sb.entry = sb.plugin / "validator" / "vmodel.py"
+            s = fail_g5(sb)
+            sb.add_defect(s["failed"], "G5", related=["REQ-002", *s["failing"]], status="fixed")
+            sb.regate_g4()
+            self.assertEqual(sb.gate("G5")[1]["status"], "FAILED")
+            init_py = sb.plugin / "validator" / "vmodel_validator" / "__init__.py"
+            os.chmod(init_py, 0o644)
+            init_py.write_text(init_py.read_text(encoding="utf-8") + "# changed core\n", encoding="utf-8")
+            d = sb.status()["work_items"][0]["defects"][0]
+            self.assertEqual((d.get("closure_state"), d.get("closure_gate_status")), ("VERIFICATION_FAILED", "BLOCKED"))
+            line = [ln.strip() for ln in sb.vm("status", "WI-001")[1].splitlines()
+                    if ln.strip().startswith("DEFECT-001")][0]
+            self.assertNotIn("unblock", line)
+            self.assertIn("resolve the block", line)
+            sb.vm("report", "WI-001")
+            report = (sb.root / ".vmodel/reports/WI-001.md").read_text(encoding="utf-8")
+            details = [ln for ln in report.splitlines() if "closure: VERIFICATION_FAILED" in ln][0]
+            self.assertNotIn("unblock", details)
+        finally:
+            sb.cleanup()
+
+
 class DisplayStateChar(FailedG5Case):
     """Behaviour that the first 0.1.4 build already had and the new states must keep."""
 
@@ -218,6 +351,26 @@ class DisplayStateChar(FailedG5Case):
         d = self.defect()
         self.assertEqual((d["verified_by"], d["claimed_status"]), (res["record_id"], "fixed"))
         self.assertNotEqual(d.get("closure_state"), "CLOSED")
+
+    def test_another_defects_failure_on_the_closure_gate_is_not_closed(self):
+        """Per gate, not per DEFECT (conservative): a later G5 failure owned by another DEFECT reopens the display."""
+        self.close_defect()
+        self.s["wf"].write_text(self.s["good"].replace("if n <= 0:", "if n < 0:"), encoding="utf-8")
+        self.gate_g4()
+        other = self.sb.gate("G5")[1]
+        self.assertEqual(other["status"], "FAILED")
+        self.sb.add_defect(other["record_id"], "G5", did="DEFECT-002")
+        self.assertNotEqual(self.defect().get("closure_state"), "CLOSED")
+
+    def test_ledger_failure_after_a_failed_reverification_is_unknown(self):
+        self.sb.add_defect(self.failed, "G5", related=["REQ-002", *self.failing], status="fixed")
+        self.gate_g4()
+        self.assertEqual(self.sb.gate("G5")[1]["status"], "FAILED")
+        ledger = self.sb.root / ".vmodel/state/ledger.jsonl"
+        ledger.write_text(ledger.read_text(encoding="utf-8").replace('"status":"FAILED"', '"status":"PASSED"', 1),
+                          encoding="utf-8")
+        d = self.defect()
+        self.assertEqual((d.get("closure_state"), d["verified_by"]), ("UNKNOWN", None))
 
     def test_json_keeps_the_0_1_3_and_0_1_4_keys(self):
         self.sb.add_defect(self.failed, "G5", related=["REQ-002", *self.failing])

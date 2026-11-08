@@ -105,35 +105,50 @@ def closure_view(d: dict, gates: dict[str, dict]) -> dict:
 
     Display only, from the signed ledger and the current gate state; first match wins:
     UNKNOWN              the ledger failed its integrity check: nothing is guessed.
-    VERIFICATION_FAILED  the closure gate's latest evaluation since the DEFECT's first cited failure on it is a failure
-                         (FAILED, or BLOCKED after three identical failures): the fix did not verify (again).
+    VERIFICATION_FAILED  `last_verification` is a failure: among the gates the DEFECT cites failures of, the latest
+                         PASSED-or-failure evaluation since its first cited failure is FAILED or a 3-strike BLOCKED
+                         (REVIEW_REQUIRED and environment BLOCKED are neutral, as in the 3-strike count).
     UNKNOWN              a PASS exists (`verification_withheld`) but its evidence or the cited failure's does not match
                          the signed ledger: neither "verified" nor "not verified" can be stated.
     CLOSED               verified (`verified_by`) and that gate is PASSED for the current inputs (gate_state already
                          requires the upstream gates to be PASSED).
     REVERIFY_REQUIRED    verified once, but that gate is not PASSED now (STALE, REVIEW_REQUIRED, BLOCKED ...).
     FIX_APPLIED / OPEN   no verification yet (claim `fixed` / `open`).
-    `verified_by` and `verification_history` keep the past successes in every state.
+    `verified_by` and `verification_history` keep the past successes in every state. `closure_action` names the
+    next step (re-verify, rework, unblock, resolve_block, check_integrity) or is None. 'verified by' is worded only
+    for CLOSED; past successes read 'previously passed in'.
     """
     vb, gate, claimed = d.get("verified_by"), d.get("closure_gate"), d.get("claimed_status")
     now: dict = gates.get(str(gate)) or {}
     attempt: dict = d.get("last_verification") or {}
-    record = None
+    record = action = None
     if ledger_unverifiable(d):
-        state, now_status = "UNKNOWN", None
+        state, now_status, action = "UNKNOWN", None, "check_integrity"
     elif attempt.get("failure"):
         state, now_status, record = "VERIFICATION_FAILED", now.get("status"), attempt.get("record")
+        failed_now: dict = gates.get(str(attempt.get("gate"))) or {}
+        if failed_now.get("status") != "BLOCKED":
+            action = "rework"
+        elif failed_now.get("blocked_reason") == "three_consecutive_identical_failures":
+            action = "unblock"  # only `vmodel unblock` (user, TTY) lifts it
+        else:
+            action = "resolve_block"  # e.g. validator integrity; `vmodel unblock` does not apply
     elif d.get("verification_withheld"):
-        state, now_status = "UNKNOWN", now.get("status")
+        state, now_status, action = "UNKNOWN", now.get("status"), "check_integrity"
     elif vb:
         state, now_status = ("CLOSED" if now.get("status") == "PASSED" else "REVERIFY_REQUIRED"), now.get("status")
         record = now.get("record_id")
+        if state == "REVERIFY_REQUIRED":
+            action = "resolve_block" if now_status == "BLOCKED" else "re-verify"
     else:
         state, now_status = ("FIX_APPLIED" if claimed == "fixed" else "OPEN"), None
-    note = (f"defects.json says open, but the ledger shows the fix verified by {vb}"
-            if vb and claimed == "open" and state in ("CLOSED", "REVERIFY_REQUIRED") else None)
+    note = None
+    if vb and claimed == "open" and state == "CLOSED":
+        note = f"defects.json says open, but the ledger shows the fix verified by {vb}"
+    elif vb and claimed == "open" and state == "REVERIFY_REQUIRED":
+        note = f"defects.json says open, but the ledger shows the fix passed {gate} in {vb} (no longer current)"
     return {"closure_state": state, "closure_gate_status": now_status, "closure_gate_record": record,
-            "claim_note": note}
+            "closure_action": action, "claim_note": note}
 
 
 def render_problem(p: dict) -> str:
@@ -189,18 +204,25 @@ def _now_passed(d: dict) -> str:
 
 
 def _previously(d: dict) -> str:
-    """The past successes, never worded as a current state: 'previously verified by R1 (last PASS R5)'."""
-    hist = d.get("verification_history") or []
+    """Past successes, never worded as a current state ('verified by' is reserved for CLOSED):
+    'previously passed in R1 (last PASS R5)'. A withheld PASS (evidence mismatch) is not a past success."""
+    withheld = d.get("verification_withheld")
+    hist = [r for r in d.get("verification_history") or [] if r != withheld]
     first = d.get("verified_by") or (hist[0] if hist else None)
     if not first:
         return ""
-    return f"previously verified by {first}" + (f" (last PASS {hist[-1]})" if hist and hist[-1] != first else "")
+    return f"previously passed in {first}" + (f" (last PASS {hist[-1]})" if hist and hist[-1] != first else "")
+
+
+def _withheld(d: dict) -> str:
+    w = d.get("verification_withheld")
+    return f"PASS {w} withheld (its evidence or the cited failure's does not match the signed ledger)" if w else ""
 
 
 def _failed_attempt(d: dict) -> str:
     a = d.get("last_verification") or {}
     why = f" ({a['blocked_reason']})" if a.get("blocked_reason") else ""
-    return f"{d.get('closure_gate')} re-verification {a.get('record')} {a.get('status')}{why}"
+    return f"{a.get('gate') or d.get('closure_gate')} re-verification {a.get('record')} {a.get('status')}{why}"
 
 
 def closure_text(d: dict) -> str:
@@ -212,10 +234,12 @@ def closure_text(d: dict) -> str:
                     "cited failure's does not match the signed ledger)")
         return "verification cannot be determined: the ledger failed its integrity check"
     if state == "VERIFICATION_FAILED":
-        prev = _previously(d)
-        what = "the user must unblock" if now == "BLOCKED" else "rework"
-        withheld = f", {d['verification_withheld']} withheld" if d.get("verification_withheld") else ""
-        return f"{_failed_attempt(d)}{', ' + prev if prev else ''}{withheld}: {what}"
+        extra = "".join(f", {x}" for x in (_previously(d), _withheld(d)) if x)
+        failed_gate = (d.get("last_verification") or {}).get("gate") or gate
+        what = {"unblock": "the user must unblock (three identical failures)",
+                "resolve_block": f"{failed_gate} is now BLOCKED: resolve the block first"}.get(d.get("closure_action"),
+                                                                                             "rework")
+        return f"{_failed_attempt(d)}{extra}: {what}"
     if state == "REVERIFY_REQUIRED":
         return (f"{_previously(d)}, {gate} is now BLOCKED: resolve the block first" if now == "BLOCKED"
                 else f"{_previously(d)}, {gate} is now {now}: re-verify")
@@ -386,10 +410,12 @@ def report_closure_details(d: dict) -> list[str]:
     elif state == "CLOSED":
         why = f"verified by {vb} and {_now_passed(d)} for the current inputs"
     elif state == "VERIFICATION_FAILED":
+        failed_gate = (d.get("last_verification") or {}).get("gate") or gate
         why = (f"{_failed_attempt(d)} after the cited failure, so the fix is not verified"
                + (f" ({prev}; that success no longer stands)" if prev else "")
-               + ("; the gate is BLOCKED until the user unblocks it" if now == "BLOCKED"
-                  else "; record the failure in a DEFECT, fix and re-verify"))
+               + {"unblock": f"; {failed_gate} is BLOCKED after three identical failures until the user unblocks it",
+                  "resolve_block": f"; {failed_gate} is now BLOCKED (see the gate's reasons): resolve the block first"
+                  }.get(d.get("closure_action"), "; record the failure in a DEFECT, fix and re-verify"))
     elif state == "REVERIFY_REQUIRED" and now == "BLOCKED":
         why = (f"{prev}, but {gate} is now BLOCKED; resolve the block (see the gate's reasons), then re-verify "
                "before treating the defect as closed")
@@ -400,7 +426,7 @@ def report_closure_details(d: dict) -> list[str]:
     else:
         why = "not fixed and not verified yet"
     if d.get("verification_withheld") and state != "UNKNOWN":
-        why += f" ({d['verification_withheld']} withheld: its evidence does not match the signed ledger)"
+        why += f" ({_withheld(d)})"
     out = [f"closure: {state} — {why}"]
     if d.get("claim_note"):
         out.append(f"note: {d['claim_note']}")
