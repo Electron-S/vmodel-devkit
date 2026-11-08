@@ -20,9 +20,13 @@ WRITE_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit"}
 READ_TOOLS = {"Read"}
 SHELL_TOOLS = {"Bash", "PowerShell"}
 SHELL_META = re.compile(r"[;&|`<>]|\$\(")
-# Commands that write, move or delete (POSIX shell, Git, PowerShell/cmd). "2>&1" is not a write.
+# Commands that write, move or delete (POSIX shell, Git, PowerShell/cmd). fd duplication ("2>&1", ">&2", "2>&-") is
+# not a write; "&>file", "&>>file", ">&file", "1>&file" and "x2>&file" (digits ending an ordinary word) are, as bash
+# creates the file ("2>&file" is an error).
 WRITE_VERBS = re.compile(
-    r"(?<![0-9&])>(?!&)|[0-9]>(?!&)|\b(rm|rmdir|mv|cp|touch|tee|truncate|chmod|chown|ln|mkdir|dd|install|patch|"
+    r"(?<![0-9&])>(?!&)|[0-9]>(?!&)|&>|(?<![02-9])>&(?![ \t]*(?:[0-9]+|-)(?=$|[ \t\n;&|)<>]))|"
+    r"(?<=[^\s;&|()<>0-9])[0-9]+>&(?![ \t]*(?:[0-9]+|-)(?=$|[ \t\n;&|)<>]))|"
+    r"\b(rm|rmdir|mv|cp|touch|tee|truncate|chmod|chown|ln|mkdir|dd|install|patch|"
     r"unlink|shred|rsync|tar|unzip)\b|sed\s+(-[a-zA-Z]*i|--in-place)|python[0-9.]*(\.exe)?\s+-c|\bperl\b|"
     r"\bfind\b[^|;&]*-(delete|exec)|git\s+(clean|checkout|restore|stash|reset|rm|mv|apply|am|switch)\b|"
     r"Remove-Item|Set-Content|Out-File|Add-Content|New-Item|Move-Item|Copy-Item|Clear-Content|Rename-Item|"
@@ -31,6 +35,25 @@ REPO_WIDE_DESTRUCTIVE = re.compile(
     r"git\s+clean\b|\bfind\b[^|;&]*-delete|\brm\s+(-[a-zA-Z]+\s+)*(\.|\./|\*|\./\*|\.\*)(\s|$)", re.IGNORECASE)
 USER_ONLY = re.compile(r"vmodel(\.cmd)?[\"']?\s+(init|install|uninstall|unblock)\b|accept-current", re.IGNORECASE)
 VERIFIER_WRITE_VERBS = WRITE_VERBS
+# Bash redirections that cannot write a file (D36): output to exactly /dev/null, fd duplication or closing, and plain
+# input redirection. They are removed before the write checks, so they neither count as writes nor hide a write verb
+# from its flag (e.g. "sed >/dev/null 2>&1 -i ..."). A target must end at a bash word break (space, tab, newline,
+# ;&|) or the end): '/dev/null"x"', '/dev/null`..`', '/dev/null$X', '/dev/null#c', '/dev/null/..' and '/dev/null\r'
+# name other paths, and a quoted "/dev/null" is not recognised, so those stay writes.
+NON_WRITING_REDIRECT = re.compile(
+    r"(?:&>>?|>&|[0-9]*>>?)[ \t]*/dev/null(?=$|[ \t\n;&|)])"
+    r"|[0-9]*[<>]&[ \t]*(?:[0-9]+|-)(?=$|[ \t\n;&|)<>])"
+    r"|[0-9]*<(?![<>&(])[ \t]*[^\s;&|()<>'\"`$]+(?=$|[ \t\n;&|)<>])")
+
+
+def normalize_redirections(cmd: str, tool: str = "Bash") -> str:
+    """The command without non-writing redirections (Bash only: PowerShell resolves /dev/null to a real path)."""
+    return NON_WRITING_REDIRECT.sub(" ", cmd) if tool == "Bash" else cmd
+
+
+def shell_writes(cmd: str, tool: str = "Bash") -> bool:
+    """True if the command may write, move or delete files."""
+    return bool(WRITE_VERBS.search(normalize_redirections(cmd, tool)))
 
 
 def _norm(p: str | os.PathLike) -> str:
@@ -161,7 +184,7 @@ def guard(payload: dict) -> dict | None:
         cmd = str(ti.get("command") or "")
         low = cmd.lower().replace("\\", "/")
         validator_call = _is_validator_call(cmd)
-        writes = bool(WRITE_VERBS.search(cmd))
+        writes = shell_writes(cmd, tool)
         if USER_ONLY.search(cmd):
             return _deny("init/install/uninstall/unblock and 'lock --accept-current' are user-only actions; "
                          "ask the user to run them in a terminal")
@@ -171,7 +194,7 @@ def guard(payload: dict) -> dict | None:
             return None
         if verifier and writes:
             return _deny("the verifier may only run read-only commands and the vmodel CLI")
-        if REPO_WIDE_DESTRUCTIVE.search(cmd):
+        if REPO_WIDE_DESTRUCTIVE.search(cmd) or REPO_WIDE_DESTRUCTIVE.search(normalize_redirections(cmd, tool)):
             return _deny("repository-wide deletion (git clean, find -delete, rm of '.' or '*') would also destroy "
                          "VModel records; delete explicit paths instead")
         if any(m in low for m in _home_markers()):

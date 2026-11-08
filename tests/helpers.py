@@ -16,7 +16,11 @@ import tempfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-PLUGIN = REPO / "plugins" / "vmodel"
+# VMODEL_TEST_PLUGIN points the harness at another plugin copy (e.g. the immutable 0.1.3 release) so that new
+# regression tests can be shown to FAIL on the old core before the fix (scripts/red_green.py). Default: the source.
+PLUGIN = Path(os.environ["VMODEL_TEST_PLUGIN"]).resolve() if os.environ.get("VMODEL_TEST_PLUGIN") \
+    else REPO / "plugins" / "vmodel"
+SOURCE_PLUGIN = REPO / "plugins" / "vmodel"
 SAMPLE = REPO / "samples" / "textstats"
 FIXTURE = REPO / "tests" / "fixtures" / "wordfreq"
 GATES = ["G1", "G2", "G3", "G4", "G5"]
@@ -186,3 +190,94 @@ def copy_plugin(dest_parent: Path) -> Path:
     dest = dest_parent / "plugin copy"
     shutil.copytree(PLUGIN, dest, ignore=shutil.ignore_patterns("__pycache__"))
     return dest
+
+
+# ---------------------------------------------------------------- shared rework scenario (0.1.4 regression tests)
+def fail_g5(sb: Sandbox) -> dict:
+    """G1-G4 PASSED, then a seeded bug in wordfreq.top_n -> G4 re-reviewed PASSED -> G5 FAILED.
+
+    Returns the failed record id, the failing TEST ids read from the signed record's G5.TEST_MAPPING, the G4 PASS
+    record id the G5 run stood on, and the good source to restore.
+    """
+    sb.init()
+    sb.new_wi()
+    sb.advance("G4")
+    wf = sb.root / "src/textstats/wordfreq.py"
+    good = wf.read_text(encoding="utf-8")
+    wf.write_text(good.replace("if n <= 0:", "if n < 0:"), encoding="utf-8")
+    sb.review("G4")
+    g4 = sb.gate("G4")[1]
+    assert g4["status"] == "PASSED", json.dumps(g4, indent=2, ensure_ascii=False)
+    res = sb.gate("G5")[1]
+    assert res["status"] == "FAILED", json.dumps(res, indent=2, ensure_ascii=False)
+    mapping = [c for c in res["checks"] if c["id"] == "G5.TEST_MAPPING"][0]
+    failing = sorted(i.split(":")[0] for i in mapping["items"] if i.endswith((": failed", ": error")))
+    assert failing
+    return {"failed": res["record_id"], "failing": failing, "g4_pass": g4["record_id"], "wf": wf, "good": good,
+            "evidence": res["evidence"]}
+
+
+def fix_and_pass(sb: Sandbox, scenario: dict) -> str:
+    """Restore the good source, re-review G4 and re-run G5 (the defect must already cite the failure)."""
+    scenario["wf"].write_text(scenario["good"], encoding="utf-8")
+    sb.regate_g4()
+    res = sb.gate("G5")[1]
+    assert res["status"] == "PASSED", json.dumps(res, indent=2, ensure_ascii=False)
+    return res["record_id"]
+
+
+# ---------------------------------------------------------------- released plugin copies (cross-version tests)
+_OLD_RELEASES: dict[str, Path | None] = {}
+_CORE_PREFIXES = ("validator/", "hooks/", "bin/")
+
+
+def _sha256(path: Path) -> str:
+    import hashlib
+    return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _matches_record(plugin: Path, record: dict) -> bool:
+    core = {k: v for k, v in record.get("files", {}).items() if k.startswith(_CORE_PREFIXES)}
+    if not core:
+        return False
+    for rel, h in core.items():
+        p = plugin / rel
+        if not p.is_file() or _sha256(p) != h:
+            return False
+    return True
+
+
+def old_release(version: str) -> Path | None:
+    """A plugin copy of an earlier release whose core files match releases/vmodel-<version>.json byte for byte.
+
+    Uses dist/vmodel-<version> when present (dist/ is not tracked), otherwise extracts plugins/vmodel from the git tag
+    v<version>. Returns None when neither is available (e.g. an exported tree without .git); callers skip then.
+    """
+    if version in _OLD_RELEASES:
+        return _OLD_RELEASES[version]
+    found: Path | None = None
+    rec_path = REPO / "releases" / f"vmodel-{version}.json"
+    if rec_path.is_file():
+        record = json.loads(rec_path.read_text(encoding="utf-8"))
+        cand = REPO / "dist" / f"vmodel-{version}"
+        if cand.is_dir() and _matches_record(cand, record):
+            found = cand
+        elif shutil.which("git") and (REPO / ".git").exists():
+            import atexit
+            import io
+            import tarfile
+            r = subprocess.run(["git", "-C", str(REPO), "archive", "--format=tar", f"v{version}", "plugins/vmodel"],
+                               capture_output=True)
+            if r.returncode == 0:
+                dest = Path(tempfile.mkdtemp(prefix=f"vmodel-{version}-"))
+                atexit.register(shutil.rmtree, dest, True)
+                with tarfile.open(fileobj=io.BytesIO(r.stdout)) as tf:
+                    try:
+                        tf.extractall(dest, filter="data")
+                    except TypeError:  # Python without extraction filters
+                        tf.extractall(dest)
+                plugin = dest / "plugins" / "vmodel"
+                if _matches_record(plugin, record):
+                    found = plugin
+    _OLD_RELEASES[version] = found
+    return found

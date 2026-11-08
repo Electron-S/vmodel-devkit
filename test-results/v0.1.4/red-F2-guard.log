@@ -1,0 +1,34 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.1.3",
+    "release_manifest": {
+      "version": "0.1.3",
+      "core_hash": "sha256:0208c7988516f050d2eabf8c50704d9e36be7c4d6eb94b4ff098dc7c2c73e0ea"
+    }
+  },
+  "git_head": "e6fc892",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "tests": 11,
+  "expectations_met": 11,
+  "violations": 0,
+  "seconds": 15.3
+}
+
+OK  expect=FAIL got=FAIL    test_guard_redirects.GuardDevNullRed.test_main_session_reads_with_output_discarded
+      AssertionError: {'cat .vmodel/work-items/WI-001/defects.js[2463 chars]ned'} != {}
+OK  expect=FAIL got=FAIL    test_guard_redirects.GuardDevNullRed.test_verifier_reads_with_output_discarded
+      AssertionError: {'cat src/textstats/wordfreq.py 2>/dev/nul[469 chars]CLI'} != {}
+OK  expect=FAIL got=FAIL    test_guard_redirects.GuardFileRedirectRed.test_ampersand_redirects_into_protected_paths_denied
+      AssertionError: Lists differ: ['echo x &> .vmodel/state/ledger.jsonl', '[179 chars]e/x'] != []
+OK  expect=FAIL got=FAIL    test_guard_redirects.GuardFileRedirectRed.test_redirection_between_verb_and_flag_denied
+      AssertionError: Lists differ: ['sed 2>&1 -i s/a/b/ .vmodel/state/ledger.[151 chars]ete'] != []
+OK  expect=FAIL got=FAIL    test_guard_redirects.GuardFileRedirectRed.test_verifier_ampersand_redirects_to_files_denied
+      AssertionError: Lists differ: ['cat src/textstats/wordfreq.py &> notes.t[135 chars]txt'] != []
+OK  expect=ok   got=ok      test_guard_redirects.GuardWritesChar.test_devnull_between_verb_and_flag_stays_denied
+OK  expect=ok   got=ok      test_guard_redirects.GuardWritesChar.test_fd_duplication_is_not_a_write
+OK  expect=ok   got=ok      test_guard_redirects.GuardWritesChar.test_non_bash_tools_keep_the_old_rule
+OK  expect=ok   got=ok      test_guard_redirects.GuardWritesChar.test_other_rules_ignore_devnull_suffix
+OK  expect=ok   got=ok      test_guard_redirects.GuardWritesChar.test_verifier_writes_stay_denied
+OK  expect=ok   got=ok      test_guard_redirects.GuardWritesChar.test_writes_into_protected_paths_stay_denied
