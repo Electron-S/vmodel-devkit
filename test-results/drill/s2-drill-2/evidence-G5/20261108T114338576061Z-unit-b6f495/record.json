@@ -1,0 +1,103 @@
+{
+  "schema": "vmodel.evidence/1",
+  "work_item": "WI-001",
+  "gate": "G5",
+  "kind": "unit_test",
+  "command": [
+    "/usr/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "-p",
+    "no:cacheprovider",
+    "--junitxml=/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/1ff457c3-a92d-4328-90c9-6e4a8a5312fb/scratchpad/drill-2/한글 드릴 프로젝트/.vmodel/evidence/WI-001/G5/20261108T114338576061Z-unit-b6f495/junit.xml"
+  ],
+  "cwd": ".",
+  "executable": {
+    "requested": "/usr/bin/python3",
+    "resolved": "/usr/bin/python3",
+    "sha256": "sha256:e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f",
+    "version": "Python 3.12.3",
+    "notes": []
+  },
+  "runtime": {
+    "validator_python": "3.12.3",
+    "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+    "machine": "x86_64",
+    "os_name": "posix",
+    "preferred_encoding": "UTF-8"
+  },
+  "started_at": "2026-11-08T11:43:38.582Z",
+  "finished_at": "2026-11-08T11:43:39.079Z",
+  "duration_s": 0.497,
+  "exit_code": 0,
+  "timed_out": false,
+  "start_error": null,
+  "files": {
+    "stdout.bin": {
+      "sha256": "sha256:bd4a0bf23f9265d67e1156e1a17e6e11a03babde789ed92919969784c3c1de48",
+      "bytes": 99
+    },
+    "stderr.bin": {
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "junit.xml": {
+      "sha256": "sha256:0297303e0a54dfece906173ef78ea650a0c170cbd8f04eac057fbb5555e2e8e1",
+      "bytes": 2068
+    }
+  },
+  "git": {
+    "available": true,
+    "head": "8f47f6813598faaf9b1cc957d43e8d939662e6cc",
+    "dirty": true,
+    "note": null
+  },
+  "manifest_hash": "sha256:01473d50371442da021e366b5f277674e24c1af0a15ee6e4e1f2471a8b578fd2",
+  "validator": {
+    "version": "0.1.2",
+    "core_hash": "sha256:a0555e328413d22afeb7f3171d9969e22721f4fc3ee25b3084d9419154876e09"
+  },
+  "junit_summary": {
+    "tests": 18,
+    "passed": 18,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "junit_error": null,
+  "verified_files": {
+    ".claude/settings.json": "sha256:11da97b15f31bcd717ef3d76b1e92084332dcb0eed313914f89e2daf6acd74c9",
+    ".vmodel/config.json": "sha256:1488079f5e4d955f8d2001ba687c8a5e3de20265b2332ff842b2ff795ca6dd03",
+    ".vmodel/work-items/WI-001/architecture.json": "sha256:54ad40395b8b95e94cec842d9554e3082af86fe2e2e5ee96336d61e7972db003",
+    ".vmodel/work-items/WI-001/change-requests.json": "MISSING",
+    ".vmodel/work-items/WI-001/defects.json": "sha256:47540dab02c4b2b615cd245b2359397ef43aca046890b1f55c9dec8798d00355",
+    ".vmodel/work-items/WI-001/design.json": "sha256:42a0f13a7c0fd1c5d055143dcd94112e88d4b87b3d97b88b4f204511019d393b",
+    ".vmodel/work-items/WI-001/requirements.json": "sha256:fd6adde0973dbc045cb0dcb70f0754d6772f9c4ace2c0851f263c706525bb1e5",
+    ".vmodel/work-items/WI-001/tests.json": "sha256:cbffe8d85b60bffdb4cbbe8a61e7ef67f3f5f6dabce505675fdc83219e62ca3a",
+    ".vmodel/work-items/WI-001/workitem.json": "sha256:af6cf1632b4e30c36644d0d0ddc4f7cb4e4a49b8edc42ec3c03ae83eebd63ff8",
+    "README.md": "sha256:bc98dc3595217fbf57fd62edf68e7f1592f3e508b8b2dd4fb853a0d75ac26a44",
+    "pyproject.toml": "sha256:cf0b5fc80e3978272c7f4f7a3d07daa0632549a16bbcc395fc0ddc23f8e2c824",
+    "src/scorestats/__init__.py": "sha256:e5e601afe90cf9ebfa2bb6f6ffe13415760a1baa961d69366e0ded126f079cb0",
+    "src/scorestats/percentile.py": "sha256:8f77b299c01972a0745af0ee4f089f1d2c851bdd980c8f1a2655096685208b32",
+    "tests/test_percentile.py": "sha256:cbdbb909ad2997dbbb3c48852bd293964c41593d5c74f2e83daaf8d3206cf165",
+    "tests/test_smoke.py": "sha256:f9dab1fa2b7297a6eb60eb6e626a6cae4d16def4489b15e4ecc1c3c1d258b4a6"
+  },
+  "environment": {
+    "scrubbed": [
+      "VMODEL_GUARD_LOG",
+      "VMODEL_HOME"
+    ],
+    "set": {
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONPYCACHEPREFIX": "<validator temp>",
+      "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"
+    },
+    "distributions": {
+      "count": 0,
+      "sha256": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "items": []
+    }
+  },
+  "sig": "hmac-sha256:720105b424bde7a0b772b58d60727d7b34258217e0b994e57b4852c610b168fd"
+}

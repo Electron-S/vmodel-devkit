@@ -23,9 +23,13 @@
 - 전부 임시 샌드박스에서만, `--setting-sources project,local`로 사용자 전역 설정 격리
 
 ## 현재 작업
-MVP(M0~M4) 완료. 다음은 사용자 결정 대기: 미검증 항목 처리 여부, Extension 착수 여부, WorkMind 적용 시점. Extension에는 자동 진입하지 않는다.
+MVP(M0~M4) 완료, 0.1.2 기준 버전 태그, 실전 재작업 드릴 완료(2026-11-08). 0.1.3은 하네스로만 검증. 다음은 사용자 결정 대기: 0.1.3 실제 세션 확인(재작업 1회), 남은 미검증 항목, Extension 착수 여부, WorkMind 적용 시점. Extension에는 자동 진입하지 않는다.
+
+## 헤드리스 실행 예산 (실전 재작업 드릴, 사용자 승인 2026-11-08)
+- 승인 3회만: haiku 권한 프로브 1회($0.3 상한) + sonnet S1·S2 각 1회($4 상한). 사용: $0.0025 + $0.70 + $0.33. 추가 실행은 다시 승인.
 
 ## 버전 이력
 - 0.1.0 (releases/vmodel-0.1.0.json): 최초 고정 릴리스. E2E-1에서 사용.
 - 0.1.1 (releases/vmodel-0.1.1.json): 스킬/에이전트가 프로젝트 밖 플러그인 파일을 Read하지 않도록 `vmodel guide <topic>` 추가. E2E-2에서 사용.
-- 0.1.2 (releases/vmodel-0.1.2.json): 단일 명령 규칙(스킬·에이전트), verifier 포기 금지, 설치 시 validator CLI allow 규칙. E2E-3에서 G1~G5 완주. **현재 버전.**
+- 0.1.2 (releases/vmodel-0.1.2.json, 태그 `v0.1.2` → `bbd6a3d`): 단일 명령 규칙(스킬·에이전트), verifier 포기 금지, 설치 시 validator CLI allow 규칙. E2E-3에서 G1~G5 완주, 실전 재작업 드릴(TEST_RESULTS §8)의 기준 버전.
+- 0.1.3 (releases/vmodel-0.1.3.json): 드릴에서 찾은 F1~F4 수정 — 결함 `fixed`는 수정과 함께, 원장 파생 결함 추적(`failing_tests`/`unlinked_failing_tests`/`verified_by`), status에 실패 체크 표시, verifier 원인 대조 체크리스트(D28~D30). 하네스 103/103. **현재 버전, 실제 세션 미검증.**

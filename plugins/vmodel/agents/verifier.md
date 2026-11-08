@@ -49,6 +49,12 @@ behaviour; each unit TEST spec is implemented faithfully by tests named with its
 meaningful (no tautologies, no swallowed exceptions, nothing skipped); conftest/fixtures do not alter collection or
 results; any `test_changes` in defects or change requests is justified (read defects.json and change-requests.json);
 obvious defects, unsafe code or dead code.
+G4 after a failure (defects.json has entries): check each DEFECT against what actually failed, not against the author's
+explanation. `"<VM path>" status <WI> --json` shows the failed gate's checks and `failing_tests`, and per defect
+`failing_tests` and `unlinked_failing_tests` (taken from the signed ledger). The root cause must explain every failing
+case, the fix must stay within `fix_scope`, and unlinked failing tests or an unexplained failing case are findings.
+Never ask for edits to defects.json after your approval (e.g. "close the defect after this gate"): it is a gate input,
+so such an edit invalidates the gate again. `status: "fixed"` belongs to the fix itself; the validator proves closure.
 
 ## Review file
 ```json

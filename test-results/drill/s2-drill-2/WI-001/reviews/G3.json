@@ -1,0 +1,16 @@
+{"gate": "G3", "work_item": "WI-001", "reviewer": "vmodel:verifier", "target_hash": "sha256:44df8a43a890ca695b8726bb6f46f0549710de18adb77cae9dd5f4e26ab54720",
+ "reviewed_at": "2026-11-08T12:00:00Z", "verdict": "approve",
+ "summary": "DESIGN-001 is implementable and its contract (preconditions, postconditions, errors, boundaries) is precise. The integer-arithmetic rank -(-p*N//100) is correct, and the expected values of TEST-001..016 recompute correctly. Unit tests detect the targeted defects (TEST-010 ceil vs floor/round, TEST-011 float error) and the system tests cover AC-001-1..6 and AC-002-1..3. Only minor remarks remain.",
+ "checklist": [
+  {"item": "Units implementable as specified", "result": "ok", "note": "Signature, algorithm and 0-based index r-1 are unambiguous."},
+  {"item": "Contracts precise and complete", "result": "ok", "note": "ValueError conditions (bool/float/str/range/empty) and the 1, 100, N=1 and exact-multiple boundaries are stated."},
+  {"item": "Unit tests can detect contract violations", "result": "ok", "note": "Normal, abnormal and boundary tests have concrete expected values; TEST-010 and TEST-011 target rounding defects; TEST-003 detects in-place sort."},
+  {"item": "Integration specs cover interfaces", "result": "na", "note": "Single component, no interfaces; justified in the architecture."},
+  {"item": "System specs cover every acceptance criterion", "result": "ok", "note": "TEST-013 covers AC-001-1..5, TEST-014 covers AC-001-6, TEST-015 covers AC-002-1..3, TEST-016 covers REQ-003."},
+  {"item": "Nothing designed that no requirement asks for", "result": "ok", "note": "The design only realises REQ-001..003."}
+ ],
+ "findings": [
+  {"id": "F-1", "severity": "minor", "description": "TEST-012 uses 80 -> 5 in [1,5,5,5,9]. Ranks 2, 3 and 4 all give 5, so an off-by-one in the rank cannot be detected. Use duplicate values that are distinguishable at the neighbouring ranks, or add a case where an off-by-one changes the result.", "related": ["TEST-012", "DESIGN-001"], "status": "open"},
+  {"id": "F-2", "severity": "minor", "description": "The behaviour for NaN in scores is undefined (ASM-002 only excludes non-numeric types), and so is the behaviour for a non-ValueError failure on a non-iterable scores argument. This is acceptable as an assumption but not stated in the design contract.", "related": ["ASM-002", "DESIGN-001"], "status": "open"},
+  {"id": "F-3", "severity": "info", "description": "The decision to reject p=50.0 (a float with an integral value) follows REQ-002 (non-integer value) and is tested in TEST-005, but it is not an explicit acceptance criterion. It is consistent across the requirements, design and tests.", "related": ["REQ-002", "TEST-005"], "status": "open"}
+ ]}

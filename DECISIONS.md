@@ -82,3 +82,28 @@ G4는 AST로 테스트 함수 이름만 보고(주석·문자열 불인정), G5�
 - 사용자 결정(`decided_by: "user"`)은 오케스트레이터가 기록하므로 자기 증명이다. 암호학적 결속(TTY 서명 명령)은 UX 비용 때문에 Extension.
 - pty를 쓰는 스크립트, 에이전트가 작성한 python 스크립트 실행 같은 임의 코드 실행은 guard가 문자열로 판별할 수 없다. 서명·앵커·재검증이 탐지 장치이며, 최종 신뢰 경계는 CI/별도 사용자.
 - 프로필은 STANDARD만 생성 가능. 다른 값이 들어 있으면 WI는 COMPLETED가 될 수 없고, 모르는 값이면 BLOCKED.
+
+## D26. 실전 재작업 드릴 설계: 블라인드 시딩 + 에이전트 pytest 차단 (2026-11-08)
+목표는 "실제 Claude 세션에서 테스트 실패 → 결함 → 수정 → 재검증"이다. 실패는 결함 주입으로 만들고, 주입 내용은 실행 전에 세션 밖 파일에 봉인했다(`drill-plan.json`, sha256 기록). 오케스트레이터는 결함을 알지만 verifier·test-designer에게는 표준 프롬프트만 준다(블라인드). S1에서는 `--disallowedTools "Bash(*pytest*)"`로 에이전트의 pytest 실행을 막았다. DevKit 역할 정의상 테스트 실행은 Validator의 G5 몫이고(D12), 막지 않으면 G4 리뷰어가 pytest를 돌려 G5까지 가지 않기 때문이다(E2E-3에서 verifier가 G4 리뷰 중 pytest 실행 확인). 이 규칙이 묶음 명령과 `python3 -I -c "import pytest"`까지 막는지는 haiku 프로브로 먼저 확인했다.
+결과적으로 verifier는 pytest 없이 코드를 손으로 추적해 결함을 잡았다(G4 FAILED). 그래서 G5 경로는 D27 방식으로 확인했다.
+
+## D27. G5 경로는 "놓친 리뷰" 주입 포크로 검증 (2026-11-08)
+G5는 G4 PASSED가 전제이므로, 실제 흐름에서 G5 FAILED는 G4 리뷰가 결함을 놓쳤을 때만 생긴다. S1의 실제 산출물(요구사항~코드·테스트)과 실제 verifier의 G1~G3 리뷰 파일(바이트 동일, 같은 target_hash)을 새 샌드박스로 옮기고, G4 승인 리뷰만 하네스가 썼다. 그 summary에 `[DRILL FAULT INJECTION ...]`을 명시해 두었고, 이 내용은 원장 해시에 묶인다. 이 상태에서 Validator가 실제 pytest를 돌려 G5 FAILED를 기록했고, 이어서 시딩 사실을 모르는 새 Claude 세션(S2)이 `/vmodel:rework`로 재작업을 수행했다. 주입은 G4 승인 하나뿐이며, 이후의 G4 재리뷰는 실제 verifier가 했다.
+기각한 대안: (a) 시딩 결함을 리뷰어가 못 보게 위장하기 — 실험 조작이고, 통한다는 보장도 없다. (b) verifier 모델 교체 — 검증 대상인 플러그인을 바꾸는 것이다.
+
+## D28. 결함 종료(`status: fixed`)는 수정과 함께, 증명은 원장이 (0.1.3)
+defects.json은 G4/G5 입력이다(test_changes 리뷰, NO_WEAKENING). 0.1.2 스킬은 "Gate 통과 후 fixed로 바꾸라"고 지시했고, 그대로 하면 G4/G5가 STALE이 되어 리뷰 1회와 G4·G5 재실행이 더 든다. 실제 S2에서 그대로 일어났다(R00015~R00019). G4 verifier도 "이 Gate 뒤에 결함을 닫으라"는 info finding으로 같은 행동을 부추겼다.
+조치: 스킬(start, rework), verifier 지침, VMODEL.md, ARTIFACTS.md에 "fixed는 수정과 같은 단계, 재리뷰 전에. 통과 후에는 defects.json을 건드리지 않는다"를 명시했다. 이때 `fixed`는 에이전트의 주장일 뿐이고, 종료 증거는 Validator가 원장에서 찾은 "실패 기록 이후 그 Gate의 첫 PASS"(`verified_by`)다.
+기각한 대안: defects.json 해시에서 `status` 필드를 빼는 방식. manifest 의미를 바꾸고 Core를 더 크게 건드려야 해서 택하지 않았다.
+
+## D29. 결함↔실패 테스트 추적은 원장에서 파생, 누락은 경고 (0.1.3)
+S2의 DEFECT는 실패한 TEST 5개 중 3개만 `related`에 연결했지만 아무 장치도 이를 잡지 못했다. 이제 Validator가 DEFECT가 인용한 실패 기록에서 실패 TEST ID를 직접 꺼내 `failing_tests`, `unlinked_failing_tests`, `verified_by`를 계산하고, `status`(텍스트·JSON)·`lint`·`report`에 보여준다(`gates.defect_trace`).
+누락을 BLOCKED로 막지 않은 이유: 막으면 링크를 하나 빠뜨릴 때마다 defects.json 수정 → G4 STALE → 리뷰 재실행 비용이 생기는데, 추적 정보 자체는 이미 원장에서 완전하게 얻을 수 있다. 원인이 모든 실패를 설명하는지라는 의미 판단은 verifier의 G4 체크리스트에 넣었다("root cause must explain every failing case"). 이것도 AI 리뷰이므로 기계 검증이 아니다.
+
+## D30. `status`가 실패한 Gate의 실패 체크·실패 테스트를 보여준다 (0.1.3)
+S2 오케스트레이터는 무엇이 실패했는지 보려고 `.vmodel/state/ledger.jsonl`을 `tail`로 직접 읽었다. 스킬은 "`VM status`로 실패 체크를 보라"고 했지만 0.1.2의 status는 실패 체크를 출력하지 않았다. 이제 FAILED/BLOCKED Gate에 `failed_checks`(ID, 상세, 항목 최대 8개)와 `failing_tests`가 붙고, 텍스트 출력에도 나온다.
+
+## D31. 드릴에서 관찰했지만 고치지 않은 것 (문서화만)
+- 오케스트레이터가 시스템 테스트(TEST-013)의 예시를 단위 테스트로 돌리려고 함수 이름에 TEST_001 토큰을 붙였다. G4.TEST_CODE는 ID당 함수가 하나 이상 있는지만 보기 때문에 명세와 다른 테스트가 그 ID로 추적된다. 의미 검토(G4 리뷰)의 몫으로 남긴다.
+- auto 권한 모드에서는 스킬의 "한 번에 한 명령" 규칙을 어긴 묶음 명령(`VM=…; "$VM" …`, `cd`)과 python heredoc 쓰기가 분류기를 통과했다. heredoc으로 work-items 산출물을 쓰는 것은 guard의 문자열 판별 밖이다(D25). defects.json은 원래 에이전트가 쓰는 파일이고 리뷰·스키마 검증을 거치므로 신뢰 모델에는 영향이 없다. 다만 스킬의 "shell writes into .vmodel/ are blocked"는 보호 경로(state/evidence/config/lock)에 대해서만 맞는 말이다.
+- 설계 단위가 하나면 모든 단위 테스트가 모든 REQ로 추적된다(E2E-3에 이어 재확인).

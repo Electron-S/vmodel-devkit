@@ -1,0 +1,16 @@
+{"gate": "G4", "work_item": "WI-001", "reviewer": "vmodel:verifier",
+ "target_hash": "sha256:707cf268a50ae6e54ea6cd72df4dc41bc382656b2674fe47c5be14cb9646c39a",
+ "reviewed_at": "2026-11-08T00:00:00Z", "verdict": "reject",
+ "summary": "The rank computation in percentile.py does not follow DESIGN-001. It uses int(p*N/100), which is floor, as the 0-based index. The design requires ceil(p*N/100)-1 in integer arithmetic. The result is off by one whenever p*N is a multiple of 100, so the code violates the contract, and by hand-tracing at least TEST-010, TEST-011 and TEST-012 would fail. The tests themselves are faithful and meaningful. I could not run pytest because the command was denied, so this finding comes from tracing the code.",
+ "checklist": [
+  {"item": "Code matches design contract (signature, errors, boundaries)", "result": "issue", "note": "Signature and ValueError checks match. The rank formula does not: floor instead of ceil-1, and float division instead of integer arithmetic."},
+  {"item": "No unrequested behaviour", "result": "ok", "note": "Only the requested function is implemented."},
+  {"item": "Each unit TEST spec implemented with TEST_nnn token", "result": "ok", "note": "TEST-001..012 all present and faithful to the procedure and expected values."},
+  {"item": "Assertions meaningful", "result": "ok", "note": "Concrete expected values, no skips and no swallowed exceptions. The tests are correct and would detect this defect."},
+  {"item": "conftest/fixtures do not alter results", "result": "ok", "note": "No conftest."},
+  {"item": "test_changes in defects/change requests", "result": "na", "note": "Neither defects.json nor change-requests.json exists."},
+  {"item": "Obvious defects, unsafe or dead code", "result": "issue", "note": "Rank off-by-one, see F-1. The min(..., count-1) clamp only masks p=100."}
+ ],
+ "findings": [
+  {"id": "F-1", "severity": "major", "description": "percentile.py line 20 uses index = min(int(p*count/100), count-1). It is floor, not ceil(p*N/100)-1, and uses float division. For p*N a multiple of 100 it returns the next element. N=5,p=40 gives 35 instead of 20 (TEST-010 and AC-001-3). N=100,p=29 gives 30 instead of 29 (TEST-011). N=5,p=80 gives 9 instead of 5 (TEST-012). N=5,p=100 only works because of the clamp. The design prescribes index = -(-p*N // 100) - 1 with integer arithmetic. Fix the code. Do not change the tests.", "related": ["DESIGN-001", "REQ-001", "TEST-010", "TEST-011", "TEST-012"], "status": "open"}
+ ]}

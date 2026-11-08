@@ -56,11 +56,11 @@ Implement exactly the designed units. Write unit tests for every unit-level TEST
 `VM gate WI G5` — the validator runs the tests itself and records evidence. FAILED -> Rework.
 
 ## Rework (any FAILED gate)
-1. Read the failed checks (gate output or `VM status WI`).
-2. Add a DEFECT to `defects.json` (`VM next-id DEFECT`): `gate`, `found_in_records: ["<failed record id>"]`, `description`, `failed_checks`, `root_cause_phase` (P1-P4 where the error was introduced), `root_cause`, `fix_scope`, `related` ids, `status: "open"`. The validator refuses to re-evaluate without it.
-3. Fix at the root-cause phase. Changing upstream artifacts makes downstream gates STALE; re-run the gate loop from that phase forward. `defects.json` and `change-requests.json` are part of the G4/G5 inputs, so after recording a defect G4 needs a fresh review before G5.
+1. Read the failure: `VM status WI` lists, under the failed gate, its failed checks, failing test cases and failing TEST ids.
+2. Add a DEFECT to `defects.json` (`VM next-id DEFECT`): `gate`, `found_in_records: ["<failed record id>"]`, `description`, `failed_checks`, `root_cause_phase` (P1-P4 where the error was introduced), `root_cause` (it must explain every failing case, not only the first), `fix_scope`, `related` (the REQ/DESIGN ids and every failing TEST id `VM status` lists), `status: "open"`. The validator refuses to re-evaluate without it.
+3. Fix at the root-cause phase and, in the same step, set the defect `status` to `fixed` — before the re-review. `defects.json` and `change-requests.json` are G4/G5 inputs: editing them after a gate passed makes G4/G5 STALE again and costs another review, so leave them alone once G5 passed. `fixed` is only your claim; the validator proves the closure (`VM status` shows the defect as "verified by <record>" after the gate passes).
 4. If a test file must change, add `test_changes` to the defect: `file`, `since_record` (the baseline record id the validator names), `reason`, `requirements`, `impact`.
-5. Set the defect `status` to `fixed` once fixed. If the validator BLOCKS after 3 identical failures, stop and report.
+5. `VM lint WI` (it also flags failing TEST ids the defect does not link), then re-run the gate loop from the root-cause phase forward; changing upstream artifacts makes downstream gates STALE, and G4 needs a fresh review before G5. If the validator BLOCKS after 3 identical failures, stop and report.
 
 ## Finish
 `VM status WI` and `VM report WI`. Tell the user: final status (normally `PARTIALLY_VERIFIED`), that G6/G7 are not implemented in this DevKit version so this is not a full V-Model completion, the report path, the evidence path from G5, defects found, and any assumptions they should check.

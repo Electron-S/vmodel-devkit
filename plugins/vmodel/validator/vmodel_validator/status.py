@@ -4,8 +4,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from .gates import (GATE_ORDER, Ctx, build_ctx, gate_def, gate_state, gates_def, implemented_gates, integrity_for,
-                    last_eval, last_with_status)
+from .gates import (GATE_ORDER, Ctx, _items, build_ctx, defect_trace, gate_def, gate_state, gates_def,
+                    implemented_gates, integrity_for, last_eval, last_with_status)
 from .hashing import short
 from .integrity import IntegrityReport
 from .ledger import Ledger, LedgerError
@@ -85,7 +85,8 @@ def project_status(project: Project, wi: str | None = None) -> dict:
         wi_doc = wi_doc if isinstance(wi_doc, dict) else {}
         profile = wi_doc.get("profile", "STANDARD")
         item = {"id": ctx.wi, "title": wi_doc.get("title"), "profile": profile,
-                "status": wi_status(gates, profile), "gates": gates, "next_action": next_action(ctx.wi, gates)}
+                "status": wi_status(gates, profile), "gates": gates, "next_action": next_action(ctx.wi, gates),
+                "defects": defect_trace(ctx.entries, ctx.wi, _items(ctx.arts.get("defects.json"), "defects"))}
         if item["status"] == "BLOCKED" and not isinstance(gates_def()["profiles"].get(profile), dict):
             item["profile_note"] = f"unknown profile {profile!r} in workitem.json"
             item["next_action"] = f"fix the profile in {ctx.wi}/workitem.json (STANDARD)"
@@ -93,6 +94,17 @@ def project_status(project: Project, wi: str | None = None) -> dict:
             item["profile_note"] = f"profile {profile} is not implemented in the MVP; gates follow STANDARD G1-G5"
         out["work_items"].append(item)
     return out
+
+
+def render_defect(d: dict) -> str:
+    closure = f"verified by {d['verified_by']}" if d["verified_by"] else "not verified yet"
+    line = (f"{d['id']} [{d['claimed_status']}; {closure}] {d['gate']} root cause {d['root_cause_phase']}; "
+            f"failing tests (ledger): {', '.join(d['failing_tests']) or '-'}")
+    if d["unlinked_failing_tests"]:
+        line += f"; NOT linked by the defect: {', '.join(d['unlinked_failing_tests'])}"
+    if d["unknown_records"]:
+        line += f"; unknown records: {', '.join(d['unknown_records'])}"
+    return line
 
 
 def render_status(st: dict) -> str:
@@ -121,6 +133,14 @@ def render_status(st: dict) -> str:
                 lines.append(f"      * {c}")
             if g.get("review_required_by") and g["status"] == "REVIEW_REQUIRED":
                 lines.append(f"      review required by: {', '.join(g['review_required_by'])}")
+            for c in g.get("failed_checks") or []:
+                lines.append(f"      x {c['id']} {c['status']}: {c['detail'][:200]}")
+                for it in c["items"][:5]:
+                    lines.append(f"          {str(it).splitlines()[0][:200] if str(it) else ''}")
+            if g.get("failing_tests"):
+                lines.append(f"      failing tests: {', '.join(g['failing_tests'])}")
+        for d in w.get("defects") or []:
+            lines.append(f"  {render_defect(d)}")
         lines.append(f"  next: {w['next_action']}")
         if w.get("profile_note"):
             lines.append(f"  note: {w['profile_note']}")
@@ -262,22 +282,21 @@ def report_markdown(project: Project, wi: str) -> str:
                   f"{', '.join(r['design_units']) or '-'} | {tests} |")
     if tv["dangling"]:
         md += ["", "Dangling references:", ""] + [f"- {d}" for d in tv["dangling"]]
-    from .gates import _items
-
     defects = _items(ctx.arts.get("defects.json"), "defects")
     crs = _items(ctx.arts.get("change-requests.json"), "change_requests")
     md += ["", "## Defects", ""]
     if not defects:
         md.append("None recorded.")
-    for d in defects:
-        verified = ""
-        lp = last_with_status(ctx.entries, wi, d.get("gate", ""), "PASSED")
-        found = [x for x in (d.get("found_in_records") or []) if isinstance(x, str)] \
-            if isinstance(d.get("found_in_records"), list) else []
-        if lp and found and lp.id > max(found):
-            verified = f" — verified by {lp.id}"
-        md.append(f"- {d.get('id')} [{d.get('status')}{verified}] {d.get('gate')} {str(d.get('description', ''))[:200]} "
+    for d, dt in zip(defects, defect_trace(ctx.entries, wi, defects)):
+        closure = f" — verified by {dt['verified_by']}" if dt["verified_by"] else " — not verified yet"
+        md.append(f"- {d.get('id')} [{d.get('status')}{closure}] {d.get('gate')} {str(d.get('description', ''))[:200]} "
                   f"(root cause {d.get('root_cause_phase')}: {str(d.get('root_cause', ''))[:200]})")
+        for rid, tests in dt["failing_tests_by_record"].items():
+            md.append(f"  - failing tests in {rid} (from the signed ledger): {', '.join(tests) or 'none'}")
+        if dt["unlinked_failing_tests"]:
+            md.append(f"  - not linked by the defect (`related`): {', '.join(dt['unlinked_failing_tests'])}")
+        if dt["unknown_records"]:
+            md.append(f"  - cites records that are not gate evaluations of {wi}: {', '.join(dt['unknown_records'])}")
     md += ["", "## Change requests", ""]
     if not crs:
         md.append("None recorded.")

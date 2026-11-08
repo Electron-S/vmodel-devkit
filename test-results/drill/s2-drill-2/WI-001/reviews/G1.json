@@ -1,0 +1,18 @@
+{"gate": "G1", "work_item": "WI-001", "reviewer": "vmodel:verifier", "target_hash": "sha256:87038dcf698048f8b746b2a40afef3e6e29c54faea673db916a5f0cabc7788d4",
+ "reviewed_at": "2026-11-08T12:00:00Z", "verdict": "approve",
+ "summary": "All parts of the request (nearest-rank formula, p validation, empty list, input immutability, five example values) are covered by three atomic requirements with concrete acceptance criteria. No blocking problems; a few minor precision and testability gaps are noted.",
+ "checklist": [
+  {"item": "Every part of the request covered", "result": "ok", "note": "Formula, p range/non-integer, empty list, immutability and the five examples map to REQ-001..003 and AC-001-1..5."},
+  {"item": "Atomic, unambiguous, testable", "result": "issue", "note": "REQ-003 has no acceptance criteria; p=50.0 handling is not explicit (see F-1, F-2)."},
+  {"item": "Acceptance criteria concrete and measurable", "result": "ok", "note": "Concrete inputs and expected outputs; AC-001-6 is less specific but acceptable."},
+  {"item": "Non-functional needs and constraints captured", "result": "ok", "note": "Immutability constraint and assumptions on input type and size are recorded."},
+  {"item": "Conflicts analysed", "result": "ok", "note": "Pairwise review performed; no real conflicts exist."},
+  {"item": "Critical decisions to user", "result": "na", "note": "No security or data-loss decisions; open_issues empty."},
+  {"item": "Assumptions reasonable and recorded", "result": "ok", "note": "ASM-001 bool rejection is sensible; ASM-002 leaves NaN or non-numeric behaviour undefined."}
+ ],
+ "findings": [
+  {"id": "F-1", "severity": "minor", "description": "REQ-003 (input list unchanged) has no acceptance criterion, so there is no measurable pass condition. Add e.g. 'after percentile([50,15,40], 50) the list is still [50,15,40]'.", "related": ["REQ-003"], "status": "open"},
+  {"id": "F-2", "severity": "minor", "description": "REQ-002 does not say whether integral floats such as p=50.0 are rejected. 'Not an integer' is ambiguous; AC-002-2 only covers 50.5. State it explicitly.", "related": ["REQ-002", "AC-002-2"], "status": "open"},
+  {"id": "F-3", "severity": "minor", "description": "The formula r = ceil(p/100 x N) is vulnerable to floating-point error with float arithmetic (e.g. exact products landing slightly above an integer). Require exact integer arithmetic, i.e. ceil(p*N/100) = (p*N+99)//100, or add a boundary AC.", "related": ["REQ-001"], "status": "open"},
+  {"id": "F-4", "severity": "info", "description": "Behaviour for NaN or non-numeric scores is undefined (ASM-002); acceptable but worth noting.", "related": ["ASM-002"], "status": "open"}
+ ]}

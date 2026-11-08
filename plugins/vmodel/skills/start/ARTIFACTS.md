@@ -114,7 +114,7 @@ Ids are project-unique (`VM next-id <KIND>`). The authoritative schemas are the 
    "test_changes": [{"file": "tests/test_x.py", "since_record": "R00010", "reason": "...",
                      "requirements": ["REQ-002"], "impact": "..."}]}]}
 ```
-`removed_ids` (DESIGN/TEST ids) is allowed on defects and change requests when an item is intentionally removed.
+`related` lists the REQ/DESIGN ids and every failing TEST id of the cited record (`vmodel status` shows them). Set `status` to `fixed` in the same edit as the fix, before the re-review; never edit defects.json after the gate passed (it is a G4/G5 input). `removed_ids` (DESIGN/TEST ids) is allowed on defects and change requests when an item is intentionally removed.
 
 ## change-requests.json (requirement changes after G1 passed)
 ```json

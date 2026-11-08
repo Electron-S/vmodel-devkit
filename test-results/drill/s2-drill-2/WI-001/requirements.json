@@ -1,0 +1,33 @@
+{
+  "work_item": "WI-001",
+  "requirements": [
+    {"id": "REQ-001", "type": "functional", "title": "nearest-rank 백분위수 계산", "priority": "must", "status": "active",
+     "description": "percentile(scores, p)는 점수(정수/실수) 목록을 오름차순으로 정렬한 뒤 순위 r = ceil(p/100 × N)(1부터 셈, N은 점수 개수)번째 값을 돌려준다.",
+     "source": "user request",
+     "acceptance_criteria": [
+       {"id": "AC-001-1", "criterion": "percentile([15, 20, 35, 40, 50], 5)는 15를 돌려준다"},
+       {"id": "AC-001-2", "criterion": "percentile([15, 20, 35, 40, 50], 30)은 20을 돌려준다"},
+       {"id": "AC-001-3", "criterion": "percentile([15, 20, 35, 40, 50], 40)은 20을 돌려준다"},
+       {"id": "AC-001-4", "criterion": "percentile([15, 20, 35, 40, 50], 50)은 35를 돌려준다"},
+       {"id": "AC-001-5", "criterion": "percentile([15, 20, 35, 40, 50], 100)은 50을 돌려준다"},
+       {"id": "AC-001-6", "criterion": "정렬되지 않은 입력과 실수 값 목록에서도 정렬 후 같은 규칙으로 값을 돌려준다"}]},
+    {"id": "REQ-002", "type": "functional", "title": "입력 검증", "priority": "must", "status": "active",
+     "description": "p가 1 이상 100 이하의 정수가 아니면(범위 밖이거나 정수가 아닌 값) ValueError를 낸다. 점수 목록이 비어 있으면 ValueError를 낸다.",
+     "source": "user request",
+     "acceptance_criteria": [
+       {"id": "AC-002-1", "criterion": "p=0 또는 p=101이면 ValueError"},
+       {"id": "AC-002-2", "criterion": "p=50.5 같은 실수 또는 문자열 p이면 ValueError"},
+       {"id": "AC-002-3", "criterion": "빈 목록이면 ValueError"}]},
+    {"id": "REQ-003", "type": "constraint", "title": "입력 목록 불변", "priority": "must", "status": "active",
+     "description": "함수는 전달받은 점수 목록을 변경하지 않는다(정렬은 사본에서 수행).",
+     "source": "user request",
+     "acceptance_criteria": []}
+  ],
+  "conflict_analysis": {"performed": true, "method": "요구사항 쌍별 검토", "conflicts": []},
+  "open_issues": [],
+  "assumptions": [
+    {"id": "ASM-001", "description": "p가 bool(True/False)이면 정수가 아닌 값으로 보고 ValueError를 낸다. 어차피 True는 1로 해석될 수 있으나 의도된 입력이 아니다.", "impact": "bool p는 거부된다"},
+    {"id": "ASM-002", "description": "점수 목록의 원소는 서로 비교 가능한 수(int/float)라고 가정하며 그 외 타입 검증은 하지 않는다.", "impact": "비수치 원소의 동작은 정의하지 않는다"},
+    {"id": "ASM-003", "description": "점수 목록은 리스트 등 순회 가능한 시퀀스로 전달되며 메모리에 들어간다.", "impact": "스트리밍 입력은 지원하지 않는다"}
+  ]
+}

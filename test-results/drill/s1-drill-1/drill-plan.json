@@ -1,0 +1,30 @@
+{
+  "drill": "rework-drill-1",
+  "feature": "nearest-rank percentile of a score list (scorestats)",
+  "seeded_defect": {
+    "phase": "P4",
+    "unit": "the percentile function designed in P3 (name chosen by the session)",
+    "fault": "0-based index computed as min(int(p*N/100), N-1) instead of ceil(p*N/100)-1",
+    "correct": "rank r = ceil(p/100*N) (1-based) -> sorted_scores[r-1]",
+    "manifests_when": "p*N/100 is an integer smaller than N, e.g. [15,20,35,40,50] p=40 -> 35 instead of 20; p=20 -> 20 instead of 15; N=4 p=50 -> 3rd instead of 2nd value",
+    "masked_when": "p*N/100 is not an integer, or p=100 (clamped), or N=1"
+  },
+  "expected_detection": {
+    "gate": "G5",
+    "status": "FAILED",
+    "checks": [
+      "G5.EXECUTION (pytest exit code 1)",
+      "G5.RESULTS (failed test case)",
+      "G5.TEST_MAPPING (the TEST id of the failing case)"
+    ],
+    "work_item_not": "PARTIALLY_VERIFIED",
+    "alternative": "G4 review reject if the verifier spots the fault by reading (recorded as such, not G5)"
+  },
+  "expected_rework": {
+    "root_cause_phase": "P4",
+    "fix_scope": "the percentile module only; no test or spec change is needed",
+    "tests_changed": false
+  },
+  "sealed_at": "2026-11-08T11:30:56+00:00",
+  "release": "vmodel-0.1.2"
+}

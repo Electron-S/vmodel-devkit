@@ -1,0 +1,57 @@
+...F..F.......FFF.                                                       [100%]
+=================================== FAILURES ===================================
+____________________ test_TEST_001_request_examples[40-20] _____________________
+
+p = 40, expected = 20
+
+    @pytest.mark.parametrize(
+        "p, expected",
+        [(5, 15), (30, 20), (40, 20), (50, 35), (100, 50)],
+    )
+    def test_TEST_001_request_examples(p, expected):
+>       assert percentile(SAMPLE, p) == expected
+E       assert 35 == 20
+E        +  where 35 = percentile([15, 20, 35, 40, 50], 40)
+
+tests/test_percentile.py:17: AssertionError
+______________________ test_TEST_002_unsorted_float_list _______________________
+
+    def test_TEST_002_unsorted_float_list():
+>       assert percentile([3.5, 1.5, 2.5, 4.5], 50) == 2.5
+E       assert 3.5 == 2.5
+E        +  where 3.5 = percentile([3.5, 1.5, 2.5, 4.5], 50)
+
+tests/test_percentile.py:21: AssertionError
+_____________ test_TEST_010_rank_kept_when_product_multiple_of_100 _____________
+
+    def test_TEST_010_rank_kept_when_product_multiple_of_100():
+>       assert percentile([15, 20, 35, 40, 50], 40) == 20
+E       assert 35 == 20
+E        +  where 35 = percentile([15, 20, 35, 40, 50], 40)
+
+tests/test_percentile.py:61: AssertionError
+_____________________ test_TEST_011_p29_n100_integer_rank ______________________
+
+    def test_TEST_011_p29_n100_integer_rank():
+>       assert percentile(list(range(1, 101)), 29) == 29
+E       assert 30 == 29
+E        +  where 30 = percentile([1, 2, 3, 4, 5, 6, ...], 29)
+E        +    where [1, 2, 3, 4, 5, 6, ...] = list(range(1, 101))
+E        +      where range(1, 101) = range(1, 101)
+
+tests/test_percentile.py:65: AssertionError
+__________________ test_TEST_012_duplicates_selected_by_rank ___________________
+
+    def test_TEST_012_duplicates_selected_by_rank():
+>       assert percentile([5, 5, 5, 9, 1], 80) == 5
+E       assert 9 == 5
+E        +  where 9 = percentile([5, 5, 5, 9, 1], 80)
+
+tests/test_percentile.py:69: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_percentile.py::test_TEST_001_request_examples[40-20] - asse...
+FAILED tests/test_percentile.py::test_TEST_002_unsorted_float_list - assert 3...
+FAILED tests/test_percentile.py::test_TEST_010_rank_kept_when_product_multiple_of_100
+FAILED tests/test_percentile.py::test_TEST_011_p29_n100_integer_rank - assert...
+FAILED tests/test_percentile.py::test_TEST_012_duplicates_selected_by_rank - ...
+5 failed, 13 passed in 0.03s

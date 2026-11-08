@@ -144,7 +144,7 @@ def cmd_next_id(args) -> int:
 
 
 def cmd_lint(args) -> int:
-    from .gates import load_artifacts, load_schema, TraceGraph
+    from .gates import TraceGraph, _items, defect_trace, load_artifacts, load_schema
     from .project import SCHEMA_FOR
 
     p = _project(args)
@@ -163,6 +163,22 @@ def cmd_lint(args) -> int:
         except ArtifactError as exc:
             problems.append(str(exc))
     problems += [f"trace: {d}" for d in TraceGraph.build(arts).dangling()]
+    defects = _items(arts.get("defects.json"), "defects")
+    if defects:  # rework records are checked against what the signed ledger says actually failed
+        try:
+            entries = Ledger(p).entries()
+        except (LedgerError, ArtifactError, ProjectError) as exc:
+            problems.append(f"ledger: {exc}")
+            entries = []
+        for d in defect_trace(entries, args.wi, defects):
+            for rid, tests in d["failing_tests_by_record"].items():
+                missing = [t for t in tests if t in d["unlinked_failing_tests"]]
+                if missing:
+                    problems.append(f"rework: {d['id']} does not link failing test(s) of {rid} in 'related': "
+                                    f"{', '.join(missing)}")
+            if d["unknown_records"] and entries:
+                problems.append(f"rework: {d['id']} cites {', '.join(d['unknown_records'])}, which are not gate "
+                                f"evaluations of {args.wi}")
     present = sorted(arts)
     out(f"{args.wi}: {len(present)} artifact(s) present: {', '.join(present)}")
     for pr in problems:

@@ -1,0 +1,92 @@
+### audit
+audit: validator 0.1.2 release core a0555e328413; 19 ledger entries; 9 evidence record(s) checked
+audit OK
+exit=0
+### verify-evidence (all evidence referenced by the ledger)
+.vmodel/evidence/WI-001/G4/20261108T114052861172Z-lint-86f7ee/record.json: evidence OK
+.vmodel/evidence/WI-001/G4/20261108T114204857383Z-lint-c84d30/record.json: evidence OK
+.vmodel/evidence/WI-001/G4/20261108T114239824652Z-lint-e35680/record.json: evidence OK
+.vmodel/evidence/WI-001/G4/20261108T114248807232Z-lint-63e903/record.json: evidence OK
+.vmodel/evidence/WI-001/G4/20261108T114252921524Z-lint-fd24b6/record.json: evidence OK
+.vmodel/evidence/WI-001/G4/20261108T114338358932Z-lint-0df4a9/record.json: evidence OK
+.vmodel/evidence/WI-001/G5/20261108T114053060340Z-unit-1576a1/record.json: evidence OK
+.vmodel/evidence/WI-001/G5/20261108T114240030525Z-unit-868860/record.json: evidence OK
+.vmodel/evidence/WI-001/G5/20261108T114338576061Z-unit-b6f495/record.json: evidence OK
+### status
+Project: /tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/1ff457c3-a92d-4328-90c9-6e4a8a5312fb/scratchpad/drill-2/한글 드릴 프로젝트
+Validator: 0.1.2 (release) core a0555e328413 integrity OK
+Ledger: OK (19 entries)
+
+WI-001 [PARTIALLY_VERIFIED] 점수 백분위수 계산(nearest-rank) (profile STANDARD)
+  G1 Requirements                     PASSED           R00003 @ 2026-11-08T11:40:51.540Z
+  G2 Architecture                     PASSED           R00005 @ 2026-11-08T11:40:51.927Z
+  G3 Detailed Design & Test Planning  PASSED           R00007 @ 2026-11-08T11:40:52.298Z
+  G4 Implementation                   PASSED           R00018 @ 2026-11-08T11:43:38.381Z
+  G5 Unit Verification                PASSED           R00019 @ 2026-11-08T11:43:39.189Z
+  G6 Integration Verification         NOT_IMPLEMENTED 
+      - extension gate, not implemented in the MVP
+  G7 System Verification              NOT_IMPLEMENTED 
+      - extension gate, not implemented in the MVP
+  next: G1-G5 verified. G6+ are extension gates (not implemented); report PARTIALLY_VERIFIED.
+
+MVP scope: only G1-G5 are implemented. G6 (integration) and G7 (system) are extension gates, so a work item can reach PARTIALLY_VERIFIED at most. This is NOT a full V-Model completion.
+### trace
+Traceability WI-001 (results from R00019)
+REQ-001 [functional/active] nearest-rank 백분위수 계산
+   AC: AC-001-1, AC-001-2, AC-001-3, AC-001-4, AC-001-5, AC-001-6
+   ARCH: ARCH-001   DESIGN: DESIGN-001
+   CODE: src/scorestats/percentile.py:percentile
+   TEST: TEST-001(unit:passed), TEST-002(unit:passed), TEST-003(unit:passed), TEST-004(unit:passed), TEST-005(unit:passed), TEST-006(unit:passed), TEST-007(unit:passed), TEST-008(unit:passed), TEST-009(unit:passed), TEST-010(unit:passed), TEST-011(unit:passed), TEST-012(unit:passed), TEST-013(system:not run), TEST-014(system:not run)
+REQ-002 [functional/active] 입력 검증
+   AC: AC-002-1, AC-002-2, AC-002-3
+   ARCH: ARCH-001   DESIGN: DESIGN-001
+   CODE: src/scorestats/percentile.py:percentile
+   TEST: TEST-001(unit:passed), TEST-002(unit:passed), TEST-003(unit:passed), TEST-004(unit:passed), TEST-005(unit:passed), TEST-006(unit:passed), TEST-007(unit:passed), TEST-008(unit:passed), TEST-009(unit:passed), TEST-010(unit:passed), TEST-011(unit:passed), TEST-012(unit:passed), TEST-015(system:not run)
+REQ-003 [constraint/active] 입력 목록 불변
+   AC: -
+   ARCH: ARCH-001   DESIGN: DESIGN-001
+   CODE: src/scorestats/percentile.py:percentile
+   TEST: TEST-001(unit:passed), TEST-002(unit:passed), TEST-003(unit:passed), TEST-004(unit:passed), TEST-005(unit:passed), TEST-006(unit:passed), TEST-007(unit:passed), TEST-008(unit:passed), TEST-009(unit:passed), TEST-010(unit:passed), TEST-011(unit:passed), TEST-012(unit:passed), TEST-016(system:not run)
+Reverse (TEST -> REQ):
+   TEST-001 -> REQ-001, REQ-002, REQ-003
+   TEST-002 -> REQ-001, REQ-002, REQ-003
+   TEST-003 -> REQ-001, REQ-002, REQ-003
+   TEST-004 -> REQ-001, REQ-002, REQ-003
+   TEST-005 -> REQ-001, REQ-002, REQ-003
+   TEST-006 -> REQ-001, REQ-002, REQ-003
+   TEST-007 -> REQ-001, REQ-002, REQ-003
+   TEST-008 -> REQ-001, REQ-002, REQ-003
+   TEST-009 -> REQ-001, REQ-002, REQ-003
+   TEST-010 -> REQ-001, REQ-002, REQ-003
+   TEST-011 -> REQ-001, REQ-002, REQ-003
+   TEST-012 -> REQ-001, REQ-002, REQ-003
+   TEST-013 -> REQ-001
+   TEST-014 -> REQ-001
+   TEST-015 -> REQ-002
+   TEST-016 -> REQ-003
+Dangling references: none
+### report
+report written: .vmodel/reports/WI-001.md
+## Defects
+
+- DEFECT-001 [fixed — verified by R00019] G5 TEST-001(p=40)와 TEST-002가 실패: percentile([15,20,35,40,50],40)가 20 대신 35, percentile([3.5,1.5,2.5,4.5],50)가 2.5 대신 3.5를 돌려줌 (root cause P4: 구현이 index=int(p*N/100)(내림)을 사용했으나 DESIGN-001/REQ-001은 순위 r=ceil(p*N/100), 인덱스 r-1을 요구함. p*N이 100의 배수일 때 한 칸 뒤 값이 선택됨.)
+
+## Change requests
+### verify WI-001 (fresh re-evaluation, G5 re-runs pytest)
+WI-001 G1 PASSED  record R00020  manifest 87038dcf6980
+WI-001 G2 PASSED  record R00021  manifest b880be5a93a0
+WI-001 G3 PASSED  record R00022  manifest 44df8a43a890
+WI-001 G4 PASSED  record R00023  manifest 01473d503714
+  [pass   ] G4.LINT                      ruff passed (exit 0)
+  evidence: .vmodel/evidence/WI-001/G4/20261108T115058344463Z-lint-b879f9/record.json (8f563ced8050)
+WI-001 G5 PASSED  record R00024  manifest 01473d503714
+  [pass   ] G5.PREREQ                    G4 PASSED for the current manifest hash
+  [pass   ] G5.EXECUTION                 exit code 0, junit produced
+  [pass   ] G5.RESULTS                   18 passed, 0 skipped of 18
+  [pass   ] G5.TEST_MAPPING              12 unit test spec(s) passed
+  [pass   ] G5.REQ_COVERAGE              every functional requirement has a passed test
+  evidence: .vmodel/evidence/WI-001/G5/20261108T115058379992Z-unit-9a9a43/record.json (b4f2f076365a)
+WI-001 work item status: PARTIALLY_VERIFIED
+exit=0
+audit: validator 0.1.2 release core a0555e328413; 24 ledger entries; 11 evidence record(s) checked
+audit OK

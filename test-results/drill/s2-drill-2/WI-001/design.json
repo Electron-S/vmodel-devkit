@@ -1,0 +1,23 @@
+{
+  "work_item": "WI-001",
+  "units": [
+    {"id": "DESIGN-001", "component": "ARCH-001", "module": "src/scorestats/percentile.py", "name": "percentile",
+     "kind": "function", "signature": "def percentile(scores: list[int | float], p: int) -> int | float",
+     "description": "p(정수 1..100)와 점수 목록을 검증한 뒤 sorted() 사본을 만들고, 정수 연산으로 순위 r = ceil(p*N/100)을 구해 0-기반 인덱스 r-1의 값을 돌려준다. 부동소수점 오차를 피하기 위해 순위는 -(-p*N // 100)로 계산한다.",
+     "requirements": ["REQ-001", "REQ-002", "REQ-003"],
+     "contract": {
+       "preconditions": ["p는 int(bool 제외)이고 1 <= p <= 100", "scores는 비어 있지 않은 순회 가능한 수(int/float) 컬렉션"],
+       "postconditions": ["반환값은 scores에 들어 있던 값 중 하나이며 오름차순 정렬 시 ceil(p*N/100)번째(1-기반) 값이다", "입력 scores는 변경되지 않는다"]},
+     "errors": [
+       {"exception": "ValueError", "condition": "p가 int가 아니거나(bool, float, str 포함) 1 미만 또는 100 초과"},
+       {"exception": "ValueError", "condition": "scores가 비어 있음"}],
+     "boundary_conditions": [
+       "p=1이면 정렬된 첫 값(최솟값)을 돌려준다",
+       "p=100이면 정렬된 마지막 값(최댓값)을 돌려준다",
+       "원소가 1개이면 모든 유효한 p에서 그 값을 돌려준다",
+       "p*N이 100의 배수일 때(예: N=5, p=40) 순위는 p*N/100 그대로이다",
+       "p=29, N=100처럼 부동소수점 나눗셈이면 틀릴 수 있는 경우에도 정수 연산으로 순위 29를 얻는다",
+       "p=0, p=101은 ValueError",
+       "중복 값이 있어도 정렬 후 순위로 값을 고른다"]}
+  ]
+}

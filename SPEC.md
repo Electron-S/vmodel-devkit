@@ -162,9 +162,10 @@ REQ ↔ ARCH(`components[].requirements`) ↔ DESIGN(`units[].component`, `units
 
 ## 7. 재작업 루프
 
-1. Gate FAILED → Validator가 실패 체크·실패 테스트를 기록, `failure_signature` 계산
-2. 오케스트레이터가 DEFECT 작성: `found_in_records`(실패 기록 ID), `root_cause_phase`(P1~P4), `root_cause`, `fix_scope`
-3. 원인 단계로 복귀해 산출물·코드 수정 → 영향 Gate 자동 STALE
+1. Gate FAILED → Validator가 실패 체크·실패 테스트를 기록, `failure_signature` 계산. `vmodel status`가 FAILED Gate 아래에 실패 체크와 실패 TEST ID를 보여준다 (0.1.3, D30)
+2. 오케스트레이터가 DEFECT 작성: `found_in_records`(실패 기록 ID), `root_cause_phase`(P1~P4), `root_cause`, `fix_scope`, `related`(실패 TEST ID 포함). Validator는 인용된 실패 기록에서 실패 TEST를 직접 꺼내 `failing_tests`·`unlinked_failing_tests`를 status/lint/report에 표시한다 (원장 파생, 경고만, D29)
+3. 원인 단계로 복귀해 산출물·코드 수정, **같은 단계에서 DEFECT `status: fixed`** (재리뷰 전). defects.json은 G4/G5 입력이므로 통과 후 수정하면 다시 STALE (D28). 영향 Gate 자동 STALE. G4 재리뷰에서 verifier는 원인이 모든 실패를 설명하는지 status의 실패 정보와 대조한다
+3-1. 결함 종료의 증거는 `fixed` 표기가 아니라 원장의 "인용된 실패 기록 이후 그 Gate의 첫 PASS"(`verified_by`)다
 4. 상위부터 재평가. 재평가 전 결함 기록이 없으면 BLOCKED
 5. 같은 `failure_signature`로 3회 연속 FAILED → BLOCKED, 자동 반복 중지 후 사용자 보고. 해제는 사용자가 터미널(TTY)에서 `vmodel unblock`
 6. 테스트 완화·삭제 금지: G3.NO_SILENT_REMOVAL, G5.NO_WEAKENING이 기계적으로 막는다. 테스트를 바꿔야 하면 `test_changes`에 근거·관련 REQ·영향을 기록하고 Verifier가 검토
@@ -246,7 +247,7 @@ WI 하나당 병렬 서브에이전트는 최대 2개. Agent 리뷰만으로 Gat
 | T10 | 필수 산출물 누락 → 차단 | 하네스 |
 | T11 | 잘못된 추적 관계 탐지 | 하네스 |
 | T12 | Validator Core 변조 → BLOCKED | 하네스 |
-| T13 | 실패 → 결함 → 수정 → 재검증 PASS | 하네스 (+ 실제 세션에서 관찰되면 기록) |
+| T13 | 실패 → 결함 → 수정 → 재검증 PASS | 하네스 + 실제 세션 드릴(TEST_RESULTS §8: G4 실패는 완전 실제, G5 실패는 G4 승인 1건 주입 후 실제 세션 재작업) |
 | T14 | 세션 재시작 후 상태 복원 | 하네스(새 프로세스) + 실제 새 세션 |
 | T15 | 다른 임시 프로젝트에 적용 | 하네스 |
 | T16 | 기존 Claude 설정 보존·충돌 검사 | 하네스 |

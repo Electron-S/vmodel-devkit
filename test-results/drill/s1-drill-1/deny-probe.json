@@ -1,0 +1,26 @@
+{
+  "rows": [
+    {
+      "command": "ls",
+      "is_error": false,
+      "result": "README.md\npyproject.toml\nsrc\ntests"
+    },
+    {
+      "command": "python3 -m pytest --version",
+      "is_error": true,
+      "result": "Permission to use Bash with command python3 -m pytest --version has been denied."
+    },
+    {
+      "command": "cd . && PYTHONPATH=src python3 -m pytest -q",
+      "is_error": true,
+      "result": "Permission to use Bash with command cd . && PYTHONPATH=src python3 -m pytest -q has been denied."
+    },
+    {
+      "command": "python3 -I -c \"import pytest\"",
+      "is_error": true,
+      "result": "Permission to use Bash with command python3 -I -c \"import pytest\" has been denied."
+    }
+  ],
+  "cost": 0.00252505,
+  "exit": 0
+}

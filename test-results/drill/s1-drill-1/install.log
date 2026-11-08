@@ -1,0 +1,13 @@
+initialised /tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/1ff457c3-a92d-4328-90c9-6e4a8a5312fb/scratchpad/drill-1/한글 드릴 프로젝트
+  python: /usr/bin/python3
+  lint: ruff (on_missing_lint=block)
+  validator 0.1.2 core a0555e328413 pinned
+  signing key: /tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/1ff457c3-a92d-4328-90c9-6e4a8a5312fb/scratchpad/drill-1/vmodel-home/keys/5e2c1ef432464412b1f4f838c16f3805.key
+installed into /tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/1ff457c3-a92d-4328-90c9-6e4a8a5312fb/scratchpad/drill-1/한글 드릴 프로젝트
+  deny rules added to .claude/settings.json: 8
+  allow rules added for the validator CLI: 3
+  CLAUDE.md: untouched (instructions come from the SessionStart hook)
+  register the plugin (touches ~/.claude/plugins, so it is up to you):
+    claude plugin marketplace add "<path-to>/dist" --scope project
+    claude plugin install vmodel@vmodel-devkit --scope project
+    # or, session only: claude --plugin-dir "/home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.1.2"

@@ -1,0 +1,29 @@
+{
+  "work_item": "WI-001",
+  "defects": [
+    {
+      "id": "DEFECT-001",
+      "gate": "G5",
+      "found_in_records": [
+        "R00010"
+      ],
+      "description": "TEST-001(p=40)와 TEST-002가 실패: percentile([15,20,35,40,50],40)가 20 대신 35, percentile([3.5,1.5,2.5,4.5],50)가 2.5 대신 3.5를 돌려줌",
+      "failed_checks": [
+        "G5.RESULTS"
+      ],
+      "root_cause_phase": "P4",
+      "root_cause": "구현이 index=int(p*N/100)(내림)을 사용했으나 DESIGN-001/REQ-001은 순위 r=ceil(p*N/100), 인덱스 r-1을 요구함. p*N이 100의 배수일 때 한 칸 뒤 값이 선택됨.",
+      "fix_scope": [
+        "src/scorestats/percentile.py"
+      ],
+      "related": [
+        "REQ-001",
+        "DESIGN-001",
+        "TEST-001",
+        "TEST-002",
+        "TEST-010"
+      ],
+      "status": "fixed"
+    }
+  ]
+}

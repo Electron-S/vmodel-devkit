@@ -1,0 +1,15 @@
+{"gate": "G4", "work_item": "WI-001", "reviewer": "vmodel:verifier", "target_hash": "sha256:01473d50371442da021e366b5f277674e24c1af0a15ee6e4e1f2471a8b578fd2",
+ "reviewed_at": "2026-11-08T00:00:00Z", "verdict": "approve",
+ "summary": "Re-review after DEFECT-001 was set to status fixed; code and tests are unchanged from the previous approval. percentile.py computes rank=ceil(p*N/100) with integer arithmetic and returns sorted[rank-1], matching DESIGN-001. All 12 unit TEST specs are implemented with TEST_nnn names and meaningful assertions. The defect record is consistent with the fix (fix_scope only percentile.py, no test changes).",
+ "checklist": [
+  {"item": "Code matches design contract (signature, errors, boundaries)", "result": "ok", "note": "Unchanged since the prior review: signature identical, ValueError cases covered, integer ceil correct, p=1 and p=100 give min and max."},
+  {"item": "No unrequested behaviour / dead code", "result": "ok", "note": "Single function, no extras."},
+  {"item": "Each unit TEST spec implemented with TEST_nnn token", "result": "ok", "note": "TEST_001..TEST_012 present and faithful."},
+  {"item": "Assertions meaningful and able to detect the defect", "result": "ok", "note": "TEST_001/002/010 fail under the old floor index; TEST_011 guards against float division."},
+  {"item": "conftest/fixtures do not alter results; nothing skipped", "result": "ok", "note": "No conftest, no skip/xfail."},
+  {"item": "test_changes justified", "result": "ok", "note": "DEFECT-001 now status fixed; no test_changes; root cause is in code (P4) and fix_scope is only src/scorestats/percentile.py, consistent with the spec."},
+  {"item": "Obvious defects or unsafe code", "result": "ok", "note": "None found; input list is copied by sorted()."}
+ ],
+ "findings": [
+  {"id": "F-1", "severity": "info", "description": "DEFECT-001 is now closed as fixed, resolving the earlier remark. System tests TEST-013..016 have no automation entry (outside G4 unit scope).", "related": ["DEFECT-001", "TEST-013"], "status": "resolved"}
+ ]}

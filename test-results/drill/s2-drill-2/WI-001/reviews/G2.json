@@ -1,0 +1,16 @@
+{"gate": "G2", "work_item": "WI-001", "reviewer": "vmodel:verifier", "target_hash": "sha256:b880be5a93a0354edc717273ebf0d0115252250954fa728fb2e49f65fd7fc0af",
+ "reviewed_at": "2026-11-08T12:00:00Z", "verdict": "approve",
+ "summary": "Single-component architecture covers REQ-001..003 and the lack of interfaces is justified. The one NFR/constraint (input immutability) has a credible approach. Two minor points: float rounding risk in ceil(p/100*N) and REQ-003 having no acceptance criterion.",
+ "checklist": [
+  {"item": "Every requirement realised by a component", "result": "ok", "note": "ARCH-001 maps REQ-001/002/003."},
+  {"item": "Interfaces precise", "result": "na", "note": "No inter-component interfaces; public function signature percentile(scores, p) is given in REQ-001."},
+  {"item": "Data flows consistent", "result": "na", "note": "None needed for a single pure function."},
+  {"item": "NFR/constraint approach credible", "result": "ok", "note": "sorted() copy for REQ-003."},
+  {"item": "Trade-offs justified", "result": "ok", "note": "sort() vs sorted() justified by REQ-003."},
+  {"item": "Integration test strategy exercises every interface", "result": "ok", "note": "No interfaces; reasoning stated, unit/system tests cover behaviour."}
+ ],
+ "findings": [
+  {"id": "F-1", "severity": "minor", "description": "The rank formula ceil(p/100 x N) computed with floats can mis-round (e.g. p=29, N=100: 0.29*100 = 29.000000000000004 -> rank 30 instead of 29). The architecture does not state that the rank must be computed with exact integer arithmetic (e.g. -(-p*N // 100)). Address this in the G3 design contract and add a boundary unit test.", "related": ["ARCH-001", "REQ-001"], "status": "open"},
+  {"id": "F-2", "severity": "minor", "description": "REQ-003 has no acceptance criteria, so system-level verification of input immutability is not anchored; add a measurable criterion (list equal to a copy of itself and same order after the call).", "related": ["REQ-003"], "status": "open"},
+  {"id": "F-3", "severity": "info", "description": "ASM-002 leaves NaN/non-numeric elements undefined; acceptable but should be noted in the design.", "related": ["ASM-002"], "status": "open"}
+ ]}

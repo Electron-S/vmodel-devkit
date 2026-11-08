@@ -246,6 +246,47 @@ def unblocked_after(entries: list[Entry], wi: str, gate: str, seq: int) -> bool:
     return any(e.record.get("type") == "unblock" and e.seq > seq for e in gate_entries(entries, wi, gate))
 
 
+def failing_tests(record: dict) -> list[str]:
+    """TEST ids whose cases failed or errored in a signed G5 record (validator facts, not agent claims)."""
+    ex = record.get("executed_tests")
+    return sorted(t for t, s in ex.items() if s in ("failed", "error")) if isinstance(ex, dict) else []
+
+
+def failed_checks(record: dict, limit: int = 8) -> list[dict]:
+    return [{"id": c.get("id"), "status": c.get("status"), "detail": c.get("detail", ""),
+             "items": (c.get("items") or [])[:limit]}
+            for c in record.get("checks") or [] if isinstance(c, dict) and c.get("status") in ("fail", "blocked")]
+
+
+def defect_trace(entries: list[Entry], wi: str, defects: list[dict]) -> list[dict]:
+    """Defect view derived from the signed ledger: what failed in the records a DEFECT cites, which failing TEST ids
+    the DEFECT does not link, and the first PASS of its gate after the failure (the closure evidence)."""
+    by_id = {e.id: e for e in entries}
+    out = []
+    for d in defects:
+        found = _str_list(d.get("found_in_records"))
+        cited = [by_id[r] for r in found if r in by_id and by_id[r].record.get("work_item") == wi
+                 and by_id[r].record.get("type") == "gate"]
+        per_record = {e.id: failing_tests(e.record) for e in cited}
+        failing = sorted({t for ts in per_record.values() for t in ts})
+        linked = set(_str_list(d.get("related")))
+        verified_by = None
+        if cited:
+            last = max(cited, key=lambda e: e.seq)
+            last_seq = last.seq
+            # the gate of the signed failure record, not the agent-written `gate` field
+            for e in gate_entries(entries, wi, str(last.record.get("gate"))):
+                if e.seq > last_seq and e.record.get("type") == "gate" and e.record.get("status") == "PASSED":
+                    verified_by = e.id
+                    break
+        out.append({"id": d.get("id"), "gate": d.get("gate"), "claimed_status": d.get("status"),
+                    "root_cause_phase": d.get("root_cause_phase"), "found_in_records": found,
+                    "unknown_records": sorted(set(found) - {e.id for e in cited}),
+                    "failing_tests_by_record": per_record, "failing_tests": failing,
+                    "unlinked_failing_tests": [t for t in failing if t not in linked], "verified_by": verified_by})
+    return out
+
+
 # ---------------------------------------------------------------- state (shared with status)
 def gate_state(ctx: Ctx, gate: str, current_manifests: dict[str, dict] | None = None) -> dict:
     gd = gate_def(gate)
@@ -297,6 +338,9 @@ def gate_state(ctx: Ctx, gate: str, current_manifests: dict[str, dict] | None = 
         status = "FAILED"
         st["notes"].append("unblocked by the user; rework and re-evaluate")
     st["status"] = status
+    if status in ("FAILED", "BLOCKED"):
+        st["failed_checks"] = failed_checks(rec)
+        st["failing_tests"] = failing_tests(rec)
     if rec.get("blocked_reason"):
         st["blocked_reason"] = rec["blocked_reason"]
     if changed:

@@ -1,0 +1,322 @@
+[
+  {
+    "probe": "S1-rerun-failed-G5",
+    "claim": "G5 cannot be re-evaluated (let alone pass) while the failure has no DEFECT",
+    "before": {
+      "wi": "IN_PROGRESS",
+      "ledger_ok": true,
+      "ledger_error": null,
+      "G1": "PASSED",
+      "G2": "PASSED",
+      "G3": "PASSED",
+      "G4": "PASSED",
+      "G5": "FAILED"
+    },
+    "pass": true,
+    "summary": "gate G5 -> BLOCKED recorded=False",
+    "reasons": [
+      "rework record missing: R00010 (G5 FAILED) must be referenced by a DEFECT in defects.json (found_in_records) with root_cause_phase, root_cause and fix_scope"
+    ],
+    "restored": true,
+    "after": {
+      "wi": "IN_PROGRESS",
+      "ledger_ok": true,
+      "ledger_error": null,
+      "G1": "PASSED",
+      "G2": "PASSED",
+      "G3": "PASSED",
+      "G4": "PASSED",
+      "G5": "FAILED"
+    }
+  },
+  {
+    "probe": "S2-fake-evidence-json",
+    "claim": "a hand-written evidence record + junit is rejected and changes no gate",
+    "before": {
+      "wi": "IN_PROGRESS",
+      "ledger_ok": true,
+      "ledger_error": null,
+      "G1": "PASSED",
+      "G2": "PASSED",
+      "G3": "PASSED",
+      "G4": "PASSED",
+      "G5": "FAILED"
+    },
+    "pass": true,
+    "summary": "verify-evidence exit 1, audit exit 1, G5 still FAILED",
+    "verify_evidence": [
+      "! .vmodel/evidence/WI-001/G5/29991231T000000000000Z-unit-fake01/record.json: invalid signature (not written by the validator)",
+      "  ! .vmodel/evidence/WI-001/G5/29991231T000000000000Z-unit-fake01/record.json: not referenced by the signed ledger -> not evidence",
+      "evidence REJECTED"
+    ],
+    "audit": [
+      "audit: validator 0.1.2 release core a0555e328413; 10 ledger entries; 2 evidence record(s) checked",
+      "  ! .vmodel/evidence/WI-001/G5/29991231T000000000000Z-unit-fake01/record.json: evidence not referenced by the ledger (ignored for gate decisions)",
+      "audit FAILED (1 problem(s))"
+    ],
+    "restored": true,
+    "after": {
+      "wi": "IN_PROGRESS",
+      "ledger_ok": true,
+      "ledger_error": null,
+      "G1": "PASSED",
+      "G2": "PASSED",
+      "G3": "PASSED",
+      "G4": "PASSED",
+      "G5": "FAILED"
+    }
+  },
+  {
+    "probe": "S2-fake-result-json",
+    "claim": "a 'PASSED' result file written into the work item is not a gate decision",
+    "before": {
+      "wi": "IN_PROGRESS",
+      "ledger_ok": true,
+      "ledger_error": null,
+      "G1": "PASSED",
+      "G2": "PASSED",
+      "G3": "PASSED",
+      "G4": "PASSED",
+      "G5": "FAILED"
+    },
+    "pass": true,
+    "summary": "G5 FAILED, WI IN_PROGRESS (file ignored)",
+    "restored": true,
+    "after": {
+      "wi": "IN_PROGRESS",
+      "ledger_ok": true,
+      "ledger_error": null,
+      "G1": "PASSED",
+      "G2": "PASSED",
+      "G3": "PASSED",
+      "G4": "PASSED",
+      "G5": "FAILED"
+    }
+  },
+  {
+    "probe": "S3-forged-PASS-appended",
+    "claim": "an appended G5 PASSED record without a valid signature is detected",
+    "before": {
+      "wi": "IN_PROGRESS",
+      "ledger_ok": true,
+      "ledger_error": null,
+      "G1": "PASSED",
+      "G2": "PASSED",
+      "G3": "PASSED",
+      "G4": "PASSED",
+      "G5": "FAILED"
+    },
+    "pass": true,
+    "summary": "ledger_ok=False G5=BLOCKED gate->BLOCKED",
+    "ledger_error": "ledger line 11: hash chain broken",
+    "gate_reasons": [
+      "ledger integrity: ledger line 11: hash chain broken"
+    ],
+    "restored": true,
+    "after": {
+      "wi": "IN_PROGRESS",
+      "ledger_ok": true,
+      "ledger_error": null,
+      "G1": "PASSED",
+      "G2": "PASSED",
+      "G3": "PASSED",
+      "G4": "PASSED",
+      "G5": "FAILED"
+    }
+  },
+  {
+    "probe": "S3-G5-FAILED-flipped-to-PASSED",
+    "claim": "editing the signed FAILED record into PASSED is detected",
+    "before": {
+      "wi": "IN_PROGRESS",
+      "ledger_ok": true,
+      "ledger_error": null,
+      "G1": "PASSED",
+      "G2": "PASSED",
+      "G3": "PASSED",
+      "G4": "PASSED",
+      "G5": "FAILED"
+    },
+    "pass": true,
+    "summary": "ledger_ok=False G5=BLOCKED",
+    "ledger_error": "ledger line 10: invalid signature (record not written by the validator)",
+    "restored": true,
+    "after": {
+      "wi": "IN_PROGRESS",
+      "ledger_ok": true,
+      "ledger_error": null,
+      "G1": "PASSED",
+      "G2": "PASSED",
+      "G3": "PASSED",
+      "G4": "PASSED",
+      "G5": "FAILED"
+    }
+  },
+  {
+    "probe": "S3-ledger-tail-deleted",
+    "claim": "deleting the last (FAILED) record is detected (signed head + external anchor)",
+    "before": {
+      "wi": "IN_PROGRESS",
+      "ledger_ok": true,
+      "ledger_error": null,
+      "G1": "PASSED",
+      "G2": "PASSED",
+      "G3": "PASSED",
+      "G4": "PASSED",
+      "G5": "FAILED"
+    },
+    "pass": true,
+    "summary": "ledger_ok=False",
+    "ledger_error": "ledger head mismatch: head says seq 10, ledger has 9 (entries were removed or the head was replaced)",
+    "restored": true,
+    "after": {
+      "wi": "IN_PROGRESS",
+      "ledger_ok": true,
+      "ledger_error": null,
+      "G1": "PASSED",
+      "G2": "PASSED",
+      "G3": "PASSED",
+      "G4": "PASSED",
+      "G5": "FAILED"
+    }
+  },
+  {
+    "probe": "S4-source-change",
+    "claim": "a source change invalidates the G4 PASS (STALE)",
+    "before": {
+      "wi": "IN_PROGRESS",
+      "ledger_ok": true,
+      "ledger_error": null,
+      "G1": "PASSED",
+      "G2": "PASSED",
+      "G3": "PASSED",
+      "G4": "PASSED",
+      "G5": "FAILED"
+    },
+    "pass": true,
+    "summary": "source: G4 STALE, changed=['changed: src/scorestats/__init__.py']",
+    "file": "src/scorestats/__init__.py",
+    "restored": true,
+    "after": {
+      "wi": "IN_PROGRESS",
+      "ledger_ok": true,
+      "ledger_error": null,
+      "G1": "PASSED",
+      "G2": "PASSED",
+      "G3": "PASSED",
+      "G4": "PASSED",
+      "G5": "FAILED"
+    }
+  },
+  {
+    "probe": "S5-test-change",
+    "claim": "a test file change invalidates the G4 PASS (STALE)",
+    "before": {
+      "wi": "IN_PROGRESS",
+      "ledger_ok": true,
+      "ledger_error": null,
+      "G1": "PASSED",
+      "G2": "PASSED",
+      "G3": "PASSED",
+      "G4": "PASSED",
+      "G5": "FAILED"
+    },
+    "pass": true,
+    "summary": "test: G4 STALE, changed=['changed: tests/test_percentile.py']",
+    "file": "tests/test_percentile.py",
+    "restored": true,
+    "after": {
+      "wi": "IN_PROGRESS",
+      "ledger_ok": true,
+      "ledger_error": null,
+      "G1": "PASSED",
+      "G2": "PASSED",
+      "G3": "PASSED",
+      "G4": "PASSED",
+      "G5": "FAILED"
+    }
+  },
+  {
+    "probe": "S5-build-config-change",
+    "claim": "a pytest/build config change invalidates the G4 PASS",
+    "before": {
+      "wi": "IN_PROGRESS",
+      "ledger_ok": true,
+      "ledger_error": null,
+      "G1": "PASSED",
+      "G2": "PASSED",
+      "G3": "PASSED",
+      "G4": "PASSED",
+      "G5": "FAILED"
+    },
+    "pass": true,
+    "summary": "pyproject: G4 STALE, changed=['changed: pyproject.toml']",
+    "file": "pyproject.toml",
+    "restored": true,
+    "after": {
+      "wi": "IN_PROGRESS",
+      "ledger_ok": true,
+      "ledger_error": null,
+      "G1": "PASSED",
+      "G2": "PASSED",
+      "G3": "PASSED",
+      "G4": "PASSED",
+      "G5": "FAILED"
+    }
+  },
+  {
+    "probe": "S5-validator-config-change",
+    "claim": "a validator config change invalidates the G4 PASS",
+    "before": {
+      "wi": "IN_PROGRESS",
+      "ledger_ok": true,
+      "ledger_error": null,
+      "G1": "PASSED",
+      "G2": "PASSED",
+      "G3": "PASSED",
+      "G4": "PASSED",
+      "G5": "FAILED"
+    },
+    "pass": true,
+    "summary": "config: G4 STALE, changed=['changed: .vmodel/config.json']",
+    "file": ".vmodel/config.json",
+    "restored": true,
+    "after": {
+      "wi": "IN_PROGRESS",
+      "ledger_ok": true,
+      "ledger_error": null,
+      "G1": "PASSED",
+      "G2": "PASSED",
+      "G3": "PASSED",
+      "G4": "PASSED",
+      "G5": "FAILED"
+    }
+  },
+  {
+    "probe": "S6-guard-hook",
+    "claim": "the guard hook denies agent writes to evidence/ledger/core/reviews",
+    "before": {
+      "wi": "IN_PROGRESS",
+      "ledger_ok": true,
+      "ledger_error": null,
+      "G1": "PASSED",
+      "G2": "PASSED",
+      "G3": "PASSED",
+      "G4": "PASSED",
+      "G5": "FAILED"
+    },
+    "pass": true,
+    "summary": "{\"Write evidence\": \"deny\", \"Edit ledger\": \"deny\", \"Bash redirect into ledger\": \"deny\", \"Edit release validator core\": \"deny\", \"Write G4 review as main session\": \"deny\", \"Bash review-submit as main session\": \"deny\", \"Write source as main session (allowed)\": \"allow\"}",
+    "restored": true,
+    "after": {
+      "wi": "IN_PROGRESS",
+      "ledger_ok": true,
+      "ledger_error": null,
+      "G1": "PASSED",
+      "G2": "PASSED",
+      "G3": "PASSED",
+      "G4": "PASSED",
+      "G5": "FAILED"
+    }
+  }
+]
