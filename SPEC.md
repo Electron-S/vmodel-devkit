@@ -123,7 +123,7 @@ Claude Code 위에서 ASPICE V-Model을 따르는 개발 절차(요구사항 →
 4. **증거 기록**: Work Item, Gate, 명령, 실행 파일 경로·버전·해시, 런타임, 시작/종료 시각, 종료 코드, stdout/stderr 해시, JUnit 결과, Git HEAD·dirty 여부, 검증 대상 파일별 해시와 manifest 해시, Validator 버전과 Core 해시.
 5. **최신성**: Gate별 manifest = 해당 Gate 산출물 + 모든 상위 산출물 (+ G4/G5는 VCS·도구 캐시·가상환경·`build/`·`dist/`·`__pycache__` 바이트코드를 뺀 **프로젝트 전체 파일**, `.vmodel/config.json`, `defects.json`, `change-requests.json`). 파일 하나라도 바뀌면 PASSED → STALE. Validator Core가 바뀌거나 상위 Gate가 PASSED가 아니게 되어도 STALE. dirty 작업 트리도 검증 가능하며 그 시점 파일 해시를 저장한다. 테스트 인터프리터의 설치 패키지 목록은 증거에 기록만 한다(STALE 판정 미포함 — 한계).
 5-1. **리뷰 진위**: guard 훅이 `vmodel review-submit`을 `agent_type == vmodel:verifier`에게만 허용하고, Gate는 원장에 등록된 해시와 같은 리뷰만 인정한다.
-6. **Validator 보호**: Core 해시를 프로젝트 `.vmodel/devkit.lock.json`에 고정. 실행 시 자기 파일 해시를 다시 계산해 lock과 다르면 BLOCKED. 릴리스 사본은 `RELEASE_MANIFEST.json`으로 파일별 대조. 쓰기 보호는 PreToolUse Hook(`onFailure: block`으로 fail-closed) + 프로젝트 권한 deny 규칙의 이중 장치.
+6. **Validator 보호**: Core 해시를 프로젝트 `.vmodel/devkit.lock.json`에 고정. 실행 시 자기 파일 해시를 다시 계산해 lock과 다르면 BLOCKED. 릴리스 사본은 `RELEASE_MANIFEST.json`으로 파일별 대조. 쓰기 보호는 PreToolUse Hook(`onFailure: block`으로 fail-closed) + 프로젝트 권한 deny 규칙의 이중 장치. guard는 Bash 명령에서 쓸 수 없는 리디렉션(정확히 `/dev/null`로 가는 출력, fd 복제·닫기, 단순 입력)을 지운 뒤 쓰기 여부를 판정하고, 해석이 불확실하면 쓰기로 본다(0.1.4, D36).
 7. **한계 (주장하지 않는 것)**: 같은 OS 사용자로 임의 코드를 실행할 수 있는 에이전트(자기가 쓴 스크립트 실행, pty로 TTY 흉내)는 이론상 키를 읽고 원장·앵커를 위조하거나 사용자 전용 명령을 실행할 수 있다. 테스트 코드는 테스트 러너와 같은 프로세스에서 돌기 때문에 G4.TEST_INTEGRITY가 못 잡는 방식으로 결과를 조작할 수 있다. 사용자 결정 기록(`decided_by: "user"`)은 자기 증명이다. Hook과 권한 규칙은 우발적·일반적 우회를 막는 장치이지 OS 수준 격리가 아니다. 최종 신뢰 경계는 별도 사용자/CI에서 신뢰 사본으로 `vmodel audit` 및 전체 재검증(`vmodel verify`)을 돌리는 것이다 [EXT: CI 연동].
 8. **순환 검증 금지**: Validator 자체의 정확성은 독립 하네스(`tests/`, unittest)로만 판정한다. DevKit 개발 자체를 DevKit Validator로 승인하지 않는다.
 
@@ -164,8 +164,12 @@ REQ ↔ ARCH(`components[].requirements`) ↔ DESIGN(`units[].component`, `units
 
 1. Gate FAILED → Validator가 실패 체크·실패 테스트를 기록, `failure_signature` 계산. `vmodel status`가 FAILED Gate 아래에 실패 체크와 실패 TEST ID를 보여준다 (0.1.3, D30)
 2. 오케스트레이터가 DEFECT 작성: `found_in_records`(실패 기록 ID), `root_cause_phase`(P1~P4), `root_cause`, `fix_scope`, `related`(실패 TEST ID 포함). Validator는 인용된 실패 기록에서 실패 TEST를 직접 꺼내 `failing_tests`·`unlinked_failing_tests`를 status/lint/report에 표시한다 (원장 파생, 경고만, D29)
+2-1. 결함 추적 점검 (0.1.4, D35·D36, 표시 전용이며 Gate 판정에 쓰지 않는다)
+   - 유효한 실패 증거는 같은 WI의 서명된 gate 기록 중 FAILED 또는 3회 동일 실패 BLOCKED뿐이다(재작업 전제 조건과 같은 정의). 그 밖의 인용(원장에 없음, 다른 WI, gate 기록 아님, PASSED·REVIEW_REQUIRED·환경 BLOCKED)은 무효이고 `failing_tests`와 `verified_by` 계산에서 빠진다.
+   - TEST별 결과: G5 기록은 실패 TEST와 UNKNOWN(실행되지 않았거나 결과가 기록되지 않음)을 구분한다. 테스트를 실행하지 않는 G1~G4의 실패는 N/A다.
+   - 분류: 오류 `evidence_integrity`(원장 무결성 실패, 또는 인용된 실패 기록·검증 PASS 기록의 증거 파일이 원장과 다름 → `verified_by` 보류)와 `invalid_citation`, 경고 `unlinked_failing_test`와 `unknown_test_result`. status(JSON `errors`·`warnings`·WI `defect_checks`, 텍스트 `ERROR [..]`/`WARNING [..]`), lint, report(`## Defect trace check` 절, 항목이 없으면 None)가 같은 이름을 쓴다. lint는 오류나 경고가 하나라도 있으면 종료 코드 1이다
 3. 원인 단계로 복귀해 산출물·코드 수정, **같은 단계에서 DEFECT `status: fixed`** (재리뷰 전). defects.json은 G4/G5 입력이므로 통과 후 수정하면 다시 STALE (D28). 영향 Gate 자동 STALE. G4 재리뷰에서 verifier는 원인이 모든 실패를 설명하는지 status의 실패 정보와 대조한다
-3-1. 결함 종료의 증거는 `fixed` 표기가 아니라 원장의 "인용된 실패 기록 이후 그 Gate의 첫 PASS"(`verified_by`)다
+3-1. 결함 종료의 증거는 `fixed` 표기가 아니라 원장의 "인용된 실패 기록 이후 그 Gate의 첫 PASS"(`verified_by`)다. 0.1.4부터 표시 상태를 파생한다(D32 권장안 C): OPEN·FIX_APPLIED(검증 전, 주장 `open`·`fixed`), VERIFIED(`verified_by`는 있지만 그 Gate가 지금 PASSED가 아님, 예: STALE → 재검증 필요), CLOSED(검증됐고 그 Gate가 현재 입력으로 PASSED). defects.json의 enum은 `open`/`fixed` 그대로다
 4. 상위부터 재평가. 재평가 전 결함 기록이 없으면 BLOCKED
 5. 같은 `failure_signature`로 3회 연속 FAILED → BLOCKED, 자동 반복 중지 후 사용자 보고. 해제는 사용자가 터미널(TTY)에서 `vmodel unblock`
 6. 테스트 완화·삭제 금지: G3.NO_SILENT_REMOVAL, G5.NO_WEAKENING이 기계적으로 막는다. 테스트를 바꿔야 하면 `test_changes`에 근거·관련 REQ·영향을 기록하고 Verifier가 검토

@@ -1,0 +1,438 @@
+{
+  "inputs": {
+    "drill": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/3327e00b-02b2-4423-87ce-b721cf6936c2/scratchpad/drill-3",
+    "work": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/18a7f4ec-42f4-4dd0-9eb3-76f6a3d98b0c/scratchpad/drill3-0.1.4",
+    "old_release": "/home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.1.3",
+    "new_release": "/home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.1.4",
+    "anchor_copied": true
+  },
+  "old_baseline": {
+    "status": {
+      "validator": {
+        "version": "0.1.3",
+        "mode": "release",
+        "core_hash": "sha256:0208c7988516f050d2eabf8c50704d9e36be7c4d6eb94b4ff098dc7c2c73e0ea",
+        "ok": true
+      },
+      "wi": "PARTIALLY_VERIFIED",
+      "defect_checks": null,
+      "gates": {
+        "G1": "PASSED",
+        "G2": "PASSED",
+        "G3": "PASSED",
+        "G4": "PASSED",
+        "G5": "PASSED"
+      },
+      "stale_notes": [],
+      "defects": [
+        {
+          "id": "DEFECT-001",
+          "claimed_status": "fixed",
+          "verified_by": "R00013",
+          "failing_tests": [
+            "TEST-001",
+            "TEST-002",
+            "TEST-010",
+            "TEST-011",
+            "TEST-012"
+          ],
+          "unlinked_failing_tests": []
+        }
+      ]
+    },
+    "lines": [
+      "WI-001 [PARTIALLY_VERIFIED] 점수 백분위수 계산(nearest-rank) (profile STANDARD)",
+      "DEFECT-001 [fixed; verified by R00013] G5 root cause P4; failing tests (ledger): TEST-001, TEST-002, TEST-010, TEST-011, TEST-012"
+    ],
+    "audit_exit": 0,
+    "ledger_entries": 18,
+    "evidence_records": 6
+  },
+  "new_before_repin": {
+    "validator_ok": false,
+    "gates": {
+      "G1": "BLOCKED",
+      "G2": "BLOCKED",
+      "G3": "BLOCKED",
+      "G4": "BLOCKED",
+      "G5": "BLOCKED"
+    }
+  },
+  "repin": [
+    "Type 'yes' to re-pin the validator core hash (all previous PASS results become STALE): re-pinned core b1fee43f0073 (validator 0.1.4)"
+  ],
+  "audit_after_repin": {
+    "exit": 0,
+    "summary": [
+      "audit: validator 0.1.4 release core b1fee43f0073; 19 ledger entries; 6 evidence record(s) checked",
+      "audit OK"
+    ]
+  },
+  "verify_evidence": {
+    ".vmodel/evidence/WI-001/G4/20261108T125458228791Z-lint-f9f972/record.json": 0,
+    ".vmodel/evidence/WI-001/G4/20261108T125643833250Z-lint-b040cb/record.json": 0,
+    ".vmodel/evidence/WI-001/G4/20261108T125844316584Z-lint-485473/record.json": 0,
+    ".vmodel/evidence/WI-001/G5/20261108T125458427119Z-unit-0c2e40/record.json": 0,
+    ".vmodel/evidence/WI-001/G5/20261108T125646787951Z-unit-895e49/record.json": 0,
+    ".vmodel/evidence/WI-001/G5/20261108T125844356280Z-unit-4ad0f9/record.json": 0
+  },
+  "new_after_repin": {
+    "status": {
+      "validator": {
+        "version": "0.1.4",
+        "mode": "release",
+        "core_hash": "sha256:b1fee43f0073571457be30388a678b37902aeb1e99a53d27764bef15aae8b83e",
+        "ok": true
+      },
+      "wi": "IN_PROGRESS",
+      "defect_checks": {
+        "errors": 0,
+        "warnings": 0
+      },
+      "gates": {
+        "G1": "STALE",
+        "G2": "STALE",
+        "G3": "STALE",
+        "G4": "STALE",
+        "G5": "STALE"
+      },
+      "stale_notes": [
+        "validator core changed since this PASS"
+      ],
+      "defects": [
+        {
+          "id": "DEFECT-001",
+          "claimed_status": "fixed",
+          "closure_state": "VERIFIED",
+          "closure_gate": "G5",
+          "closure_gate_status": "STALE",
+          "verified_by": "R00013",
+          "verification_withheld": null,
+          "claim_note": null,
+          "failing_tests": [
+            "TEST-001",
+            "TEST-002",
+            "TEST-010",
+            "TEST-011",
+            "TEST-012"
+          ],
+          "unlinked_failing_tests": [],
+          "errors": [],
+          "warnings": []
+        }
+      ]
+    },
+    "lines": [
+      "WI-001 [IN_PROGRESS] 점수 백분위수 계산(nearest-rank) (profile STANDARD); defect checks: 0 error(s), 0 warning(s)",
+      "DEFECT-001 VERIFIED [claimed fixed; verified by R00013 but G5 is now STALE: re-verify] G5 root cause P4; failing tests (ledger): TEST-001, TEST-002, TEST-010, TEST-011, TEST-012"
+    ],
+    "lint": {
+      "exit": 0,
+      "last": "lint OK (not a gate decision)"
+    }
+  },
+  "reverify": {
+    "G1": {
+      "status": "PASSED",
+      "record": "R00020",
+      "reasons": []
+    },
+    "G2": {
+      "status": "PASSED",
+      "record": "R00021",
+      "reasons": []
+    },
+    "G3": {
+      "status": "PASSED",
+      "record": "R00022",
+      "reasons": []
+    },
+    "G4": {
+      "status": "PASSED",
+      "record": "R00023",
+      "reasons": []
+    },
+    "G5": {
+      "status": "PASSED",
+      "record": "R00024",
+      "reasons": []
+    }
+  },
+  "after_reverify": {
+    "status": {
+      "validator": {
+        "version": "0.1.4",
+        "mode": "release",
+        "core_hash": "sha256:b1fee43f0073571457be30388a678b37902aeb1e99a53d27764bef15aae8b83e",
+        "ok": true
+      },
+      "wi": "PARTIALLY_VERIFIED",
+      "defect_checks": {
+        "errors": 0,
+        "warnings": 0
+      },
+      "gates": {
+        "G1": "PASSED",
+        "G2": "PASSED",
+        "G3": "PASSED",
+        "G4": "PASSED",
+        "G5": "PASSED"
+      },
+      "stale_notes": [],
+      "defects": [
+        {
+          "id": "DEFECT-001",
+          "claimed_status": "fixed",
+          "closure_state": "CLOSED",
+          "closure_gate": "G5",
+          "closure_gate_status": "PASSED",
+          "verified_by": "R00013",
+          "verification_withheld": null,
+          "claim_note": null,
+          "failing_tests": [
+            "TEST-001",
+            "TEST-002",
+            "TEST-010",
+            "TEST-011",
+            "TEST-012"
+          ],
+          "unlinked_failing_tests": [],
+          "errors": [],
+          "warnings": []
+        }
+      ]
+    },
+    "lines": [
+      "WI-001 [PARTIALLY_VERIFIED] 점수 백분위수 계산(nearest-rank) (profile STANDARD); defect checks: 0 error(s), 0 warning(s)",
+      "DEFECT-001 CLOSED [claimed fixed; verified by R00013, G5 PASSED (R00024)] G5 root cause P4; failing tests (ledger): TEST-001, TEST-002, TEST-010, TEST-011, TEST-012"
+    ],
+    "report_defects": "## Defects\n\n- DEFECT-001 [fixed — verified by R00013] G5 percentile()가 nearest-rank 순위를 올림이 아닌 내림(부동소수점 나눗셈 후 int())으로 계산해 TEST-001/002/010/011/012가 실패한다. (root cause P4: src/scorestats/percentile.py가 DESIGN-001(순위 r = ceil(p*N/100), 정수 연산 -(-p*N // 100), 인덱스 r-1)과 달리 index = min(int(p*count/100), count-1)로 구현했다. int()는 내림이고 인덱스에서 1을 빼지 않아 한 칸 뒤 값을 고르며, 부동소수점 나눗셈도 사용한다)\n  - closure: CLOSED — verified by R00013 and G5 PASSED (R00024) for the current inputs\n  - failing tests in R00010 (from the signed ledger): TEST-001, TEST-002, TEST-010, TEST-011, TEST-012\n\n## Defect trace check\n\nEvidence errors (ERROR) and traceability warnings (WARNING) derived from the signed ledger. `vmodel lint` exits 1 while any remain; gate decisions do not depend on them.\n\nNone (1 defect(s) checked).\n\n"
+  },
+  "P-F1_status_edited_after_pass": {
+    "status": {
+      "validator": {
+        "version": "0.1.4",
+        "mode": "release",
+        "core_hash": "sha256:b1fee43f0073571457be30388a678b37902aeb1e99a53d27764bef15aae8b83e",
+        "ok": true
+      },
+      "wi": "IN_PROGRESS",
+      "defect_checks": {
+        "errors": 0,
+        "warnings": 0
+      },
+      "gates": {
+        "G1": "PASSED",
+        "G2": "PASSED",
+        "G3": "PASSED",
+        "G4": "STALE",
+        "G5": "STALE"
+      },
+      "stale_notes": [],
+      "defects": [
+        {
+          "id": "DEFECT-001",
+          "claimed_status": "open",
+          "closure_state": "VERIFIED",
+          "closure_gate": "G5",
+          "closure_gate_status": "STALE",
+          "verified_by": "R00013",
+          "verification_withheld": null,
+          "claim_note": "defects.json says open, but the ledger shows the fix verified by R00013",
+          "failing_tests": [
+            "TEST-001",
+            "TEST-002",
+            "TEST-010",
+            "TEST-011",
+            "TEST-012"
+          ],
+          "unlinked_failing_tests": [],
+          "errors": [],
+          "warnings": []
+        }
+      ]
+    },
+    "lines": [
+      "WI-001 [IN_PROGRESS] 점수 백분위수 계산(nearest-rank) (profile STANDARD); defect checks: 0 error(s), 0 warning(s)",
+      "DEFECT-001 VERIFIED [claimed open; verified by R00013 but G5 is now STALE: re-verify] G5 root cause P4; failing tests (ledger): TEST-001, TEST-002, TEST-010, TEST-011, TEST-012",
+      "note: defects.json says open, but the ledger shows the fix verified by R00013"
+    ]
+  },
+  "P-F2_unlinked": {
+    "status": {
+      "validator": {
+        "version": "0.1.4",
+        "mode": "release",
+        "core_hash": "sha256:b1fee43f0073571457be30388a678b37902aeb1e99a53d27764bef15aae8b83e",
+        "ok": true
+      },
+      "wi": "IN_PROGRESS",
+      "defect_checks": {
+        "errors": 0,
+        "warnings": 1
+      },
+      "gates": {
+        "G1": "PASSED",
+        "G2": "PASSED",
+        "G3": "PASSED",
+        "G4": "STALE",
+        "G5": "STALE"
+      },
+      "stale_notes": [],
+      "defects": [
+        {
+          "id": "DEFECT-001",
+          "claimed_status": "fixed",
+          "closure_state": "VERIFIED",
+          "closure_gate": "G5",
+          "closure_gate_status": "STALE",
+          "verified_by": "R00013",
+          "verification_withheld": null,
+          "claim_note": null,
+          "failing_tests": [
+            "TEST-001",
+            "TEST-002",
+            "TEST-010",
+            "TEST-011",
+            "TEST-012"
+          ],
+          "unlinked_failing_tests": [
+            "TEST-011",
+            "TEST-012"
+          ],
+          "errors": [],
+          "warnings": [
+            {
+              "severity": "warning",
+              "category": "unlinked_failing_test",
+              "record": "R00010",
+              "detail": "DEFECT-001 does not link failing test(s) of R00010 in 'related': TEST-011, TEST-012",
+              "tests": [
+                "TEST-011",
+                "TEST-012"
+              ],
+              "records": [
+                "R00010"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "lines": [
+      "WI-001 [IN_PROGRESS] 점수 백분위수 계산(nearest-rank) (profile STANDARD); defect checks: 0 error(s), 1 warning(s)",
+      "DEFECT-001 VERIFIED [claimed fixed; verified by R00013 but G5 is now STALE: re-verify] G5 root cause P4; failing tests (ledger): TEST-001, TEST-002, TEST-010, TEST-011, TEST-012",
+      "WARNING [unlinked_failing_test] DEFECT-001 does not link failing test(s) of R00010 in 'related': TEST-011, TEST-012"
+    ],
+    "lint_exit": 1,
+    "lint": [
+      "- WARNING [unlinked_failing_test] DEFECT-001 does not link failing test(s) of R00010 in 'related': TEST-011, TEST-012",
+      "1 problem(s): 0 error(s), 1 warning(s) (not a gate decision)"
+    ]
+  },
+  "restored": {
+    "status": {
+      "validator": {
+        "version": "0.1.4",
+        "mode": "release",
+        "core_hash": "sha256:b1fee43f0073571457be30388a678b37902aeb1e99a53d27764bef15aae8b83e",
+        "ok": true
+      },
+      "wi": "PARTIALLY_VERIFIED",
+      "defect_checks": {
+        "errors": 0,
+        "warnings": 0
+      },
+      "gates": {
+        "G1": "PASSED",
+        "G2": "PASSED",
+        "G3": "PASSED",
+        "G4": "PASSED",
+        "G5": "PASSED"
+      },
+      "stale_notes": [],
+      "defects": [
+        {
+          "id": "DEFECT-001",
+          "claimed_status": "fixed",
+          "closure_state": "CLOSED",
+          "closure_gate": "G5",
+          "closure_gate_status": "PASSED",
+          "verified_by": "R00013",
+          "verification_withheld": null,
+          "claim_note": null,
+          "failing_tests": [
+            "TEST-001",
+            "TEST-002",
+            "TEST-010",
+            "TEST-011",
+            "TEST-012"
+          ],
+          "unlinked_failing_tests": [],
+          "errors": [],
+          "warnings": []
+        }
+      ]
+    },
+    "lines": [
+      "WI-001 [PARTIALLY_VERIFIED] 점수 백분위수 계산(nearest-rank) (profile STANDARD); defect checks: 0 error(s), 0 warning(s)",
+      "DEFECT-001 CLOSED [claimed fixed; verified by R00013, G5 PASSED (R00024)] G5 root cause P4; failing tests (ledger): TEST-001, TEST-002, TEST-010, TEST-011, TEST-012"
+    ]
+  },
+  "final_audit": {
+    "exit": 0,
+    "summary": [
+      "audit: validator 0.1.4 release core b1fee43f0073; 24 ledger entries; 8 evidence record(s) checked",
+      "audit OK"
+    ]
+  },
+  "ledger": {
+    "old_prefix_unchanged": true,
+    "entries_before": 18,
+    "added": [
+      [
+        "lock",
+        null,
+        null,
+        null
+      ],
+      [
+        "gate",
+        "G1",
+        "PASSED",
+        "0.1.4"
+      ],
+      [
+        "gate",
+        "G2",
+        "PASSED",
+        "0.1.4"
+      ],
+      [
+        "gate",
+        "G3",
+        "PASSED",
+        "0.1.4"
+      ],
+      [
+        "gate",
+        "G4",
+        "PASSED",
+        "0.1.4"
+      ],
+      [
+        "gate",
+        "G5",
+        "PASSED",
+        "0.1.4"
+      ]
+    ],
+    "old_gate_versions": [
+      [
+        "0.1.3",
+        "sha256:0208c7988516f050d2eabf8c50704d9e36be7c4d6eb94b4ff098dc7c2c73e0ea"
+      ]
+    ]
+  },
+  "original_untouched": true
+}

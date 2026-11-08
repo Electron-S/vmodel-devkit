@@ -153,8 +153,41 @@ F3
 | T-V-02 | REQ-F3-7 | `…GateDecisionInvariant.test_manifest_hashes_are_computed_identically` |
 | T-V-03 | REQ-V-1, V-2 | `…OldEvidenceAccept.test_013_ledger_and_evidence_verify_under_014` |
 
-## 7. 결과
-(구현 후 기록: RED·GREEN 로그, 회귀, Validator·Audit 확인)
+## 6-1. 검토 후 추가한 테스트 (§8의 지적을 재현한 것)
 
-## 8. 독립 검토
-(구현 후 기록)
+| TEST | 근거 | 하네스 |
+|---|---|---|
+| T-F2-09 | 검토 F2-1 (동사·플래그 사이 리디렉션) | `test_guard_redirects.GuardFileRedirectRed.test_redirection_between_verb_and_flag_denied`, `GuardWritesChar.test_devnull_between_verb_and_flag_stays_denied` |
+| T-F2-10 | 검토 F2-4, REQ-F2-5 | `…GuardWritesChar.test_non_bash_tools_keep_the_old_rule` |
+| T-F2-11 | 검토 F2-1·2, REQ-F2-3·4 | `…GuardDifferentialAccept.test_no_write_detection_is_lost_except_pure_devnull_redirections` (0.1.3 대비 차등) |
+| T-F3-17 | 검토 F3-2 / F1-1 | `test_defect_evidence.DefectEvidenceReviewRed.test_multi_gate_citation_is_not_verified_by_an_upstream_pass`, `test_defect_closure.DefectClosureReviewRed.test_multi_gate_failure_is_not_closed_by_the_upstream_pass` |
+| T-F3-18 | 검토 F3-1 | `…DefectEvidenceReviewRed.test_malformed_evidence_record_is_an_integrity_error_not_a_crash` |
+| T-F3-19 | 검토 F3-3 | `…test_duplicate_citations_count_once`, `…test_three_strike_chain_counts_a_missing_link_once` |
+| T-F3-20 | 검토 F3-4 | `…test_defect_without_citations_is_an_invalid_citation` |
+| T-F3-21 | 검토 F3-8 | `…test_forged_or_truncated_ledger_is_reported_in_lint_and_report`, `…test_withheld_verification_is_named_in_status_and_report`, `…test_counts_agree_across_status_lint_and_report`, `DefectTestResultsRed.test_unknown_results_are_named_in_lint_and_report`, `DefectEvidenceReviewChar.test_clean_defect_lint_exits_zero` |
+| T-F1-08 | 검토 F1-2·3·4·6 | `test_defect_closure.DefectClosureReviewRed.*` (재실행 후 현재 기록, PASS 뒤 실패, 원장 실패 UNKNOWN, report의 claim note, SessionStart 출력), `DefectClosureBlockedRed.test_blocked_gate_does_not_say_re_verify` |
+
+## 7. 결과
+(최종 수치는 TEST_RESULTS §10)
+
+## 8. 독립 검토 (Verification Agent, 별도 컨텍스트, 저장소 읽기 전용)
+
+검토자에게는 결론이 아니라 요구사항(이 문서)·diff·실행 방법만 넘겼다. 지적은 직접 재현해 사실인 것만 RED 테스트로 고정한 뒤 고쳤다(재현 못 한 것, 사용자 결정 사항은 고치지 않음).
+
+F2 (커밋 `68f64e7` 전 작업 트리)
+- 주요, 사실 확인: `sed >/dev/null 2>&1 -i … .vmodel/state/ledger.jsonl`류를 0.1.3은 막았는데 첫 수정본은 통과시켰다. bash에서 실제로 원장이 바뀌었다(abc→Xbc). → 비쓰기 리디렉션을 모두 정규화한 뒤 판정.
+- 부, 사실 확인: `sh -c 'ls 2>&1'` 같은 새 오탐, `/dev/null\r`, PowerShell에서 `/dev/null`이 `C:\dev\null` → 각각 수정.
+- 재검토: 퍼저 2,483건에서 0.1.3 대비 손실 0, 새 오탐 1종(`>&2` 바로 뒤 따옴표)은 bash에서 `>&2"y"`가 파일을 만들어 불확실 → 차단 유지(알려진 오탐). 0.1.3부터 있던 `x2>&파일` 빈틈을 추가로 찾아 수정(bash로 파일 생성 확인).
+
+F3 (커밋 `14f46b5`)
+- 주요, 사실 확인: 형식이 깨진 증거 record.json으로 status·lint·report가 종료 코드 2(TypeError). → 수정.
+- 주요, 사실 확인: G5 실패와 G4 실패를 함께 인용하면 G4 재PASS가 `verified_by`(0.1.3부터 있던 기준 선택). → 가장 하위 실패 Gate 기준.
+- 부: 3회 사슬 중복 경고, 인용 없는 결함, 원장 오류 시 `unknown_records` 의미 변화, 반복 해싱. → 수정. 테스트 공백 → §6-1.
+- 지적 중 "로그가 dirty 작업 트리에서 생성" → 최종 RED/GREEN 로그는 커밋된 상태에서 다시 만든다(TEST_RESULTS §10).
+- 재검토(`817b9aa`): 지적 1~4 해결. 새 회귀 1건(결과 있는 오래된 실행이 최근 실행의 UNKNOWN을 가림, 사실 확인) → `4c13447`. 재재검토: 해결, 경고 `records`에 대체된 실행이 남는 표현 문제 → `test_unknown_warning_names_only_the_runs_that_still_decide`(4c13447에서 실패 확인) 후 수정.
+- F1 재검토(`817b9aa`): 지적 1~4 해결, 회귀 없음.
+
+F1 (커밋 `2d4f5c6`)
+- 주요, 사실 확인: 위 F3 주요 2와 같은 원인으로 G5가 FAILED인데 CLOSED 표시. → 같은 수정.
+- 부: 재실행 뒤 옛 PASS만 표시, 원장 위조 시 "아직 검증 안 됨" 단정, BLOCKED인데 re-verify 안내. → 수정(현재 기록 표시, UNKNOWN, 차단 해소 안내).
+- 반영 안 함: VERIFIED 이름 변경 제안(사용자가 정한 상태 이름. 사용자 결정 사항으로 보고).

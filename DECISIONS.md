@@ -169,3 +169,33 @@ S2 오케스트레이터는 무엇이 실패했는지 보려고 `.vmodel/state/l
 다시 검토할 조건: 반복된 실제 세션에서 미연결이 관찰되고 경고가 보완으로 이어지지 않으면 대안 3을 다시 검토한다. 그때는 D33에 적은 회귀 테스트를 먼저 만든다.
 
 구현·회귀 테스트 계획은 PLAN.md §v0.1.4 항목 3에 있다. v0.1.3 코드에서 실패하는 재현 테스트를 먼저 쓴 뒤 고친다.
+
+## D36. v0.1.4 구현 결정과 독립 검토 결과 (2026-11-09, 구현 완료)
+사용자 지시(2026-11-08): 정책 A(증거 무결성), B(N/A·UNKNOWN), C(lint 종료 코드 유지, 출력에 ERROR/WARNING 구분)를 승인하고 D32 (C), D34 guard 오탐, D35 P1을 구현한다.
+
+절차. "이 작업에도 G1~G5를 적용하라"는 지시와 SPEC §5.8(DevKit 개발을 DevKit Validator로 승인하지 않음)을 함께 지키기 위해 절차는 G1~G5를 따르고 판정은 독립 하네스가 했다(`docs/v0.1.4/WORKITEM.md` §0). RED는 "고치기 전에 실패"가 아니라 불변 릴리스 0.1.3 코어를 대상으로 `scripts/red_green.py`가 클래스 접미사(Red/Char/Invariant/Accept)로 기계 대조했다. 항목마다 별도 컨텍스트의 Verification Agent가 읽기 전용으로 검토했고, 지적은 재현해 확인한 것만 RED 테스트로 고정한 뒤 고쳤다.
+
+F2 guard (hook.py)
+- Bash 명령에서 쓸 수 없는 리디렉션(정확히 `/dev/null`로 가는 출력, fd 복제·닫기, 단순 입력)을 지운 뒤 쓰기를 판정한다. `/dev/null` 뒤는 공백·탭·개행·`;&|)`·끝만 인정한다. bash 실측: `2>/dev/null"x"`, `` 2>/dev/null`…` ``, `>/dev/null#c`, `/dev/null\r`는 다른 경로다.
+- 0.1.3이 놓친 쓰기를 새로 잡는다: `&>`, `&>>`, `>&파일`·`1>&파일`(n 생략 또는 1), `x2>&파일`(숫자로 끝나는 일반 단어), 동사와 플래그 사이 리디렉션(`sed 2>&1 -i`, `find . 2>&1 -delete`). bash 실측: `2>&파일`은 ambiguous redirect라 쓰지 않는다.
+- 저장소 전체 삭제 규칙은 원문과 정규화한 명령 양쪽에 적용한다. PowerShell 도구에는 예외를 적용하지 않는다(PowerShell 5.1은 `/dev/null`을 `C:\dev\null`로 해석). Windows `NUL`, PowerShell `$null`은 범위 밖이며 기존처럼 차단한다.
+- 독립 검토가 찾은 것: 처음 수정본은 `sed >/dev/null 2>&1 -i …`처럼 동사·플래그 사이에 `/dev/null`이 끼면 0.1.3이 막던 쓰기를 통과시켰다(보호 약화, bash로 원장 변조 확인). 정규화 범위를 넓혀 고쳤고, 재검토 퍼저 2,483건에서 0.1.3 대비 손실 0이다. 이 밖에 `2>&1`을 따옴표 안에서 쓰기로 본 새 오탐, `\r`, PowerShell 적용, `x2>&파일`(0.1.3부터 있던 빈틈)도 고쳤다.
+- 알려진 오탐(불확실하므로 차단 유지): 따옴표 안의 `&>` 문자열(`grep '&>' …`), fd 복제 바로 뒤의 따옴표·백틱(`bash -c "echo x >&2"`; `>&2"y"`는 실제로 파일 `2y`를 만든다).
+- 두 버전 공통 미탐(기록만, 이번 범위 밖): `python3 - <<EOF`, `gzip`, `sort -o`, `curl -o`, `uniq a out`, `find -fprint`, PowerShell 별칭 `ni`/`ri`/`sc`/`ac`/`clc`. guard는 최선 노력 보호이며 OS 격리가 아니다(SPEC §5.7).
+
+F3 결함 추적 점검 (gates.py, status.py, cli.py, runner.py)
+- 유효한 실패 증거 = 재작업 전제 조건과 같은 `is_failure_record()`(FAILED, 3회 동일 실패 BLOCKED). preconditions()도 같은 함수를 쓰도록 바꿨고 식은 그대로다(Gate 판정 불변식 테스트로 확인).
+- TEST별 결과는 서명 기록만 본다: G5는 recorded/partial/unknown, G1~G4는 not_applicable. UNKNOWN 경고는 결함당 하나이며, 다른 유효 인용 기록에 결과가 있는 TEST는 뺀다.
+- 무결성 오류는 증거 기록을 audit·verify-evidence와 같은 `runner.check_evidence()`로 검사한다. 인용된 실패 기록이나 검증 PASS 기록의 증거가 원장과 다르면 `verified_by`를 보류한다(`verification_withheld`). 원장은 고치지 않는다.
+- 독립 검토가 찾은 것: (주요) DEFECT가 G5 실패와 G4 실패를 함께 인용하면 마지막 인용 기록의 Gate(G4)로 종료를 판단해, G5가 아직 FAILED인데 G4 재PASS가 `verified_by`가 되고 F1에서 CLOSED로 보였다. 0.1.3부터 있던 기준 선택 방식이다. 종료 Gate를 인용된 실패 중 가장 하위 Gate로 바꿨다(G5 PASS는 G4 PASSED를 전제로 한다). (주요) 형식이 깨진 증거 record.json 하나로 status·lint·report가 종료 코드 2로 죽었다. 0.1.3의 status는 증거를 읽지 않았으므로 새 회귀였고, 고쳤다(audit·verify-evidence의 같은 크래시도 함께 사라졌다). (부) 3회 실패 사슬에서 같은 누락을 세 번 셈, 인용이 없는 결함이 점검에 안 나옴 → 고침. 재검토에서 이 묶기 수정이 새 회귀를 만든 것을 찾았다: 결과가 있는 오래된 실행을 함께 인용하면 더 최근 실행의 UNKNOWN이 가려졌다. TEST마다 가장 최근 인용 기록의 결과를 쓰도록 고쳤고, 경고의 `records`도 아직 결정권이 있는 실행만 적는다.
+- status JSON 호환: 0.1.3 키는 모두 남는다. 의미가 바뀐 것은 둘이다. `failing_tests_by_record`는 유효 인용만 담고, `verified_by`는 유효 인용과 무결성을 통과한 경우에만 있다.
+
+F1 종료 상태 (status.py)
+- OPEN, FIX_APPLIED, VERIFIED, CLOSED는 D32 (C) 그대로다. 원장 무결성 실패로 판정할 수 없을 때는 UNKNOWN을 쓴다. "확인할 수 없으면 UNKNOWN"(정책 B)과 같은 원칙이며, 이때 "아직 검증 안 됨"으로 단정하지 않는다.
+- VERIFIED는 그 Gate가 지금 PASSED가 아니라는 뜻이다(STALE·FAILED·BLOCKED). 텍스트는 항상 현재 Gate 상태를 함께 보이고, STALE·FAILED면 re-verify, BLOCKED면 차단 해소를 안내한다. 재실행 뒤에는 현재 PASS 기록을 `G5 PASSED (R…)`로 함께 표시한다.
+- 검토 의견 중 반영하지 않은 것: VERIFIED라는 이름이 "완료"로 읽힐 수 있으니 바꾸자는 의견. 상태 이름은 사용자 지시와 D32에서 정한 것이라 유지했다. 바꾸려면 사용자 결정이 필요하다.
+
+버전·증거 관리
+- 0.1.4는 원장 기록 형식, manifest 계산, Gate 판정을 바꾸지 않는다. 0.1.3 릴리스와 같은 이력을 돌린 투영(상태·체크·실패 서명·TEST별 결과)과 같은 프로젝트의 Gate별 manifest가 일치한다(`test_version_compat`).
+- 증거 검증은 코어 해시와 무관하다(HMAC 서명 + 파일 해시). 0.1.3이 서명한 원장·증거는 0.1.4에서 audit·verify-evidence가 그대로 통과하고, 기존 기록의 `validator.version`·`core_hash`는 0.1.3 값으로 남는다. 서명된 증거를 새 해시로 다시 쓰는 경로는 없다.
+- 업그레이드 절차는 SPEC §11 그대로다. 사용자가 TTY에서 재고정(원장에 lock 기록 추가)하면 이전 PASS는 STALE이 되고, 재검증한 새 기록에 0.1.4 버전·해시가 붙는다. 한계: 재고정 전에는 새 코어가 무결성 검사로 모든 Gate를 BLOCKED로 본다. 거꾸로 0.1.4로 재고정한 프로젝트를 0.1.3으로 열어도 같은 이유로 BLOCKED다(다운그레이드도 재고정 필요).

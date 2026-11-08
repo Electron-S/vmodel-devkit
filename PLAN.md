@@ -1,6 +1,6 @@
 # PLAN
 
-현재 목표: v0.1.3 확정 완료(2026-11-08, 태그 `v0.1.3` → `0df13b7`). 다음은 v0.1.4(아래 3개 항목과 회귀 테스트)이고, 코드 수정은 사용자의 별도 지시 후 시작한다. 그 뒤 사용자가 결정하면 Extension M5(G6)·M6(G7)로 간다. Extension에는 자동 진입하지 않는다.
+현재 목표: v0.1.4 구현·검증 완료(2026-11-09, 브랜치 `v0.1.4-dev`, 릴리스 `dist/vmodel-0.1.4`·`releases/vmodel-0.1.4.json`). main 병합, `v0.1.4` 태그, 원격 푸시는 사용자 결정 대기다. 그 뒤 사용자가 결정하면 Extension M5(G6)·M6(G7)로 간다. Extension에는 자동 진입하지 않는다.
 
 | 마일스톤 | 내용 | 완료 기준 (테스트) | 상태 |
 |---|---|---|---|
@@ -10,7 +10,7 @@
 | M3 | Skills, Subagents, Hooks, 패키징, 설치/제거/버전 | 하네스: guard 훅 판정, 설치·제거·T15·T16, `claude plugin validate`, 실제 훅 동작(헤드리스 haiku ≤4회) | 완료 |
 | M4 | 샘플 프로젝트 E2E | 스크립트 E2E(T01~T18 하네스), Windows 실행(T18), 실제 Claude 세션 3회(sonnet, 회당 $4 상한), 새 세션 상태 복원(T14) | 완료 (TEST_RESULTS §3) |
 | R0.1.3 | 재작업 결함 F1~F4 수정, 실제 재작업 세션 검증 | 하네스 103/103(WSL), Windows 실패 0, drill-3 실제 세션 1회, audit OK | 완료, 태그 `v0.1.3` |
-| R0.1.4 | 결함 검증 상태 표시, guard 읽기 오탐, 실패 TEST 추적·증거 참조 (아래 §v0.1.4) | 재현 테스트 RED 확인 후 수정, 기존 하네스 포함 전체 통과, Gate 판정 불변, 새 릴리스 | 계획 확정, 착수는 별도 지시 후 |
+| R0.1.4 | 결함 검증 상태 표시, guard 읽기 오탐, 실패 TEST 추적·증거 참조 (아래 §v0.1.4) | 재현 테스트 RED 확인 후 수정, 기존 하네스 포함 전체 통과, Gate 판정 불변, 새 릴리스 | 완료(2026-11-09, TEST_RESULTS §10, DECISIONS D36). 병합·태그·푸시는 사용자 결정 대기 |
 | M5 | G6 Integration Verification (아래 §확장) | 하네스 + 새 샘플(IF 있는 2컴포넌트) | 계획 (사용자 결정 전 착수 금지) |
 | M6 | G7 System Verification, STANDARD WI의 COMPLETED | 하네스 + 새 샘플 | 계획 (사용자 결정 전 착수 금지) |
 | M7 | Extension 실제 세션 E2E | 실제 Claude 세션(비용 승인 후) | 계획 |
@@ -36,7 +36,9 @@
 ## 헤드리스 실행 예산 (0.1.3 실제 재작업 검증, 사용자 승인 2026-11-08)
 - 승인: sonnet 최대 1회, `--max-budget-usd 1`, `--dangerously-skip-permissions` 금지, 임시 샌드박스만. 사용: 1회 $0.26(S3). 추가 실행은 다시 승인.
 
-## v0.1.4 계획 (범위 확정 2026-11-08, 구현 미착수)
+## v0.1.4 계획 (범위 확정 2026-11-08, 구현 완료 2026-11-09)
+
+구현 결과와 계획 대비 달라진 점은 DECISIONS D36, 검증 결과는 TEST_RESULTS §10, 요구사항·테스트 명세는 `docs/v0.1.4/WORKITEM.md`에 있다. 계획과 달라진 점: guard는 `/dev/null`만이 아니라 fd 복제·단순 입력 리디렉션도 정규화하고, 0.1.3이 놓친 `&>`·`>&파일` 쓰기를 새로 잡는다(독립 검토 결과). 결함 종료 Gate는 인용된 실패 중 가장 하위 Gate다. 원장 무결성 실패 시 종료 상태는 UNKNOWN이다. 테스트는 계획한 `test_rework_flow.py`·`test_hooks.py` 대신 새 파일 4개(`test_guard_redirects.py`, `test_defect_evidence.py`, `test_defect_closure.py`, `test_version_compat.py`)에 두었다(기존 파일 무수정).
 
 사용자가 정한 우선순위: 1. STALE Gate에 대한 결함 검증 상태 표시 개선, 2. Guard의 읽기 명령 오탐 수정, 3. 실패 TEST 추적 및 증거 참조 정확성 개선.
 
