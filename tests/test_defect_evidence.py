@@ -291,6 +291,23 @@ class DefectEvidenceReviewRed(FailedG5Case):
         self.assertEqual(res["status"], "PASSED")
         self.assertEqual(self.defect()["verified_by"], res["record_id"])
 
+    def test_newer_unknown_results_are_not_hidden_by_older_results(self):
+        """Per TEST the latest cited result counts: an older run with results must not hide a newer run without them."""
+        self.sb.add_defect(self.failed, "G5", related=["REQ-002", *self.failing])
+        cfg_path = self.sb.root / ".vmodel/config.json"
+        cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+        cfg["unit_test"]["argv"] = ["{python}", "-c", "import sys; sys.exit(1)", "{junit}"]
+        cfg_path.write_text(json.dumps(cfg, indent=2), encoding="utf-8")
+        self.gate_g4()
+        res = self.sb.gate("G5")[1]
+        self.assertEqual(res["status"], "FAILED")
+        self.sb.add_defect(res["record_id"], "G5")
+        d = self.defect()
+        self.assertEqual([(w.get("category"), w.get("tests")) for w in d.get("warnings") or []],
+                         [("unknown_test_result", UNIT_TESTS)])
+        self.assertIn("UNKNOWN", self.defect_line())
+        self.assertEqual(self.sb.vm("lint", "WI-001")[0], 1)
+
     def test_malformed_evidence_record_is_an_integrity_error_not_a_crash(self):
         self.sb.add_defect(self.failed, "G5", related=["REQ-002", *self.failing])
         record = self.sb.root / self.s["evidence"][0]["path"]
