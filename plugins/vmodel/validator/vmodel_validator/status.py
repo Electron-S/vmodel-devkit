@@ -93,6 +93,23 @@ def defect_check_counts(defects: list[dict]) -> dict:
             "warnings": sum(len(d.get("warnings") or []) for d in defects)}
 
 
+def closure_view(d: dict, gate_status: dict[str, str]) -> dict:
+    """Derived closure state (D32 option C); defects.json keeps only the agent's claim `open` / `fixed`.
+
+    OPEN / FIX_APPLIED: no gate has verified the fix (claim `open` / `fixed`). VERIFIED: the failure's gate passed
+    after the failure (`verified_by`) but is not PASSED now (e.g. STALE) -> re-verify. CLOSED: verified and that gate is
+    PASSED for the current inputs (gate_state already requires the upstream gates to be PASSED). Display only.
+    """
+    vb, gate, claimed = d.get("verified_by"), d.get("closure_gate"), d.get("claimed_status")
+    if vb:
+        now = gate_status.get(str(gate))
+        state, now_status = ("CLOSED" if now == "PASSED" else "VERIFIED"), now
+    else:
+        state, now_status = ("FIX_APPLIED" if claimed == "fixed" else "OPEN"), None
+    note = f"defects.json says open, but the ledger shows the fix verified by {vb}" if vb and claimed == "open" else None
+    return {"closure_state": state, "closure_gate_status": now_status, "claim_note": note}
+
+
 def render_problem(p: dict) -> str:
     """'ERROR [invalid_citation] ...' / 'WARNING [unlinked_failing_test] ...': the same labels in status, lint, report."""
     return f"{p['severity'].upper()} [{p['category']}] {p['detail']}"
@@ -109,6 +126,9 @@ def project_status(project: Project, wi: str | None = None) -> dict:
         wi_doc = wi_doc if isinstance(wi_doc, dict) else {}
         profile = wi_doc.get("profile", "STANDARD")
         defects = defect_views(ctx, ledger_error)
+        gate_status = {g["gate"]: g["status"] for g in gates}
+        for d in defects:
+            d.update(closure_view(d, gate_status))
         item = {"id": ctx.wi, "title": wi_doc.get("title"), "profile": profile,
                 "status": wi_status(gates, profile), "gates": gates, "next_action": next_action(ctx.wi, gates),
                 "defects": defects, "defect_checks": defect_check_counts(defects)}
@@ -139,16 +159,23 @@ def tests_summary(d: dict) -> str:
 
 
 def closure_text(d: dict) -> str:
-    if d["verified_by"]:
-        return f"verified by {d['verified_by']}"
+    """Closure evidence for display. A past `verified_by` is shown as current only while its gate is PASSED."""
+    vb, gate = d["verified_by"], d.get("closure_gate")
+    if vb and d.get("closure_state") == "VERIFIED":
+        return f"verified by {vb} but {gate} is now {d.get('closure_gate_status')}: re-verify"
+    if vb:
+        return f"verified by {vb}, {gate} PASSED"
     if d.get("verification_withheld"):
         return f"not verified: {d['verification_withheld']} withheld (evidence integrity error)"
     return "not verified yet"
 
 
 def render_defect(d: dict) -> list[str]:
-    lines = [f"{d['id']} [{d['claimed_status']}; {closure_text(d)}] {d['gate']} root cause {d['root_cause_phase']}; "
-             f"{tests_summary(d)}"]
+    state = d.get("closure_state") or ("FIX_APPLIED" if d.get("claimed_status") == "fixed" else "OPEN")
+    lines = [f"{d['id']} {state} [claimed {d['claimed_status']}; {closure_text(d)}] {d['gate']} root cause "
+             f"{d['root_cause_phase']}; {tests_summary(d)}"]
+    if d.get("claim_note"):
+        lines.append(f"    note: {d['claim_note']}")
     lines += [f"    {render_problem(p)}" for p in [*(d.get("errors") or []), *(d.get("warnings") or [])]]
     return lines
 
@@ -281,11 +308,33 @@ def render_impact(iv: dict) -> str:
 
 # ---------------------------------------------------------------- report
 def report_closure(d: dict) -> str:
-    return closure_text(d)
+    vb, gate = d["verified_by"], d.get("closure_gate")
+    if vb and d.get("closure_state") == "VERIFIED":
+        return f"verified by {vb}, but {gate} is now {d.get('closure_gate_status')}"
+    if vb:
+        return f"verified by {vb}"
+    if d.get("verification_withheld"):
+        return f"not verified: {d['verification_withheld']} withheld"
+    return "not verified yet"
 
 
 def report_closure_details(d: dict) -> list[str]:
-    return []
+    state, vb, gate = d.get("closure_state"), d["verified_by"], d.get("closure_gate")
+    if state == "CLOSED":
+        why = f"verified by {vb} and {gate} is PASSED for the current inputs"
+    elif state == "VERIFIED":
+        why = (f"the fix was verified by {vb}, but {gate} is now {d.get('closure_gate_status')}; "
+               f"re-verify (re-run {gate}) before treating the defect as closed")
+    elif state == "FIX_APPLIED":
+        why = "fix claimed in defects.json (status fixed); no gate has verified it yet"
+    else:
+        why = "not fixed and not verified yet"
+    if d.get("verification_withheld"):
+        why += f" ({d['verification_withheld']} withheld: its evidence does not match the signed ledger)"
+    out = [f"closure: {state} — {why}"]
+    if d.get("claim_note"):
+        out.append(f"note: {d['claim_note']}")
+    return out
 
 
 def report_markdown(project: Project, wi: str) -> str:

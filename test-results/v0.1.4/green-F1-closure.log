@@ -1,0 +1,40 @@
+{
+  "mode": "green",
+  "plugin": {
+    "path": "/home/cyyoo/develop/vmodel-devkit/plugins/vmodel",
+    "release_manifest": null
+  },
+  "git_head": "14f46b5",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "tests": 25,
+  "expectations_met": 25,
+  "violations": 0,
+  "seconds": 121.2
+}
+
+OK  expect=ok   got=ok      test_defect_closure.DefectClosureInvariant.test_display_commands_do_not_touch_ledger_or_manifests
+OK  expect=ok   got=ok      test_defect_closure.DefectClosureRed.test_claim_open_but_verified_is_annotated
+OK  expect=ok   got=ok      test_defect_closure.DefectClosureRed.test_closed_after_the_gate_passes
+OK  expect=ok   got=ok      test_defect_closure.DefectClosureRed.test_invalid_or_withheld_verification_is_never_closed
+OK  expect=ok   got=ok      test_defect_closure.DefectClosureRed.test_open_and_fix_applied_before_verification
+OK  expect=ok   got=ok      test_defect_closure.DefectClosureRed.test_report_shows_the_same_closure_state_as_status
+OK  expect=ok   got=ok      test_defect_closure.DefectClosureRed.test_source_change_after_closure_shows_verified_not_closed
+OK  expect=ok   got=ok      test_defect_closure.DefectClosureRed.test_upstream_artifact_change_keeps_it_from_closed
+OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceChar.test_invalid_citations_alone_do_not_satisfy_the_rework_precondition
+OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceChar.test_status_json_keeps_the_013_defect_keys
+OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceChar.test_three_strike_blocked_record_is_valid_failure_evidence
+OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceRed.test_environment_blocked_record_is_an_invalid_citation
+OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceRed.test_missing_foreign_and_non_gate_records_share_the_category
+OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceRed.test_mixed_citation_closes_on_the_failure_gate
+OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceRed.test_passed_record_alone_is_an_invalid_citation
+OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceRed.test_report_always_has_the_defect_trace_check_section
+OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceRed.test_review_required_record_is_an_invalid_citation
+OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceRed.test_unlinked_failing_tests_are_trace_warnings_everywhere
+OK  expect=ok   got=ok      test_defect_evidence.DefectIntegrityRed.test_forged_ledger_is_one_integrity_error_not_invalid_citations
+OK  expect=ok   got=ok      test_defect_evidence.DefectIntegrityRed.test_tampered_failure_evidence_is_an_integrity_error
+OK  expect=ok   got=ok      test_defect_evidence.DefectIntegrityRed.test_tampered_verification_evidence_withholds_closure
+OK  expect=ok   got=ok      test_defect_evidence.DefectTestResultsRed.test_g4_review_reject_is_not_applicable
+OK  expect=ok   got=ok      test_defect_evidence.DefectTestResultsRed.test_g5_failure_without_junit_is_unknown_not_dash
+OK  expect=ok   got=ok      test_defect_evidence.DefectTestResultsRed.test_partially_executed_g5_separates_failing_and_unknown
+OK  expect=ok   got=ok      test_defect_evidence.SkillReportingRed.test_final_report_steps_carry_errors_and_warnings
