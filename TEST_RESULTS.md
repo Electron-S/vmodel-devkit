@@ -1,6 +1,6 @@
 # TEST_RESULTS
 
-마지막 갱신: 2026-11-08(2차). 현재 버전: VModel DevKit **0.1.3** (core `sha256:0208c798…`, `releases/vmodel-0.1.3.json`) — 하네스로만 검증, 실제 Claude 세션 미실행. 기준 버전 **0.1.2** (core `sha256:a0555e32…`, 태그 `v0.1.2` → 커밋 `bbd6a3d`)는 §3의 E2E-3과 §8의 실전 재작업 드릴에서 실제 세션으로 검증. 0.1.0·0.1.1은 E2E-1·2에서 쓴 이전 릴리스.
+마지막 갱신: 2026-11-08(3차). 현재 버전: VModel DevKit **0.1.3** (core `sha256:0208c798…`, `releases/vmodel-0.1.3.json`) — 하네스와 **실제 Claude 재작업 세션 1회**(§9, drill-3)로 검증. 기준 버전 **0.1.2** (core `sha256:a0555e32…`, 태그 `v0.1.2` → 커밋 `bbd6a3d`)는 §3의 E2E-3과 §8의 실전 재작업 드릴에서 실제 세션으로 검증. 0.1.0·0.1.1은 E2E-1·2에서 쓴 이전 릴리스.
 
 "실측"은 이 PC에서 실제로 실행한 결과, "미검증"은 실행하지 않은 것입니다. 추정은 따로 표시합니다.
 
@@ -10,8 +10,10 @@
 
 | 환경 | 결과 | 비고 |
 |---|---|---|
+| WSL2 Ubuntu 24.04, Python 3.12.3, pytest 9.0.3, ruff — **0.1.3, drill-3 실제 세션 후 재실행** | **103/103 통과** (실측, 196초, skip 0) | 코드 변경 없음(작업 트리 clean, Core `0208c798…`, `dist/vmodel-0.1.3` 43개 파일 해시가 `releases/vmodel-0.1.3.json`과 일치). 신규 실패 없음 |
 | WSL2 Ubuntu 24.04, Python 3.12.3, pytest 9.0.3, ruff — **0.1.3** | **103/103 통과** (실측, 227초) | 기존 94 + 신규 9(`test_rework_flow.py`). 신규 중 6개는 0.1.2 코드에서, 1개(`verified_by` 기준 Gate)는 중간 수정본에서 먼저 실패(RED) 확인 후 수정. 나머지 2개는 Validator 불변식 특성 테스트 |
 | WSL2 Ubuntu 24.04, Python 3.12.3, pytest 9.0.3, ruff — 0.1.2 기준 | **94/94 통과** (실측, 159초, 태그 전) | 샌드박스 경로에 한글+공백 포함 |
+| Windows 11, Python 3.13.14 venv(아래 행과 같은 것), 로캘 cp949, `devkit-0.1.3-rerun`(`git archive HEAD`) — **0.1.3, drill-3 후 재실행** | **103 실행, 실패 0, skip 4** (실측, 477초, `test-results/windows-t18-harness-0.1.3-rerun.log`) | skip 4건 동일 |
 | Windows 11, Python 3.13.14(Store) venv + pytest 9.2.0, 로캘 cp949, 경로 `%TEMP%\vmodel 한글 테스트\devkit-0.1.3` — **0.1.3** | **103 실행, 실패 0, skip 4** (실측, `test-results/windows-t18-harness-0.1.3.log`) | skip 4건은 아래와 동일 |
 | Windows 11, 같은 venv — 0.1.2 | **94 실행, 실패 0, skip 4** (실측) | skip: ruff 미설치 1, pty(POSIX 전용) 2, 심볼릭 링크 권한 1 |
 | Python 3.11 | **미검증** | 이 PC에 3.11 없음. 3.12+ 전용 문법은 쓰지 않았으나 실행 확인 안 함 |
@@ -112,7 +114,7 @@ E2E-3 산출물(사본: `test-results/e2e/e2e3-artifacts/`): REQ 4개(functional
 - Windows에서 Claude Code 세션 자체로 훅·스킬을 돌리는 것 (Windows는 Validator·런처·훅 진입점까지만 실측)
 - Windows 절대경로용 deny 규칙 형식(`Edit(//c/...)`)이 실제로 매칭되는지
 - ~~실제 Claude 세션에서의 FAILED → DEFECT → 수정 → 재검증 루프~~ → §8에서 부분 검증. 남은 것: (a) G4 리뷰가 실제로 결함을 놓쳐 G5가 실패하는 **주입 없는** 실제 경로(드릴에서는 실제 verifier가 결함을 잡아서 G4 승인 1건을 주입했음), (b) 완전 실제 G4 FAILED(drill-1) 상태에서의 실제 재작업 세션
-- 0.1.3의 스킬·verifier 변경(D28~D30)이 실제 세션 행동을 바꾸는지(`fixed` 시점, 링크 완전성, 원인 대조). 하네스로는 Validator 동작과 문구만 검증
+- ~~0.1.3의 스킬·verifier 변경(D28~D30)이 실제 세션 행동을 바꾸는지~~ → §9에서 실제 세션 1회로 확인(`fixed` 시점, 5/5 링크, verifier 원인 대조). 남은 것: (c) 실제 세션에서 링크가 빠졌을 때 에이전트가 경고를 보고 보완하는지(이번에는 누락이 없어 경고 경로가 실행되지 않음, Validator 쪽은 프로브 P-F2로만 확인), (d) 표본 1회 — 반복 실행의 일관성
 - 대화형 세션에서 auto 모드가 아닌 기본 권한으로 재작업 루프를 도는 것
 - 사람이 승인 창에 응답하는 대화형 세션에서의 사용성(헤드리스만 측정)
 - 마켓플레이스 `--scope project` 설치 상태로 실제 세션 실행(설치/제거 CLI 동작만 격리 디렉터리에서 확인, 세션은 `--plugin-dir`로 실행)
@@ -203,3 +205,147 @@ S1의 실제 산출물·코드·테스트와 실제 G1~G3 리뷰 파일(바이�
 | F4 | verifier가 원인을 실패 증거와 대조하지 않음(TEST-011을 잘못 해석) | verifier 문구 테스트 실패 | G4 체크리스트: 원인이 모든 실패를 설명하는지 status의 실패 정보로 확인, 통과 후 수정 요구 금지 |
 
 0.1.3은 하네스로만 검증했습니다. **0.1.3 스킬·verifier 변경을 실제 Claude 세션으로 확인하지는 않았습니다**(승인된 실행 3회를 모두 사용).
+
+## 9. 0.1.3 실제 재작업 세션 검증: drill-3 (2026-11-08, 릴리스 0.1.3)
+
+목적: 0.1.3에서 고친 F1~F4가 실제 Claude Code 세션의 "실패 → 결함 분석 → 수정 → 재검증 → Gate PASS" 흐름을 실제로 바꾸는지 확인한다. 조건은 S2(§8.7)와 똑같이 맞췄다. 시작 상태, 프롬프트, 권한 모드, 허용 도구가 같고 릴리스만 0.1.2에서 0.1.3으로 바꿨다. 그래서 두 결과를 나란히 비교할 수 있다.
+
+### 9.1 환경·명령·실행 횟수·비용
+- WSL2 Ubuntu 24.04, Python 3.12.3, pytest 9.0.3, ruff, Claude Code 2.1.319(claude.ai 구독 로그인). 모델은 `claude-sonnet-5-5`(세션 init 기록). 샌드박스는 세션 스크래치의 `drill-3/한글 드릴 프로젝트`(한글+공백 경로, git 저장소)이고, 서명 키·앵커는 드릴 전용 `VMODEL_HOME`을 썼다.
+- 릴리스 `dist/vmodel-0.1.3`(core `sha256:0208c798…`). 43개 파일 해시가 `releases/vmodel-0.1.3.json`과 일치했고, 릴리스 트리 다이제스트가 세션 전후로 같았다(`2964dacc…`, `release_tree_unchanged: true`).
+- 세션 옵션: `--plugin-dir dist/vmodel-0.1.3 --setting-sources project,local --no-session-persistence --permission-mode auto --permission-prompts none --max-budget-usd 1 --model sonnet`, 허용 도구는 S2와 같다. `--dangerously-skip-permissions`는 쓰지 않았다.
+```bash
+python3 scripts/e2e/rework_drill.py fork --source <drill-1> --work <drill-3> --release "$PWD/dist/vmodel-0.1.3"   # 모델 호출 없음
+python3 scripts/e2e/drill_safety.py --work <drill-3> --tag after-g5-fail --release "$PWD/dist/vmodel-0.1.3"     # 모델 호출 없음
+python3 scripts/e2e/rework_drill.py run --work <drill-3> --phase s3 --prompt-file p-s3.txt \
+        --release "$PWD/dist/vmodel-0.1.3" --model sonnet --budget 1 --permission-mode auto                      # 실제 세션 1회
+```
+  `--release`는 절대 경로여야 한다. 첫 fork 시도는 상대 경로라서 설치 단계에서 실패했다(모델 호출 없음, 반쯤 만든 폴더는 지우고 다시 실행).
+- **실행 횟수: sonnet 헤드리스 1회**(승인 1회 중 1회 사용). 추가 실행은 없었다.
+- **비용: $0.2606**(CLI의 `total_cost_usd`, list 가격 기준 추정치, 상한 $1의 26%). 토큰은 출력 7,241 / 캐시 읽기 405,646 / 캐시 생성 44,451 / 입력 34이고, 벽시계는 77초다. 구독 로그인이라 실제 청구액이 아닌 추정치다.
+- **예산 상한 강제 여부(조사 결과)**: `--max-budget-usd`는 `-p`(print) 모드에서만 동작한다. CLI 2.1.319 바이너리에는 "print budget halt: this run's spend reached --max-budget-usd; stopping background agents"와 `error_max_budget_usd` 결과 유형이 있다. 상한에 닿으면 실행을 멈추고 백그라운드 에이전트도 멈춘다는 뜻이다. 한계도 세 가지 있다. 첫째, CLI 문서 문자열 스스로 "An estimate, not a billing statement"라고 적는다. 둘째, 지출이 생긴 뒤에 검사하므로 진행 중이던 요청만큼은 넘을 수 있다. 셋째, 이번 실행은 상한에 닿지 않아서 멈추는 동작 자체는 실측하지 못했다.
+
+### 9.2 Synthetic Fixture 명시 (자연 발생 실패가 아님)
+G5 FAILED 상태는 **합성 픽스처**이고, 아래 두 가지가 인위적이다.
+1. **결함은 블라인드 시딩이다**(D26). S1에서 오케스트레이터가 봉인된 계획(`drill-plan.json`, `sha256:1b7c05fa…`)대로 P4 결함을 넣었다.
+2. **G4 승인 리뷰 1건(R00008)은 하네스가 작성했다**(D27). 실제 S1에서는 verifier가 이 코드를 reject했다. 주입한 리뷰의 summary에 `[DRILL FAULT INJECTION - written by the rework-drill harness, not by an AI reviewer]`가 적혀 있고, 그 해시가 원장에 묶여 있다.
+
+그 밖에는 모두 실제다. 요구사항~코드·테스트와 G1~G3 리뷰(R00002/04/06)는 S1의 실제 산출물로, 커밋된 사본 `test-results/drill/s1-drill-1/`과 바이트 단위로 같다. R00009 이후 기록은 모두 Validator 또는 실제 세션이 만들었다. drill-3은 포크가 새로 만든 샌드박스·원장이고, 기존 서명 원장(drill-1·drill-2)은 수정하지 않았다. drill-1 프로젝트 트리 다이제스트는 포크 전후 `731af922…`로 같았다. 포크가 다시 봉인한 계획 파일(`sha256:867b4b89…`)은 원본 계획에 시각과 `fork` 절만 더한 것이다.
+
+### 9.3 최초 실패 상태 (Validator 직접 실행)
+- **R00010 G5 FAILED**: Validator가 실행한 명령은 `/usr/bin/python3 -m pytest -q -p no:cacheprovider --junitxml=…`이고, **종료 코드 1**, 18개 중 **5개 실패**였다(TEST-001 `[40-20]` 35≠20, TEST-002 3.5≠2.5, TEST-010 35≠20, TEST-011 30≠29, TEST-012 9≠5). 실패 체크는 G5.EXECUTION·G5.RESULTS·G5.TEST_MAPPING이고 failure_signature는 `sha256:da8cba83…`다.
+- 증거는 `.vmodel/evidence/WI-001/G5/20261108T125458427119Z-unit-0c2e40/`에 있다. stdout은 `sha256:78bafdbb…`로 **drill-2의 R00010과 바이트 단위로 같아** 결정적으로 재현됐다. junit.xml은 `sha256:f5ee7f7c…`, git HEAD는 `5cd748a2`(dirty)다. 사본: `test-results/drill/s3-drill-3/evidence-G5/`.
+- `vmodel status`(0.1.3)는 G5 아래에 실패 체크 3개, 실패 케이스 5개, `failing tests: TEST-001, TEST-002, TEST-010, TEST-011, TEST-012`를 출력했다(F3).
+- **실패 상태의 PASS 차단(안전장치 프로브 11/11, 0.1.3, 모두 원상 복구)**: DEFECT 없이 G5를 다시 실행하면 기록 없이 BLOCKED가 된다. 위조 증거 JSON·결과 JSON은 무시되거나 거부되고, 원장 위조·변조·꼬리 삭제는 INVALID로 잡힌다. 소스·테스트·빌드 설정·Validator 설정을 바꾸면 G4가 STALE이 되고, guard는 보호 경로 쓰기와 메인 세션의 리뷰 작성·제출을 거부한다(`safety-after-g5-fail.json`). 결과는 §8.6과 같다.
+
+### 9.4 S3 실제 세션 진행 (트랜스크립트 도구 호출 24건, `timeline-s3.json`)
+프롬프트는 S2와 바이트 단위로 같다. `/vmodel:rework WI-001`에 "G5 실패, 원인 분석·결함 기록·원인 단계 수정·재검증, 테스트 삭제·완화 금지"를 붙였다.
+
+| # | 주체 | 동작 | 결과 |
+|---|---|---|---|
+| 1 | 메인 | `vmodel status WI-001` | 실패 체크·케이스·TEST ID 5개 확인 |
+| 2~5 | 메인 | 코드·테스트·설계·`guide artifacts` 읽기 | #3 guard 거부 1건(오탐, §9.10) |
+| 6 | 메인 | Write `defects.json` | DEFECT-001, `status: fixed`, 실패 TEST 5개 연결 |
+| 7 | 메인 | Edit `src/scorestats/percentile.py` | 2줄 수정 |
+| 8 | 메인 | `vmodel lint WI-001` | lint OK(미연결 경고 없음) |
+| 9 | 메인 | `vmodel status WI-001` | G4 STALE(defects.json·소스 변경), `DEFECT-001 [fixed; not verified yet]` |
+| 10 | 메인 | vmodel:verifier 실행(백그라운드) | 재리뷰 요청 |
+| 11~20 | verifier | `hash`, `status --json`, 코드·테스트·defects·설계·명세 읽기, G4.json 작성, `review-submit` | **R00011 G4 approve** |
+| 22 | 메인 | `vmodel gate WI-001 G4` | **R00012 G4 PASSED** |
+| 23 | 메인 | `vmodel gate WI-001 G5` | **R00013 G5 PASSED** |
+| 24 | 메인 | `vmodel status` | `DEFECT-001 [fixed; verified by R00013]` |
+
+세션은 원장·증거 파일을 직접 읽지 않았고(0건), 에이전트가 pytest를 실행하지 않았고(0건), 테스트 파일도 수정하지 않았다(0건). Implementation 역할은 D11에 따라 메인 세션(오케스트레이터)이 맡았고, 코드 수정(#7)도 메인 세션이 했다. 슬래시 명령으로 확장된 스킬 본문은 stream-json에 남지 않는다. 그래서 0.1.3 rework 스킬이 적용됐다는 판단은 행동 차이에 근거한다. S3는 VM 호출을 모두 단독 명령으로 했고, defects.json을 Write 도구로 썼고, 0.1.3에서 추가된 lint 단계를 실행했다. S2는 `VM=…;` 묶음 명령과 python heredoc을 썼고 lint를 실행하지 않았다.
+
+### 9.5 DEFECT와 Root Cause
+- DEFECT-001: gate G5, `found_in_records: [R00010]`, `failed_checks: [G5.EXECUTION, G5.RESULTS, G5.TEST_MAPPING]`, `root_cause_phase: P4`, `fix_scope: [src/scorestats/percentile.py]`, `related: [REQ-001~003, DESIGN-001, TEST-001, TEST-002, TEST-010, TEST-011, TEST-012]`, `status: fixed`.
+- 원인(세션 기록): "DESIGN-001(순위 r = ceil(p·N/100), 인덱스 r−1)과 달리 `index = min(int(p*count/100), count-1)`. int()는 내림이고 1을 빼지 않아 한 칸 뒤 값을 고른다. 설계와 테스트 명세는 올바르다."
+- **봉인 계획과 대조**: 원인 단계(P4), 결함 내용, 수정 범위(해당 모듈만), 테스트 변경 없음이 모두 일치한다.
+- **실패 증거와 독립 대조**(`root_cause_check.py`, 모델 호출 없음): 테스트 파일의 정상 입력 호출 13건을 시딩 코드, 수정 코드, 봉인 계획의 기준식(`sorted[ceil(p·N/100)−1]`)으로 계산했다. 시딩 코드가 틀린 경우는 정확히 5건이고 JUnit 실패 5건과 같다. 5건 모두 p·N/100이 N보다 작은 정수였다(계획의 발현 조건). 수정 코드가 틀린 경우는 0건이다(`root-cause-check.txt`). 원인 설명의 "부동소수점 나눗셈도 사용한다"는 사실이지만 실패 원인은 아니다(D34).
+
+### 9.6 코드 수정
+```diff
+-    index = min(int(p * count / 100), count - 1)
+-    return ordered[index]
++    # nearest-rank: 순위 r = ceil(p*N/100)을 정수 연산으로 구하고 0-기반 인덱스는 r-1
++    rank = -(-p * count // 100)
++    return ordered[rank - 1]
+```
+S2 수정과 로직이 같고 주석 위치만 다르다. 테스트 파일, requirements·architecture·design·tests·workitem은 S1과 바이트 단위로 같다(테스트 완화·삭제 없음).
+
+### 9.7 G4/G5 재검증 (서명 원장)
+- R00011 G4 리뷰 approve(major 0, minor 0, info 1: 검증 순서와 원소 타입, 설계 범위 밖) → R00012 **G4 PASSED**(manifest `49b4ad51…`, ruff는 Validator가 직접 실행, 증거 기록) → R00013 **G5 PASSED**(종료 코드 0, 18/18, 단위 명세 12개 통과, NO_WEAKENING "no test change since R00010", stdout `sha256:bd4a0bf2…`, junit `sha256:f8325547…`).
+- WI-001 **PARTIALLY_VERIFIED**. G6·G7은 미구현 Extension이므로 V-Model 전체 완료가 아니다.
+
+**0.1.2(S2)와 비교** — 같은 시작 상태, 같은 프롬프트:
+
+| 항목 | S2 (0.1.2, §8.7) | S3 (0.1.3) |
+|---|---|---|
+| 재작업 구간 원장 기록 | R00011~R00019, 9건 | R00011~R00013, **3건** |
+| REVIEW_REQUIRED 기록 | 3건(R00011·15·16) | **0건** |
+| verifier 재리뷰 | 2회 | **1회** |
+| G4·G5 PASS 기록 | 각 2회(통과 후 `fixed` 편집 → STALE → 재실행) | **각 1회** |
+| 통과 후 defects.json 수정 | 1회 | **0회** |
+| DEFECT의 실패 TEST 연결 | 3/5 | **5/5** |
+| DEFECT의 `failed_checks` | 1/3 | **3/3** |
+| 에이전트의 원장 파일 직접 읽기 | 있음(`tail ledger.jsonl`) | **없음** |
+| verifier의 원인↔실패 대조 기록 | 없음 | **있음**(체크리스트 항목) |
+| review-submit 거부 | 1회(스키마 밖 값 `closed`) | 0회 |
+| guard 거부 | 1회(verifier `sed -i`, 정상 차단) | 1회(읽기 명령 오탐, §9.10) |
+| 비용·벽시계 | $0.33, 128초 | $0.26, 77초 |
+
+표본은 각 1회다. 이 차이가 0.1.3 변경 때문이라는 해석은 행동 일치(§9.4)에 근거한 것이고, 통계적으로 증명한 것은 아니다.
+
+### 9.8 Evidence Ledger와 독립 Audit (세션 종료 후, 0.1.3 Validator, `audit-final.txt`)
+- `vmodel audit` OK(원장 13건, 증거 4건). 증거 4건(G4 lint 2, G5 unit 2) 모두 `verify-evidence` OK, `vmodel lint WI-001` OK.
+- `vmodel verify WI-001`(저장 결과를 쓰지 않고 G1~G5 처음부터 재평가) → R00014~R00018 모두 PASSED. ruff와 pytest를 Validator가 다시 실행해 18/18 통과했고 NO_WEAKENING도 통과했다. 이후 audit OK(원장 18건, 증거 6건).
+- 모든 Gate 기록의 Validator core hash는 `sha256:0208c798…` 하나뿐이다(재작업 중 Validator 변경 없음).
+- `vmodel trace` 끊어진 링크 없음. report에는 `DEFECT-001 [fixed — verified by R00013]`와 "failing tests in R00010 (from the signed ledger): TEST-001, TEST-002, TEST-010, TEST-011, TEST-012"가 나오고 미연결 줄은 없다. 설계 단위가 하나라 모든 단위 테스트가 REQ 3개로 추적되는 한계는 그대로다(D31).
+- 최종 Gate 상태(status: G1~G5 PASSED, PARTIALLY_VERIFIED)와 audit·verify 결과가 일치한다.
+
+### 9.9 F1~F4 실전 검증 결과
+
+| ID | 실제 세션(S3)에서 확인 | Validator 단독 프로브(모델 호출 없음, 원상 복구) | 판정 |
+|---|---|---|---|
+| F1 결함 상태·Gate 최신성 | `fixed`를 수정과 같은 단계(#6, 리뷰 전)에서 기록했고 통과 후 defects.json 편집은 0회였다. status는 수정 시점 `[fixed; not verified yet]`과 검증 시점 `[fixed; verified by R00013]`을 구분했다. 불필요한 STALE·REVIEW_REQUIRED는 0회 | P-F1: 통과 후 status를 `open`으로 바꾸면 G4·G5가 STALE이 되지만 `verified_by`는 R00013으로 유지된다(설계대로, D28) | **통과** |
+| F2 실패 테스트 추적 | 세션이 실패 TEST 5/5를 연결했다. lint·status·report가 원장에서 같은 5개를 조회했고 미연결은 0 | P-F2: TEST-011·012를 빼면 status·report가 "NOT linked: TEST-011, TEST-012"를 표시하고 lint는 종료 코드 1. 단, G5 통과 후 보완하면 G4·G5 STALE | **부분 통과**: 조회와 완전 연결은 실측. 누락 → 경고 → 보완 경로는 실제 세션에서 발생하지 않음(프로브로 Validator 동작만 확인) |
+| F3 status 명령 | 에이전트가 `status`만으로 실패 Gate, 실패 체크 3개, 실패 케이스 5개, 실패 TEST ID 5개를 얻었다. 원장·증거 파일 직접 읽기 0회 | — | **통과** |
+| F4 Verification Agent | verifier가 메인 세션 프롬프트에 없던 `status --json`을 스스로 호출했다. 체크리스트에 "root cause explains every failing case"를 실제 실패값(35≠20, 3.5≠2.5, 30≠29, 9≠5)과 `unlinked_failing_tests` 비어 있음으로 기록했다. 수정 범위 준수를 확인했고, 통과 후 defects.json 편집 요구는 없었다. 결과적으로 결함 상태(fixed, verified by R00013)와 테스트 결과(18/18)가 일치 | 원인↔실패 대조를 독립 계산(`root_cause_check.py`)한 결과 일치 | **통과**: verifier의 대조는 AI 리뷰이고 기계 검증이 아님. verifier는 pytest 없이 손으로 평가했고, 기계 확인은 G5 실행이 함 |
+
+### 9.10 이번 검증에서 발견한 추가 문제 (고치지 않음, D34)
+1. guard 오탐: `cat ../../defects.json 2>/dev/null`처럼 `.vmodel`을 읽는 명령을 쓰기로 판정해 거부했다(`WRITE_VERBS`의 `[0-9]>`가 원인, 재현 확인). 막는 쪽으로 틀린 오탐이고, 에이전트는 명령을 나눠 다시 읽었다.
+2. verifier의 `reviewed_at`이 실제 시각이 아니다(drill-3 13:10:00Z, 원장 12:56:31Z / S2 `00:00:00Z`). 판정에는 원장 시각만 쓴다.
+3. verifier가 백그라운드로 돌면 헤드리스 result 이벤트가 2개 생긴다. 측정 스크립트가 마지막 것만 써서 턴·시간을 적게 기록했다(비용은 누적값이라 정확).
+4. 샌드박스의 `.claude/settings.json` allow 규칙이 "workspace not trusted"로 무시됐다(S2와 같음). 헤드리스 드릴은 `--allowedTools`로만 허용한다.
+
+모두 실전 검증을 막지 않았다. 이번에 **필수 코드 수정은 없었다**. 따라서 재현 테스트 추가·Core 수정·새 릴리스도 하지 않았다.
+
+### 9.11 회귀 테스트 (실제 세션 후 재실행)
+| 환경 | 결과 | 비고 |
+|---|---|---|
+| WSL2 Ubuntu 24.04, Python 3.12.3, pytest 9.0.3, ruff | **103/103 통과**, skip 0 (실측, 196초, `test-results/wsl-harness-0.1.3-rerun.log`) | 소스 트리 `plugins/vmodel` 기준(`dist/vmodel-0.1.3`과 바이트 동일) |
+| Windows 11, Python 3.13.14 venv, 로캘 cp949, `%TEMP%\vmodel 한글 테스트\devkit-0.1.3-rerun`(`git archive HEAD`로 새로 풀어 실행) | **103 실행, 실패 0, 오류 0, skip 4** (실측, 477초, `test-results/windows-t18-harness-0.1.3-rerun.log`) | skip 4건은 이전과 같다. ruff 미설치 1, pty가 POSIX 전용 2, 심볼릭 링크 권한 1. 이 4건은 Windows에서 **미검증**이고 WSL에서는 통과 |
+
+- 신규 실패는 없다. Validator Core는 바뀌지 않았다(작업 트리 clean, core `0208c798…`, 릴리스 43개 파일 해시 일치, 릴리스 트리 다이제스트가 세션 전후 동일). `claude plugin validate --strict plugins/vmodel`은 통과했다.
+- 기존 검증 기능에도 영향이 없다. 0.1.3 Validator로 안전장치 프로브 11/11과 audit·verify-evidence·verify가 실제 drill-3 원장에서 통과했다(§9.3, §9.8).
+- 이번에는 코드를 바꾸지 않아서 재현 테스트를 추가하지 않았다.
+
+### 9.12 실제 검증과 시뮬레이션 검증 구분
+| 구분 | 내용 |
+|---|---|
+| 실제 Claude Code 세션(S3, sonnet 1회) | 실패 상태 조회(status), DEFECT 작성(5/5 연결, P4), 코드 수정, lint·status 재확인, verifier 재리뷰(원인↔실패 대조), G4·G5 재평가 호출, 최종 보고 |
+| Validator 직접 실행(실제 실행, 모델 아님) | R00010 G5 FAILED와 pytest 실행, R00012·R00013 판정, 증거·서명·해시, audit·verify-evidence·verify(pytest 재실행)·trace·report |
+| 합성(Synthetic Fixture) | 시딩 결함(S1, 봉인 계획), G4 승인 리뷰 1건 주입(R00008) |
+| 시뮬레이션·프로브(모델 호출 없음, 원상 복구) | 안전장치 프로브 11건, P-F1·P-F2, 원인 독립 계산, 하네스 103개 |
+
+### 9.13 미검증 항목
+- 실제 세션에서 DEFECT 링크가 빠졌을 때 경고를 보고 보완하는 행동(이번에는 누락이 생기지 않음).
+- 반복 표본: S3는 1회뿐이다. 0.1.2와의 차이가 우연이 아니라는 통계적 근거는 없다.
+- 주입 없는 G5 FAILED(G4 리뷰가 실제로 결함을 놓치는 경우)와, 완전 실제 G4 FAILED(drill-1) 상태에서 시작하는 재작업 세션.
+- `--max-budget-usd` 상한에 실제로 닿았을 때 멈추는 동작(이번에는 $0.26으로 상한 미도달).
+- 대화형 세션, auto가 아닌 기본 권한 모드, Windows에서의 Claude Code 세션, 신뢰된 작업 공간에서 설치 allow 규칙이 적용되는지, Python 3.11(§6).
+
+### 9.14 v0.1.3 릴리스 준비 판단
+**태그를 붙일 준비는 됐다고 판단한다. 다만 태그·병합·푸시는 하지 않았고, 결정은 사용자에게 남긴다.**
+- 근거: 실제 세션 1회에서 F1·F3·F4가 의도대로 동작했고, F2는 조회와 완전 연결까지 실측했다. 독립 audit·verify가 통과했고, 회귀는 WSL 103/103, Windows 103 실행·실패 0·skip 4다(§9.11). Validator Core·릴리스 사본은 변경되지 않았다. 이번에 발견한 4건은 모두 안전 측 오탐이거나 측정·표시 문제라서 릴리스를 막을 결함이 아니다.
+- 단서: 표본이 1회이고, G5 실패는 합성 픽스처이며, auto 권한 모드의 헤드리스 세션에서만 확인했다. `v0.1.3` 태그는 코드가 같으므로 이 검증 결과 문서 커밋에 붙이는 것을 권한다.

@@ -1,0 +1,15 @@
+{"gate": "G4", "work_item": "WI-001", "reviewer": "vmodel:verifier", "target_hash": "sha256:49b4ad51a85cd8f88defc4df139cd9dfe1063be3cbc1d72d17258b4d49cc6dae",
+ "reviewed_at": "2026-11-08T13:10:00Z", "verdict": "approve",
+ "summary": "The reworked percentile() now matches DESIGN-001: p validation (bool/float/str rejected, 1..100), empty-list ValueError, sorted copy, integer rank -(-p*N//100), index r-1. Hand-evaluating all 12 unit test specs against the code gives the expected values, including the five that failed in R00010 (TEST-001/002/010/011/012). The fix stayed within fix_scope and the tests are unchanged.",
+ "checklist": [
+  {"item": "Code matches design contract (signature, errors, boundaries)", "result": "ok", "note": "Signature identical; ValueError for non-int/bool/out-of-range p and for empty scores; p=1/100, N=1, p*N multiple of 100, p=29 N=100 all handled by integer ceil."},
+  {"item": "No unrequested behaviour / dead code / unsafe code", "result": "ok", "note": "Single pure function, no I/O, no leftover code from the faulty implementation."},
+  {"item": "Each unit TEST spec implemented by a test named with TEST_nnn", "result": "ok", "note": "TEST_001..TEST_012 all present; TEST_001 has an extra parametrized test covering the request examples (superset, fine)."},
+  {"item": "Assertions meaningful, nothing skipped or swallowed", "result": "ok", "note": "Concrete expected values; pytest.raises(ValueError) for every abnormal case incl. True and 50.0; TEST_003 checks the list is unchanged."},
+  {"item": "conftest/fixtures do not alter results", "result": "ok", "note": "No conftest; tests import the function directly."},
+  {"item": "test_changes justified", "result": "na", "note": "No change-requests.json; the defect lists no test changes and tests match tests.json."},
+  {"item": "DEFECT-001 root cause explains every failing case and fix within fix_scope", "result": "ok", "note": "Old floor/no-minus-one logic explains all 5 failures (35 vs 20, 3.5 vs 2.5, 30 vs 29, 9 vs 5); unlinked_failing_tests is empty; only src/scorestats/percentile.py changed besides defects.json status. G5 shows STALE results from the old code, which the validator must re-run."}
+ ],
+ "findings": [
+  {"id": "F-1", "severity": "info", "description": "Validation order checks p before scores; both give ValueError, so the contract is unaffected. Non-numeric elements are not validated, which the design does not require.", "related": ["DESIGN-001"], "status": "open"}
+ ]}

@@ -1,0 +1,128 @@
+{
+  "project": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/3327e00b-02b2-4423-87ce-b721cf6936c2/scratchpad/drill-3/한글 드릴 프로젝트",
+  "validator": {
+    "ok": true,
+    "version": "0.1.3",
+    "core_hash": "sha256:0208c7988516f050d2eabf8c50704d9e36be7c4d6eb94b4ff098dc7c2c73e0ea",
+    "mode": "release",
+    "problems": []
+  },
+  "ledger": {
+    "ok": true,
+    "error": null,
+    "entries": 13
+  },
+  "mvp_note": "MVP scope: only G1-G5 are implemented. G6 (integration) and G7 (system) are extension gates, so a work item can reach PARTIALLY_VERIFIED at most. This is NOT a full V-Model completion.",
+  "work_items": [
+    {
+      "id": "WI-001",
+      "title": "점수 백분위수 계산(nearest-rank)",
+      "profile": "STANDARD",
+      "status": "PARTIALLY_VERIFIED",
+      "gates": [
+        {
+          "gate": "G1",
+          "name": "Requirements",
+          "status": "PASSED",
+          "notes": [],
+          "manifest_hash_current": "sha256:87038dcf698048f8b746b2a40afef3e6e29c54faea673db916a5f0cabc7788d4",
+          "record_id": "R00003",
+          "evaluated_at": "2026-11-08T12:54:56.924Z",
+          "manifest_hash_recorded": "sha256:87038dcf698048f8b746b2a40afef3e6e29c54faea673db916a5f0cabc7788d4",
+          "review_required_by": []
+        },
+        {
+          "gate": "G2",
+          "name": "Architecture",
+          "status": "PASSED",
+          "notes": [],
+          "manifest_hash_current": "sha256:b880be5a93a0354edc717273ebf0d0115252250954fa728fb2e49f65fd7fc0af",
+          "record_id": "R00005",
+          "evaluated_at": "2026-11-08T12:54:57.288Z",
+          "manifest_hash_recorded": "sha256:b880be5a93a0354edc717273ebf0d0115252250954fa728fb2e49f65fd7fc0af",
+          "review_required_by": []
+        },
+        {
+          "gate": "G3",
+          "name": "Detailed Design & Test Planning",
+          "status": "PASSED",
+          "notes": [],
+          "manifest_hash_current": "sha256:44df8a43a890ca695b8726bb6f46f0549710de18adb77cae9dd5f4e26ab54720",
+          "record_id": "R00007",
+          "evaluated_at": "2026-11-08T12:54:57.654Z",
+          "manifest_hash_recorded": "sha256:44df8a43a890ca695b8726bb6f46f0549710de18adb77cae9dd5f4e26ab54720",
+          "review_required_by": []
+        },
+        {
+          "gate": "G4",
+          "name": "Implementation",
+          "status": "PASSED",
+          "notes": [],
+          "manifest_hash_current": "sha256:49b4ad51a85cd8f88defc4df139cd9dfe1063be3cbc1d72d17258b4d49cc6dae",
+          "record_id": "R00012",
+          "evaluated_at": "2026-11-08T12:56:43.849Z",
+          "manifest_hash_recorded": "sha256:49b4ad51a85cd8f88defc4df139cd9dfe1063be3cbc1d72d17258b4d49cc6dae",
+          "review_required_by": []
+        },
+        {
+          "gate": "G5",
+          "name": "Unit Verification",
+          "status": "PASSED",
+          "notes": [],
+          "manifest_hash_current": "sha256:49b4ad51a85cd8f88defc4df139cd9dfe1063be3cbc1d72d17258b4d49cc6dae",
+          "record_id": "R00013",
+          "evaluated_at": "2026-11-08T12:56:47.375Z",
+          "manifest_hash_recorded": "sha256:49b4ad51a85cd8f88defc4df139cd9dfe1063be3cbc1d72d17258b4d49cc6dae",
+          "review_required_by": []
+        },
+        {
+          "gate": "G6",
+          "name": "Integration Verification",
+          "status": "NOT_IMPLEMENTED",
+          "notes": [
+            "extension gate, not implemented in the MVP"
+          ]
+        },
+        {
+          "gate": "G7",
+          "name": "System Verification",
+          "status": "NOT_IMPLEMENTED",
+          "notes": [
+            "extension gate, not implemented in the MVP"
+          ]
+        }
+      ],
+      "next_action": "G1-G5 verified. G6+ are extension gates (not implemented); report PARTIALLY_VERIFIED.",
+      "defects": [
+        {
+          "id": "DEFECT-001",
+          "gate": "G5",
+          "claimed_status": "fixed",
+          "root_cause_phase": "P4",
+          "found_in_records": [
+            "R00010"
+          ],
+          "unknown_records": [],
+          "failing_tests_by_record": {
+            "R00010": [
+              "TEST-001",
+              "TEST-002",
+              "TEST-010",
+              "TEST-011",
+              "TEST-012"
+            ]
+          },
+          "failing_tests": [
+            "TEST-001",
+            "TEST-002",
+            "TEST-010",
+            "TEST-011",
+            "TEST-012"
+          ],
+          "unlinked_failing_tests": [],
+          "verified_by": "R00013"
+        }
+      ]
+    }
+  ]
+}

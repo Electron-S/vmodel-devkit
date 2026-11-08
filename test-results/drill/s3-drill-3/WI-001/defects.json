@@ -1,0 +1,10 @@
+{"work_item": "WI-001", "defects": [
+  {"id": "DEFECT-001", "gate": "G5", "found_in_records": ["R00010"],
+   "description": "percentile()가 nearest-rank 순위를 올림이 아닌 내림(부동소수점 나눗셈 후 int())으로 계산해 TEST-001/002/010/011/012가 실패한다.",
+   "failed_checks": ["G5.EXECUTION", "G5.RESULTS", "G5.TEST_MAPPING"],
+   "root_cause_phase": "P4",
+   "root_cause": "src/scorestats/percentile.py가 DESIGN-001(순위 r = ceil(p*N/100), 정수 연산 -(-p*N // 100), 인덱스 r-1)과 달리 index = min(int(p*count/100), count-1)로 구현했다. int()는 내림이고 인덱스에서 1을 빼지 않아 한 칸 뒤 값을 고르며, 부동소수점 나눗셈도 사용한다. 설계와 테스트 명세는 올바르다.",
+   "fix_scope": ["src/scorestats/percentile.py"],
+   "related": ["REQ-001", "REQ-002", "REQ-003", "DESIGN-001", "TEST-001", "TEST-002", "TEST-010", "TEST-011", "TEST-012"],
+   "status": "fixed"}
+]}

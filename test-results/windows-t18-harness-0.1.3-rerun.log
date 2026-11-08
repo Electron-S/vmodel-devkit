@@ -1,0 +1,117 @@
+python 3.13.14 Windows-11-10.0.26300-SP0 preferred=cp949 cwd=C:\Users\cyyoo\AppData\Local\Temp\vmodel 한글 테스트\devkit-0.1.3-rerun
+test_cp949_artifact_fails_gate_cleanly (test_encoding.ArtifactEncoding.test_cp949_artifact_fails_gate_cleanly) ... ok
+test_non_utf8_test_output_hashed_raw (test_encoding.ProcessOutputBytes.test_non_utf8_test_output_hashed_raw) ... ok
+test_cli_without_stdout (test_encoding.StdioRobustness.test_cli_without_stdout)
+pythonw-like environment: sys.stdout/sys.stderr are None. ... ok
+test_cp949_console_encoding_does_not_crash (test_encoding.StdioRobustness.test_cp949_console_encoding_does_not_crash) ... ok
+test_bom_tolerated (test_encoding.TextIO.test_bom_tolerated) ... ok
+test_cp949_reported_not_crash (test_encoding.TextIO.test_cp949_reported_not_crash) ... ok
+test_display_decode_never_raises (test_encoding.TextIO.test_display_decode_never_raises) ... ok
+test_schema_lite (test_encoding.TextIO.test_schema_lite) ... ok
+test_test_id_tokens (test_encoding.TextIO.test_test_id_tokens) ... ok
+test_utf16_reported (test_encoding.TextIO.test_utf16_reported) ... ok
+test_T01_T05_full_flow_partially_verified (test_gates.HappyPath.test_T01_T05_full_flow_partially_verified) ... ok
+test_T14_state_restored_in_new_process (test_gates.HappyPath.test_T14_state_restored_in_new_process) ... ok
+test_verify_reexecutes_everything (test_gates.HappyPath.test_verify_reexecutes_everything) ... ok
+test_T04_design_conformance (test_gates.ImplementationAndUnitVerification.test_T04_design_conformance) ... ok
+test_T05_evidence_contents (test_gates.ImplementationAndUnitVerification.test_T05_evidence_contents) ... ok
+test_T06_failing_test_blocks_g5 (test_gates.ImplementationAndUnitVerification.test_T06_failing_test_blocks_g5) ... ok
+test_T08_source_change_makes_pass_stale (test_gates.ImplementationAndUnitVerification.test_T08_source_change_makes_pass_stale) ... ok
+test_T09_test_change_invalidates_and_needs_justification (test_gates.ImplementationAndUnitVerification.test_T09_test_change_invalidates_and_needs_justification) ... ok
+test_T13_fail_defect_fix_reverify_pass (test_gates.ImplementationAndUnitVerification.test_T13_fail_defect_fix_reverify_pass) ... ok
+test_deleted_test_is_detected (test_gates.ImplementationAndUnitVerification.test_deleted_test_is_detected) ... ok
+test_g4_lint_executed_with_evidence (test_gates.ImplementationAndUnitVerification.test_g4_lint_executed_with_evidence) ... skipped 'ruff not installed'
+test_g4_lint_missing_blocks_without_user_choice (test_gates.ImplementationAndUnitVerification.test_g4_lint_missing_blocks_without_user_choice) ... ok
+test_g4_syntax_error_and_missing_test_code (test_gates.ImplementationAndUnitVerification.test_g4_syntax_error_and_missing_test_code) ... ok
+test_inputs_modified_during_run (test_gates.ImplementationAndUnitVerification.test_inputs_modified_during_run) ... ok
+test_streak_not_reset_by_review_required (test_gates.ImplementationAndUnitVerification.test_streak_not_reset_by_review_required)
+FAILED, REVIEW_REQUIRED, FAILED, FAILED with the same cause -> BLOCKED (M1 regression). ... ok
+test_three_identical_failures_block (test_gates.ImplementationAndUnitVerification.test_three_identical_failures_block) ... ok
+test_user_unblock_with_tty (test_gates.ImplementationAndUnitVerification.test_user_unblock_with_tty) ... skipped 'pty is POSIX only'
+test_T10_missing_architecture_and_prereq (test_gates.MechanicalChecks.test_T10_missing_architecture_and_prereq) ... ok
+test_T10_missing_required_artifact_blocks_gate (test_gates.MechanicalChecks.test_T10_missing_required_artifact_blocks_gate) ... ok
+test_T11_broken_traceability_g2 (test_gates.MechanicalChecks.test_T11_broken_traceability_g2) ... ok
+test_T11_broken_traceability_g3 (test_gates.MechanicalChecks.test_T11_broken_traceability_g3) ... ok
+test_ambiguity_is_only_a_warning (test_gates.MechanicalChecks.test_ambiguity_is_only_a_warning) ... ok
+test_change_control_requires_cr (test_gates.MechanicalChecks.test_change_control_requires_cr) ... ok
+test_g3_requires_abnormal_and_system_tests (test_gates.MechanicalChecks.test_g3_requires_abnormal_and_system_tests) ... ok
+test_missing_acceptance_criteria (test_gates.MechanicalChecks.test_missing_acceptance_criteria) ... ok
+test_project_unique_ids_across_work_items (test_gates.MechanicalChecks.test_project_unique_ids_across_work_items) ... ok
+test_unresolved_conflict_fails (test_gates.MechanicalChecks.test_unresolved_conflict_fails) ... ok
+test_approve_with_open_major_finding_fails (test_gates.ReviewRules.test_approve_with_open_major_finding_fails) ... ok
+test_critical_issue_needs_user (test_gates.ReviewRules.test_critical_issue_needs_user) ... ok
+test_critical_issue_resolved_without_user_fails (test_gates.ReviewRules.test_critical_issue_resolved_without_user_fails) ... ok
+test_missing_review_is_review_required_by_verifier (test_gates.ReviewRules.test_missing_review_is_review_required_by_verifier) ... ok
+test_reject_fails_gate (test_gates.ReviewRules.test_reject_fails_gate) ... ok
+test_review_submit_refuses_outdated_review (test_gates.ReviewRules.test_review_submit_refuses_outdated_review) ... ok
+test_stale_review_after_artifact_change (test_gates.ReviewRules.test_stale_review_after_artifact_change) ... ok
+test_unsubmitted_review_file_is_not_accepted (test_gates.ReviewRules.test_unsubmitted_review_file_is_not_accepted) ... ok
+test_wrong_reviewer_identity_fails (test_gates.ReviewRules.test_wrong_reviewer_identity_fails) ... ok
+test_C3_ambient_pytest_env_is_scrubbed (test_hardening.ExecutionHardening.test_C3_ambient_pytest_env_is_scrubbed) ... ok
+test_C3_python_file_hidden_in_pycache_fails_g4 (test_hardening.ExecutionHardening.test_C3_python_file_hidden_in_pycache_fails_g4) ... ok
+test_C3_root_level_module_outside_configured_paths_fails_g4 (test_hardening.ExecutionHardening.test_C3_root_level_module_outside_configured_paths_fails_g4) ... ok
+test_C3_symlink_in_tree_fails_g4 (test_hardening.ExecutionHardening.test_C3_symlink_in_tree_fails_g4) ... skipped 'symlinks need privileges on Windows'
+test_C4_result_tampering_conftest_fails_g4 (test_hardening.ExecutionHardening.test_C4_result_tampering_conftest_fails_g4) ... ok
+test_H1_comment_does_not_count_as_test_code (test_hardening.ExecutionHardening.test_H1_comment_does_not_count_as_test_code) ... ok
+test_H1_one_test_cannot_claim_many_ids (test_hardening.ExecutionHardening.test_H1_one_test_cannot_claim_many_ids) ... ok
+test_M2_test_data_change_makes_stale (test_hardening.ExecutionHardening.test_M2_test_data_change_makes_stale) ... ok
+test_upstream_failure_invalidates_downstream_pass (test_hardening.ExecutionHardening.test_upstream_failure_invalidates_downstream_pass) ... ok
+test_C1_user_only_lifecycle_commands_denied (test_hardening.HookHardening.test_C1_user_only_lifecycle_commands_denied) ... ok
+test_C1_wiping_vmodel_denied (test_hardening.HookHardening.test_C1_wiping_vmodel_denied) ... ok
+test_C2_review_forgery_through_bash_denied (test_hardening.HookHardening.test_C2_review_forgery_through_bash_denied) ... ok
+test_M5_no_false_positives (test_hardening.HookHardening.test_M5_no_false_positives) ... ok
+test_powershell_tool_is_guarded (test_hardening.HookHardening.test_powershell_tool_is_guarded) ... ok
+test_C1_reinit_after_wipe_refused_and_rollback_detected (test_hardening.LifecycleAnchors.test_C1_reinit_after_wipe_refused_and_rollback_detected) ... ok
+test_H2_lite_profile_never_completed (test_hardening.StatusRobustness.test_H2_lite_profile_never_completed) ... ok
+test_M4_malformed_json_shapes_do_not_crash (test_hardening.StatusRobustness.test_M4_malformed_json_shapes_do_not_crash) ... ok
+test_bash_chained_with_protected_data_denied (test_hooks.GuardHook.test_bash_chained_with_protected_data_denied) ... ok
+test_bash_core_modification_denied (test_hooks.GuardHook.test_bash_core_modification_denied) ... ok
+test_bash_touching_protected_data (test_hooks.GuardHook.test_bash_touching_protected_data) ... ok
+test_bash_validator_calls_allowed (test_hooks.GuardHook.test_bash_validator_calls_allowed) ... ok
+test_guide_prints_plugin_docs_without_reading_outside_files (test_hooks.GuardHook.test_guide_prints_plugin_docs_without_reading_outside_files) ... ok
+test_invalid_json_is_denied (test_hooks.GuardHook.test_invalid_json_is_denied) ... ok
+test_keys_read_denied (test_hooks.GuardHook.test_keys_read_denied) ... ok
+test_normal_source_write_allowed (test_hooks.GuardHook.test_normal_source_write_allowed) ... ok
+test_outside_vmodel_project_allowed (test_hooks.GuardHook.test_outside_vmodel_project_allowed) ... ok
+test_protected_writes_denied (test_hooks.GuardHook.test_protected_writes_denied) ... ok
+test_reviews_only_by_verifier (test_hooks.GuardHook.test_reviews_only_by_verifier) ... ok
+test_session_start_restores_context (test_hooks.GuardHook.test_session_start_restores_context) ... ok
+test_user_only_actions_denied (test_hooks.GuardHook.test_user_only_actions_denied) ... ok
+test_validator_core_write_denied (test_hooks.GuardHook.test_validator_core_write_denied) ... ok
+test_verifier_is_read_only_elsewhere (test_hooks.GuardHook.test_verifier_is_read_only_elsewhere) ... ok
+test_validator_call_with_spaces_in_plugin_path (test_hooks.GuardWithSpacedPluginPath.test_validator_call_with_spaces_in_plugin_path) ... ok
+test_T16_existing_settings_preserved_and_conflicts_reported (test_install.Install.test_T16_existing_settings_preserved_and_conflicts_reported) ... ok
+test_claude_md_import_is_optional_and_reversible (test_install.Install.test_claude_md_import_is_optional_and_reversible) ... ok
+test_init_refuses_to_overwrite (test_install.Install.test_init_refuses_to_overwrite) ... ok
+test_invalid_existing_settings_not_touched (test_install.Install.test_invalid_existing_settings_not_touched) ... ok
+test_no_prior_settings_created_and_removed (test_install.Install.test_no_prior_settings_created_and_removed) ... ok
+test_T15_apply_to_a_different_project (test_install.OtherProject.test_T15_apply_to_a_different_project)
+A second, unrelated project (flat layout, different package) gets its own key and ledger. ... ok
+test_T12_validator_core_modification_blocks (test_integrity.CoreTamper.test_T12_validator_core_modification_blocks) ... ok
+test_release_manifest_detects_modified_file (test_integrity.CoreTamper.test_release_manifest_detects_modified_file) ... ok
+test_T07_pass_report_without_execution_is_rejected (test_integrity.ForgedResults.test_T07_pass_report_without_execution_is_rejected) ... ok
+test_T17_injected_ledger_record_detected (test_integrity.ForgedResults.test_T17_injected_ledger_record_detected) ... ok
+test_T17_modified_record_detected (test_integrity.ForgedResults.test_T17_modified_record_detected) ... ok
+test_T17_truncated_ledger_detected (test_integrity.ForgedResults.test_T17_truncated_ledger_detected) ... ok
+test_missing_signing_key_blocks (test_integrity.ForgedResults.test_missing_signing_key_blocks) ... ok
+test_tampered_evidence_detected_by_audit (test_integrity.ForgedResults.test_tampered_evidence_detected_by_audit) ... ok
+test_upgrade_requires_user_repin_and_stales_previous_passes (test_integrity.Upgrade.test_upgrade_requires_user_repin_and_stales_previous_passes) ... skipped 'pty is POSIX only'
+test_closure_follows_the_signed_failure_record_not_the_agent_written_gate (test_rework_flow.DefectTraceFromLedger.test_closure_follows_the_signed_failure_record_not_the_agent_written_gate) ... ok
+test_defect_links_are_derived_from_the_ledger_and_gaps_are_flagged (test_rework_flow.DefectTraceFromLedger.test_defect_links_are_derived_from_the_ledger_and_gaps_are_flagged) ... ok
+test_status_shows_the_failed_checks_of_a_failed_gate (test_rework_flow.DefectTraceFromLedger.test_status_shows_the_failed_checks_of_a_failed_gate) ... ok
+test_unlinked_failing_tests_do_not_block_the_rework (test_rework_flow.DefectTraceFromLedger.test_unlinked_failing_tests_do_not_block_the_rework)
+Visibility, not a new gate: the semantic check is the verifier's G4 review (no extra STALE rounds). ... ok
+test_documented_order_ends_partially_verified_with_ledger_backed_closure (test_rework_flow.ReworkOrder.test_documented_order_ends_partially_verified_with_ledger_backed_closure)
+Fix + `status: fixed` together, then re-review and re-verify: no extra STALE round. ... ok
+test_editing_defects_after_the_pass_makes_g4_g5_stale (test_rework_flow.ReworkOrder.test_editing_defects_after_the_pass_makes_g4_g5_stale)
+Validator invariant the skills must respect (characterisation, holds since 0.1.0). ... ok
+test_no_skill_marks_the_defect_fixed_after_the_gate_passes (test_rework_flow.SkillWording.test_no_skill_marks_the_defect_fixed_after_the_gate_passes) ... ok
+test_skills_say_mark_fixed_before_the_re_review_and_why (test_rework_flow.SkillWording.test_skills_say_mark_fixed_before_the_re_review_and_why) ... ok
+test_verifier_checks_root_cause_against_the_failure_and_does_not_ask_for_post_pass_edits (test_rework_flow.SkillWording.test_verifier_checks_root_cause_against_the_failure_and_does_not_ask_for_post_pass_edits)
+In the drill the G4 reviewer asked to close the defect 'after this gate' -> one extra STALE round. ... ok
+
+----------------------------------------------------------------------
+Ran 103 tests in 476.853s
+
+OK (skipped=4)
+RESULT ran=103 failures=0 errors=0 skipped=4

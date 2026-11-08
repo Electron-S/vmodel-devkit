@@ -1,0 +1,6 @@
+test_TEST_001_request_examples p=40 N=5 p*N/100=2.0 integer<N=True ref=20 seeded=35 fixed=20
+test_TEST_002_unsorted_float_list p=50 N=4 p*N/100=2.0 integer<N=True ref=2.5 seeded=3.5 fixed=2.5
+test_TEST_010_rank_kept_when_product_multiple_of_100 p=40 N=5 p*N/100=2.0 integer<N=True ref=20 seeded=35 fixed=20
+test_TEST_011_p29_n100_integer_rank p=29 N=100 p*N/100=29.0 integer<N=True ref=29 seeded=30 fixed=29
+test_TEST_012_duplicates_selected_by_rank p=80 N=5 p*N/100=4.0 integer<N=True ref=5 seeded=9 fixed=5
+normal-input calls checked: 13; seeded/fixed disagreements: 5; fixed code wrong: 0

@@ -1,0 +1,149 @@
+{
+  "before": {
+    "digest": "sha256:7d7095a2624059276e30d9e5dd29df403ac3563fcd67ad4337874d73880cc328",
+    "ledger_lines": 18
+  },
+  "after": {
+    "digest": "sha256:7d7095a2624059276e30d9e5dd29df403ac3563fcd67ad4337874d73880cc328",
+    "ledger_lines": 18
+  },
+  "restored": true,
+  "final": {
+    "wi": "PARTIALLY_VERIFIED",
+    "gates": {
+      "G4": "PASSED",
+      "G5": "PASSED"
+    },
+    "defects": [
+      {
+        "id": "DEFECT-001",
+        "gate": "G5",
+        "claimed_status": "fixed",
+        "root_cause_phase": "P4",
+        "found_in_records": [
+          "R00010"
+        ],
+        "unknown_records": [],
+        "failing_tests_by_record": {
+          "R00010": [
+            "TEST-001",
+            "TEST-002",
+            "TEST-010",
+            "TEST-011",
+            "TEST-012"
+          ]
+        },
+        "failing_tests": [
+          "TEST-001",
+          "TEST-002",
+          "TEST-010",
+          "TEST-011",
+          "TEST-012"
+        ],
+        "unlinked_failing_tests": [],
+        "verified_by": "R00013"
+      }
+    ]
+  },
+  "results": [
+    {
+      "probe": "P-F2 unlinked failing tests",
+      "snapshot": {
+        "wi": "IN_PROGRESS",
+        "gates": {
+          "G4": "STALE",
+          "G5": "STALE"
+        },
+        "defects": [
+          {
+            "id": "DEFECT-001",
+            "gate": "G5",
+            "claimed_status": "fixed",
+            "root_cause_phase": "P4",
+            "found_in_records": [
+              "R00010"
+            ],
+            "unknown_records": [],
+            "failing_tests_by_record": {
+              "R00010": [
+                "TEST-001",
+                "TEST-002",
+                "TEST-010",
+                "TEST-011",
+                "TEST-012"
+              ]
+            },
+            "failing_tests": [
+              "TEST-001",
+              "TEST-002",
+              "TEST-010",
+              "TEST-011",
+              "TEST-012"
+            ],
+            "unlinked_failing_tests": [
+              "TEST-011",
+              "TEST-012"
+            ],
+            "verified_by": "R00013"
+          }
+        ]
+      },
+      "lint_exit": 1,
+      "lint": [
+        "  - rework: DEFECT-001 does not link failing test(s) of R00010 in 'related': TEST-011, TEST-012"
+      ],
+      "status_defect_line": [
+        "DEFECT-001 [fixed; verified by R00013] G5 root cause P4; failing tests (ledger): TEST-001, TEST-002, TEST-010, TEST-011, TEST-012; NOT linked by the defect: TEST-011, TEST-012"
+      ]
+    },
+    {
+      "probe": "P-F1 status edited after the pass",
+      "snapshot": {
+        "wi": "IN_PROGRESS",
+        "gates": {
+          "G4": "STALE",
+          "G5": "STALE"
+        },
+        "defects": [
+          {
+            "id": "DEFECT-001",
+            "gate": "G5",
+            "claimed_status": "open",
+            "root_cause_phase": "P4",
+            "found_in_records": [
+              "R00010"
+            ],
+            "unknown_records": [],
+            "failing_tests_by_record": {
+              "R00010": [
+                "TEST-001",
+                "TEST-002",
+                "TEST-010",
+                "TEST-011",
+                "TEST-012"
+              ]
+            },
+            "failing_tests": [
+              "TEST-001",
+              "TEST-002",
+              "TEST-010",
+              "TEST-011",
+              "TEST-012"
+            ],
+            "unlinked_failing_tests": [],
+            "verified_by": "R00013"
+          }
+        ]
+      },
+      "status_lines": [
+        "G4 Implementation                   STALE            R00017 @ 2026-11-08T12:58:44.328Z",
+        "* changed: .vmodel/work-items/WI-001/defects.json",
+        "G5 Unit Verification                STALE            R00018 @ 2026-11-08T12:58:45.150Z",
+        "* changed: .vmodel/work-items/WI-001/defects.json",
+        "DEFECT-001 [open; verified by R00013] G5 root cause P4; failing tests (ledger): TEST-001, TEST-002, TEST-010, TEST-011, TEST-012",
+        "next: G4 STALE (inputs changed): re-review if needed and re-run 'vmodel gate WI-001 G4'",
+        "MVP scope: only G1-G5 are implemented. G6 (integration) and G7 (system) are extension gates, so a work item can reach PARTIALLY_VERIFIED at most. This is NOT a full V-Model completion."
+      ]
+    }
+  ]
+}

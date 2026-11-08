@@ -1,0 +1,18 @@
+Project: /tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/3327e00b-02b2-4423-87ce-b721cf6936c2/scratchpad/drill-3/한글 드릴 프로젝트
+Validator: 0.1.3 (release) core 0208c7988516 integrity OK
+Ledger: OK (13 entries)
+
+WI-001 [PARTIALLY_VERIFIED] 점수 백분위수 계산(nearest-rank) (profile STANDARD)
+  G1 Requirements                     PASSED           R00003 @ 2026-11-08T12:54:56.924Z
+  G2 Architecture                     PASSED           R00005 @ 2026-11-08T12:54:57.288Z
+  G3 Detailed Design & Test Planning  PASSED           R00007 @ 2026-11-08T12:54:57.654Z
+  G4 Implementation                   PASSED           R00012 @ 2026-11-08T12:56:43.849Z
+  G5 Unit Verification                PASSED           R00013 @ 2026-11-08T12:56:47.375Z
+  G6 Integration Verification         NOT_IMPLEMENTED 
+      - extension gate, not implemented in the MVP
+  G7 System Verification              NOT_IMPLEMENTED 
+      - extension gate, not implemented in the MVP
+  DEFECT-001 [fixed; verified by R00013] G5 root cause P4; failing tests (ledger): TEST-001, TEST-002, TEST-010, TEST-011, TEST-012
+  next: G1-G5 verified. G6+ are extension gates (not implemented); report PARTIALLY_VERIFIED.
+
+MVP scope: only G1-G5 are implemented. G6 (integration) and G7 (system) are extension gates, so a work item can reach PARTIALLY_VERIFIED at most. This is NOT a full V-Model completion.

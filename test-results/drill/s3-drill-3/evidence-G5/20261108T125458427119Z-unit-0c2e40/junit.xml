@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="5" skipped="0" tests="18" time="0.027" timestamp="2026-11-08T21:54:58.971902+09:00" hostname="PC"><testcase classname="tests.test_percentile" name="test_TEST_001_p30_returns_20" time="0.000" /><testcase classname="tests.test_percentile" name="test_TEST_001_request_examples[5-15]" time="0.000" /><testcase classname="tests.test_percentile" name="test_TEST_001_request_examples[30-20]" time="0.000" /><testcase classname="tests.test_percentile" name="test_TEST_001_request_examples[40-20]" time="0.000"><failure message="assert 35 == 20&#10; +  where 35 = percentile([15, 20, 35, 40, 50], 40)">p = 40, expected = 20
+
+    @pytest.mark.parametrize(
+        "p, expected",
+        [(5, 15), (30, 20), (40, 20), (50, 35), (100, 50)],
+    )
+    def test_TEST_001_request_examples(p, expected):
+&gt;       assert percentile(SAMPLE, p) == expected
+E       assert 35 == 20
+E        +  where 35 = percentile([15, 20, 35, 40, 50], 40)
+
+tests/test_percentile.py:17: AssertionError</failure></testcase><testcase classname="tests.test_percentile" name="test_TEST_001_request_examples[50-35]" time="0.000" /><testcase classname="tests.test_percentile" name="test_TEST_001_request_examples[100-50]" time="0.000" /><testcase classname="tests.test_percentile" name="test_TEST_002_unsorted_float_list" time="0.000"><failure message="assert 3.5 == 2.5&#10; +  where 3.5 = percentile([3.5, 1.5, 2.5, 4.5], 50)">def test_TEST_002_unsorted_float_list():
+&gt;       assert percentile([3.5, 1.5, 2.5, 4.5], 50) == 2.5
+E       assert 3.5 == 2.5
+E        +  where 3.5 = percentile([3.5, 1.5, 2.5, 4.5], 50)
+
+tests/test_percentile.py:21: AssertionError</failure></testcase><testcase classname="tests.test_percentile" name="test_TEST_003_input_list_unchanged" time="0.000" /><testcase classname="tests.test_percentile" name="test_TEST_004_p_out_of_range_raises" time="0.000" /><testcase classname="tests.test_percentile" name="test_TEST_005_non_integer_p_raises" time="0.000" /><testcase classname="tests.test_percentile" name="test_TEST_006_empty_list_raises" time="0.000" /><testcase classname="tests.test_percentile" name="test_TEST_007_p1_returns_minimum" time="0.000" /><testcase classname="tests.test_percentile" name="test_TEST_008_p100_returns_maximum" time="0.000" /><testcase classname="tests.test_percentile" name="test_TEST_009_single_element_any_p" time="0.000" /><testcase classname="tests.test_percentile" name="test_TEST_010_rank_kept_when_product_multiple_of_100" time="0.000"><failure message="assert 35 == 20&#10; +  where 35 = percentile([15, 20, 35, 40, 50], 40)">def test_TEST_010_rank_kept_when_product_multiple_of_100():
+&gt;       assert percentile([15, 20, 35, 40, 50], 40) == 20
+E       assert 35 == 20
+E        +  where 35 = percentile([15, 20, 35, 40, 50], 40)
+
+tests/test_percentile.py:61: AssertionError</failure></testcase><testcase classname="tests.test_percentile" name="test_TEST_011_p29_n100_integer_rank" time="0.000"><failure message="assert 30 == 29&#10; +  where 30 = percentile([1, 2, 3, 4, 5, 6, ...], 29)&#10; +    where [1, 2, 3, 4, 5, 6, ...] = list(range(1, 101))&#10; +      where range(1, 101) = range(1, 101)">def test_TEST_011_p29_n100_integer_rank():
+&gt;       assert percentile(list(range(1, 101)), 29) == 29
+E       assert 30 == 29
+E        +  where 30 = percentile([1, 2, 3, 4, 5, 6, ...], 29)
+E        +    where [1, 2, 3, 4, 5, 6, ...] = list(range(1, 101))
+E        +      where range(1, 101) = range(1, 101)
+
+tests/test_percentile.py:65: AssertionError</failure></testcase><testcase classname="tests.test_percentile" name="test_TEST_012_duplicates_selected_by_rank" time="0.000"><failure message="assert 9 == 5&#10; +  where 9 = percentile([5, 5, 5, 9, 1], 80)">def test_TEST_012_duplicates_selected_by_rank():
+&gt;       assert percentile([5, 5, 5, 9, 1], 80) == 5
+E       assert 9 == 5
+E        +  where 9 = percentile([5, 5, 5, 9, 1], 80)
+
+tests/test_percentile.py:69: AssertionError</failure></testcase><testcase classname="tests.test_smoke" name="test_package_imports" time="0.000" /></testsuite></testsuites>
