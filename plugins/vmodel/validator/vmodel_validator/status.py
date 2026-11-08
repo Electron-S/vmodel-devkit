@@ -93,21 +93,29 @@ def defect_check_counts(defects: list[dict]) -> dict:
             "warnings": sum(len(d.get("warnings") or []) for d in defects)}
 
 
-def closure_view(d: dict, gate_status: dict[str, str]) -> dict:
+def ledger_unverifiable(d: dict) -> bool:
+    return any(p["category"] == "evidence_integrity" and p.get("record") is None for p in d.get("errors") or [])
+
+
+def closure_view(d: dict, gates: dict[str, dict]) -> dict:
     """Derived closure state (D32 option C); defects.json keeps only the agent's claim `open` / `fixed`.
 
-    OPEN / FIX_APPLIED: no gate has verified the fix (claim `open` / `fixed`). VERIFIED: the failure's gate passed
-    after the failure (`verified_by`) but is not PASSED now (e.g. STALE) -> re-verify. CLOSED: verified and that gate is
-    PASSED for the current inputs (gate_state already requires the upstream gates to be PASSED). Display only.
+    OPEN / FIX_APPLIED: no gate has verified the fix (claim `open` / `fixed`). VERIFIED: the closure gate passed after
+    the failure (`verified_by`) but is not PASSED now (STALE, FAILED, BLOCKED) -> not closed. CLOSED: verified and that
+    gate is PASSED for the current inputs (gate_state already requires the upstream gates to be PASSED). UNKNOWN: the
+    ledger failed its integrity check, so verification cannot be determined. Display only.
     """
     vb, gate, claimed = d.get("verified_by"), d.get("closure_gate"), d.get("claimed_status")
-    if vb:
-        now = gate_status.get(str(gate))
-        state, now_status = ("CLOSED" if now == "PASSED" else "VERIFIED"), now
+    now: dict = gates.get(str(gate)) or {}
+    if ledger_unverifiable(d):
+        state, now_status = "UNKNOWN", None
+    elif vb:
+        state, now_status = ("CLOSED" if now.get("status") == "PASSED" else "VERIFIED"), now.get("status")
     else:
         state, now_status = ("FIX_APPLIED" if claimed == "fixed" else "OPEN"), None
     note = f"defects.json says open, but the ledger shows the fix verified by {vb}" if vb and claimed == "open" else None
-    return {"closure_state": state, "closure_gate_status": now_status, "claim_note": note}
+    return {"closure_state": state, "closure_gate_status": now_status,
+            "closure_gate_record": now.get("record_id") if vb else None, "claim_note": note}
 
 
 def render_problem(p: dict) -> str:
@@ -126,9 +134,9 @@ def project_status(project: Project, wi: str | None = None) -> dict:
         wi_doc = wi_doc if isinstance(wi_doc, dict) else {}
         profile = wi_doc.get("profile", "STANDARD")
         defects = defect_views(ctx, ledger_error)
-        gate_status = {g["gate"]: g["status"] for g in gates}
+        by_gate = {g["gate"]: g for g in gates}
         for d in defects:
-            d.update(closure_view(d, gate_status))
+            d.update(closure_view(d, by_gate))
         item = {"id": ctx.wi, "title": wi_doc.get("title"), "profile": profile,
                 "status": wi_status(gates, profile), "gates": gates, "next_action": next_action(ctx.wi, gates),
                 "defects": defects, "defect_checks": defect_check_counts(defects)}
@@ -150,21 +158,28 @@ def tests_summary(d: dict) -> str:
         return "failing tests (ledger): none (no valid failure record cited)"
     if all(c["test_results"] == "not_applicable" for c in valid):
         return f"failing tests (ledger): N/A ({'/'.join(sorted({str(c['gate']) for c in valid}))} does not run tests)"
-    unsure = [c for c in valid if c["test_results"] in ("unknown", "partial")]
+    unsure = any(w["category"] == "unknown_test_result" for w in d.get("warnings") or [])
     text = f"failing tests (ledger): {', '.join(d['failing_tests']) or ('none confirmed' if unsure else 'none')}"
     if unsure:
-        unknown = sorted({t for c in unsure for t in c["unknown_tests"]})
-        text += f"; UNKNOWN: {', '.join(unknown) or 'no per-TEST results recorded'}"
+        text += f"; UNKNOWN: {', '.join(d.get('unknown_tests') or []) or 'no per-TEST results recorded'}"
     return text
+
+
+def _now_passed(d: dict) -> str:
+    cur = d.get("closure_gate_record")
+    return f"{d.get('closure_gate')} PASSED" + (f" ({cur})" if cur and cur != d["verified_by"] else "")
 
 
 def closure_text(d: dict) -> str:
     """Closure evidence for display. A past `verified_by` is shown as current only while its gate is PASSED."""
-    vb, gate = d["verified_by"], d.get("closure_gate")
+    vb, gate, now = d["verified_by"], d.get("closure_gate"), d.get("closure_gate_status")
+    if d.get("closure_state") == "UNKNOWN":
+        return "verification cannot be determined: the ledger failed its integrity check"
     if vb and d.get("closure_state") == "VERIFIED":
-        return f"verified by {vb} but {gate} is now {d.get('closure_gate_status')}: re-verify"
+        return (f"verified by {vb} but {gate} is now BLOCKED: resolve the block first" if now == "BLOCKED"
+                else f"verified by {vb} but {gate} is now {now}: re-verify")
     if vb:
-        return f"verified by {vb}, {gate} PASSED"
+        return f"verified by {vb}, {_now_passed(d)}"
     if d.get("verification_withheld"):
         return f"not verified: {d['verification_withheld']} withheld (evidence integrity error)"
     return "not verified yet"
@@ -309,6 +324,8 @@ def render_impact(iv: dict) -> str:
 # ---------------------------------------------------------------- report
 def report_closure(d: dict) -> str:
     vb, gate = d["verified_by"], d.get("closure_gate")
+    if d.get("closure_state") == "UNKNOWN":
+        return "verification cannot be determined"
     if vb and d.get("closure_state") == "VERIFIED":
         return f"verified by {vb}, but {gate} is now {d.get('closure_gate_status')}"
     if vb:
@@ -320,8 +337,13 @@ def report_closure(d: dict) -> str:
 
 def report_closure_details(d: dict) -> list[str]:
     state, vb, gate = d.get("closure_state"), d["verified_by"], d.get("closure_gate")
-    if state == "CLOSED":
-        why = f"verified by {vb} and {gate} is PASSED for the current inputs"
+    if state == "UNKNOWN":
+        why = "the signed ledger failed its integrity check, so the verification cannot be determined"
+    elif state == "CLOSED":
+        why = f"verified by {vb} and {_now_passed(d)} for the current inputs"
+    elif state == "VERIFIED" and d.get("closure_gate_status") == "BLOCKED":
+        why = (f"the fix was verified by {vb}, but {gate} is now BLOCKED; resolve the block (see the gate's reasons) "
+               "before treating the defect as closed")
     elif state == "VERIFIED":
         why = (f"the fix was verified by {vb}, but {gate} is now {d.get('closure_gate_status')}; "
                f"re-verify (re-run {gate}) before treating the defect as closed")

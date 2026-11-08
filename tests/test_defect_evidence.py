@@ -200,6 +200,19 @@ class DefectTestResultsRed(unittest.TestCase):
         self.assertIn(failing[0], line)
         self.assertIn("UNKNOWN", line)
 
+    def test_unknown_results_are_named_in_lint_and_report(self):
+        self.sb.advance("G4")
+        self.set_argv(["{python}", "-c", "import sys; sys.exit(1)", "{junit}"])
+        res, failing, unknown = self.run_g5()
+        self.sb.add_defect(res["record_id"], "G5", related=["REQ-001"])
+        code, out = self.sb.vm("lint", "WI-001")
+        self.assertEqual(code, 1, out)
+        self.assertIn("WARNING [unknown_test_result]", out)
+        self.sb.vm("report", "WI-001")
+        report = (self.sb.root / ".vmodel/reports/WI-001.md").read_text(encoding="utf-8")
+        self.assertIn("WARNING [unknown_test_result]", report.split("## Defect trace check", 1)[-1])
+        self.assertIn(f"failing tests in {res['record_id']} (from the signed ledger): none; UNKNOWN", report)
+
     def test_g4_review_reject_is_not_applicable(self):
         self.sb.advance("G3")
         self.sb.put_code()
@@ -259,6 +272,107 @@ class DefectIntegrityRed(FailedG5Case):
         self.assertEqual(problems(d, "errors"), [("evidence_integrity", None)])
         self.assertEqual((d["verified_by"], d["failing_tests"]), (None, []))
         self.assertIn("ERROR [evidence_integrity]", self.status_text())
+
+
+class DefectEvidenceReviewRed(FailedG5Case):
+    """Findings of the independent F3/F1 reviews (2026-11-09), reproduced before the fix."""
+
+    def test_multi_gate_citation_is_not_verified_by_an_upstream_pass(self):
+        self.sb.add_defect(self.failed, "G5", related=["REQ-002", *self.failing], status="fixed")
+        self.s["wf"].write_text(self.s["good"], encoding="utf-8")
+        self.sb.review("G4", verdict="reject")
+        g4_fail = self.sb.gate("G4")[1]
+        self.assertEqual(g4_fail["status"], "FAILED")
+        self.sb.add_defect(g4_fail["record_id"], "G4")  # the same DEFECT recurs at G4
+        g4_pass = self.gate_g4()
+        d = self.defect()
+        self.assertEqual((d["verified_by"], d.get("closure_gate")), (None, "G5"), f"not {g4_pass}")
+        res = self.sb.gate("G5")[1]
+        self.assertEqual(res["status"], "PASSED")
+        self.assertEqual(self.defect()["verified_by"], res["record_id"])
+
+    def test_malformed_evidence_record_is_an_integrity_error_not_a_crash(self):
+        self.sb.add_defect(self.failed, "G5", related=["REQ-002", *self.failing])
+        record = self.sb.root / self.s["evidence"][0]["path"]
+        for content in ("[]", "5", '{"files": ["x"]}', '{"files": {"stdout.bin": "x"}}'):
+            record.write_text(content, encoding="utf-8")
+            code, st = self.sb.vm_json("status", "WI-001")
+            self.assertEqual(code, 0, content)
+            d = st["work_items"][0]["defects"][0]
+            self.assertIn(("evidence_integrity", self.failed), problems(d, "errors"), content)
+            code, out = self.sb.vm("lint", "WI-001")
+            self.assertEqual(code, 1, out)
+            self.assertIn("ERROR [evidence_integrity]", out)
+            code, out = self.sb.vm("report", "WI-001")
+            self.assertEqual(code, 0, out)
+
+    def test_duplicate_citations_count_once(self):
+        g4_pass = self.s["g4_pass"]
+        self.sb.add_defect(self.failed, "G5", related=["REQ-002"])
+        self.set_defect(found_in_records=[g4_pass, g4_pass, self.failed, self.failed])
+        d = self.defect()
+        self.assertEqual(problems(d, "errors"), [("invalid_citation", g4_pass)])
+        self.assertEqual(problems(d, "warnings"), [("unlinked_failing_test", self.failed)])
+
+    def test_three_strike_chain_counts_a_missing_link_once(self):
+        records = [self.failed]
+        for _ in range(2):
+            self.sb.add_defect(records[-1], "G5")
+            self.sb.regate_g4()
+            records.append(self.sb.gate("G5")[1]["record_id"])
+        self.sb.add_defect(records[-1], "G5")
+        d = self.defect()
+        warns = d.get("warnings") or []
+        self.assertEqual([(w.get("category"), w.get("records"), w.get("tests")) for w in warns],
+                         [("unlinked_failing_test", records, self.failing)])
+        self.assertEqual(self.wi().get("defect_checks"), {"errors": 0, "warnings": 1})
+
+    def test_defect_without_citations_is_an_invalid_citation(self):
+        self.sb.add_defect(self.failed, "G5", related=["REQ-002", *self.failing])
+        self.set_defect(found_in_records=self.failed)  # a string, not a list (schema error too)
+        d = self.defect()
+        self.assertEqual(problems(d, "errors"), [("invalid_citation", None)])
+        self.assertIn("defect checks: 1 error(s)", self.status_text())
+
+    def test_forged_or_truncated_ledger_is_reported_in_lint_and_report(self):
+        self.sb.add_defect(self.failed, "G5", related=["REQ-002", *self.failing])
+        ledger = self.sb.root / ".vmodel/state/ledger.jsonl"
+        lines = ledger.read_text(encoding="utf-8").splitlines()
+        ledger.write_text("\n".join(lines[:-1]) + "\n", encoding="utf-8")  # head/anchor mismatch
+        d = self.defect()
+        self.assertEqual(problems(d, "errors"), [("evidence_integrity", None)])
+        self.assertEqual(d["unknown_records"], [self.failed])  # 0.1.3 value kept
+        code, out = self.sb.vm("lint", "WI-001")
+        self.assertEqual(code, 1, out)
+        self.assertIn("ERROR [evidence_integrity]", out)
+        self.assertNotIn("invalid_citation", out)
+        section = self.report().split("## Defect trace check", 1)[1]
+        self.assertIn("ERROR [evidence_integrity]", section)
+
+    def test_withheld_verification_is_named_in_status_and_report(self):
+        res = self.close_defect()
+        ev = self.sb.root / res["evidence"][0]["path"]
+        (ev.parent / "stdout.bin").write_bytes(b"edited output")
+        self.assertIn(f"{res['record_id']} withheld", self.defect_line())
+        self.assertIn(f"{res['record_id']} withheld", self.report())
+
+    def test_counts_agree_across_status_lint_and_report(self):
+        self.sb.add_defect(self.failed, "G5", related=["REQ-002"])
+        self.set_defect(found_in_records=[self.failed, self.s["g4_pass"]])
+        self.assertEqual(self.wi().get("defect_checks"), {"errors": 1, "warnings": 1})
+        self.assertIn("defect checks: 1 error(s), 1 warning(s)", self.status_text())
+        code, out = self.sb.vm("lint", "WI-001")
+        self.assertIn("2 problem(s): 1 error(s), 1 warning(s)", out)
+        section = self.report().split("## Defect trace check", 1)[1].split("\n## ", 1)[0]
+        self.assertEqual((section.count("- ERROR ["), section.count("- WARNING [")), (1, 1))
+
+
+class DefectEvidenceReviewChar(FailedG5Case):
+    def test_clean_defect_lint_exits_zero(self):
+        self.close_defect()
+        code, out = self.sb.vm("lint", "WI-001")
+        self.assertEqual(code, 0, out)
+        self.assertIn("lint OK", out)
 
 
 class SkillReportingRed(unittest.TestCase):

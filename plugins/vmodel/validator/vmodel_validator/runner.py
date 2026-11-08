@@ -183,19 +183,30 @@ def check_evidence(project, ledger, rel: str, expected_sha: str | None) -> list[
         problems.append(f"{rel}: record file hash differs from the ledger")
     try:
         rec = load_json(path)
-    except ArtifactError as exc:
+    except (ArtifactError, OSError) as exc:
         return [str(exc)]
+    if not isinstance(rec, dict):
+        return [*problems, f"{rel}: not an evidence record (JSON object expected)"]
     sig = rec.pop("sig", None)
     if not verify_sig(ledger.key, rec, sig):
         problems.append(f"{rel}: invalid signature (not written by the validator)")
-    for name, meta in (rec.get("files") or {}).items():
+    files = rec.get("files") or {}
+    if not isinstance(files, dict):
+        return [*problems, f"{rel}: 'files' is not an object"]
+    for name, meta in files.items():
+        if not isinstance(meta, dict):
+            problems.append(f"{rel}: {name}: malformed file entry")
+            continue
         f = path.parent / name
         if meta.get("missing"):
             continue
-        if not f.is_file():
-            problems.append(f"{rel}: {name} missing")
-        elif sha256_file(f) != meta.get("sha256"):
-            problems.append(f"{rel}: {name} content differs from its recorded hash")
+        try:
+            if not f.is_file():
+                problems.append(f"{rel}: {name} missing")
+            elif sha256_file(f) != meta.get("sha256"):
+                problems.append(f"{rel}: {name} content differs from its recorded hash")
+        except OSError as exc:
+            problems.append(f"{rel}: {name} unreadable ({exc.__class__.__name__})")
     return problems
 
 

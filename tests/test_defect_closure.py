@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import unittest
 
+from helpers import Sandbox
 from rework_case import FailedG5Case
 
 
@@ -100,6 +101,98 @@ class DefectClosureRed(FailedG5Case):
         self.assertIn("withheld", self.defect_line())
 
 
+class DefectClosureReviewRed(FailedG5Case):
+    """Findings of the independent F1/F3 reviews (2026-11-09), reproduced before the fix."""
+
+    def test_multi_gate_failure_is_not_closed_by_the_upstream_pass(self):
+        self.sb.add_defect(self.failed, "G5", related=["REQ-002", *self.failing], status="fixed")
+        self.s["wf"].write_text(self.s["good"], encoding="utf-8")
+        self.sb.review("G4", verdict="reject")
+        g4_fail = self.sb.gate("G4")[1]
+        self.sb.add_defect(g4_fail["record_id"], "G4")
+        self.gate_g4()
+        self.assertEqual(self.gates()["G5"], "FAILED")
+        self.assertEqual(self.defect().get("closure_state"), "FIX_APPLIED")
+        self.assertNotIn("CLOSED", self.defect_line())
+        self.assertEqual(self.sb.gate("G5")[1]["status"], "PASSED")
+        self.assertEqual(self.defect().get("closure_state"), "CLOSED")
+
+    def test_rerun_after_stale_names_the_current_pass(self):
+        first = self.close_defect()
+        wf = self.s["wf"]
+        wf.write_bytes(wf.read_bytes() + b"\n")
+        self.gate_g4()
+        again = self.sb.gate("G5")[1]
+        self.assertEqual(again["status"], "PASSED")
+        d = self.defect()
+        self.assertEqual((d.get("closure_state"), d["verified_by"], d.get("closure_gate_record")),
+                         ("CLOSED", first["record_id"], again["record_id"]))
+        self.assertIn(f"G5 PASSED ({again['record_id']})", self.defect_line())
+
+    def test_failure_after_the_pass_is_verified_not_closed(self):
+        self.close_defect()
+        wf = self.s["wf"]
+        wf.write_text(self.s["good"].replace("if n <= 0:", "if n < 0:"), encoding="utf-8")
+        self.gate_g4()
+        self.assertEqual(self.sb.gate("G5")[1]["status"], "FAILED")
+        d = self.defect()
+        self.assertEqual((d.get("closure_state"), d.get("closure_gate_status")), ("VERIFIED", "FAILED"))
+        self.assertIn("G5 is now FAILED", self.defect_line())
+
+    def test_ledger_failure_is_unknown_not_unverified(self):
+        self.close_defect()
+        ledger = self.sb.root / ".vmodel/state/ledger.jsonl"
+        ledger.write_text(ledger.read_text(encoding="utf-8").replace('"status":"PASSED"', '"status":"FAILED"', 1),
+                          encoding="utf-8")
+        d = self.defect()
+        self.assertEqual((d.get("closure_state"), d["verified_by"]), ("UNKNOWN", None))
+        self.assertIn("cannot be determined", self.defect_line())
+        self.assertIn("closure: UNKNOWN", self.report())
+
+    def test_claim_note_appears_in_the_report(self):
+        self.sb.add_defect(self.failed, "G5", related=["REQ-002", *self.failing])
+        self.s["wf"].write_text(self.s["good"], encoding="utf-8")
+        self.gate_g4()
+        self.assertEqual(self.sb.gate("G5")[1]["status"], "PASSED")
+        self.assertIn("note: defects.json says open", self.report())
+
+    def test_session_start_context_shows_the_closure_state(self):
+        self.close_defect()
+        wf = self.s["wf"]
+        wf.write_bytes(wf.read_bytes() + b"\n")
+        code, out = self.sb.hook("session-start", {"hook_event_name": "SessionStart", "cwd": str(self.sb.root)})
+        self.assertEqual(code, 0, out)
+        self.assertIn("DEFECT-001 VERIFIED", out)
+        self.assertIn("G5 is now STALE", out)
+
+
+class DefectClosureBlockedRed(unittest.TestCase):
+    def test_blocked_gate_does_not_say_re_verify(self):
+        import os
+        from helpers import copy_plugin, fail_g5
+        sb = Sandbox()
+        try:
+            sb.plugin = copy_plugin(sb.tmp)
+            sb.entry = sb.plugin / "validator" / "vmodel.py"
+            s = fail_g5(sb)
+            sb.add_defect(s["failed"], "G5", related=["REQ-002", *s["failing"]], status="fixed")
+            s["wf"].write_text(s["good"], encoding="utf-8")
+            sb.regate_g4()
+            self.assertEqual(sb.gate("G5")[1]["status"], "PASSED")
+            init_py = sb.plugin / "validator" / "vmodel_validator" / "__init__.py"
+            os.chmod(init_py, 0o644)  # a release copy is read-only
+            init_py.write_text(init_py.read_text(encoding="utf-8") + "# changed core\n", encoding="utf-8")
+            st = sb.status()
+            d = st["work_items"][0]["defects"][0]
+            self.assertEqual((d.get("closure_state"), d.get("closure_gate_status")), ("VERIFIED", "BLOCKED"))
+            line = [ln.strip() for ln in sb.vm("status", "WI-001")[1].splitlines()
+                    if ln.strip().startswith("DEFECT-001")][0]
+            self.assertIn("resolve the block", line)
+            self.assertNotIn("re-verify", line)
+        finally:
+            sb.cleanup()
+
+
 class DefectClosureInvariant(FailedG5Case):
     def test_display_commands_do_not_touch_ledger_or_manifests(self):
         """Closure is display-only: no ledger record, no manifest or gate change from status/lint/report/trace."""
@@ -117,6 +210,7 @@ class DefectClosureInvariant(FailedG5Case):
         for args in (("status",), ("status", "WI-001", "--json"), ("lint", "WI-001"), ("report", "WI-001"),
                      ("trace", "WI-001"), ("impact", "WI-001")):
             self.sb.vm(*args)
+        self.sb.hook("session-start", {"hook_event_name": "SessionStart", "cwd": str(self.sb.root)})
         after = snapshot()
         self.assertEqual(before, after)
         self.assertEqual(json.loads(json.dumps(before["gates"])), {"G1": "PASSED", "G2": "PASSED", "G3": "PASSED",

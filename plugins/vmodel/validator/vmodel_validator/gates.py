@@ -294,7 +294,7 @@ def citation_view(entry: Entry | None, rid: str, wi: str) -> dict:
         return {**c, "valid": False, "reason": f"is a {rec.get('gate')} {rec.get('status')}{why} record, not a failure"}
     c["valid"] = True
     if rec.get("gate") not in TEST_EXECUTING_GATES:
-        return {**c, "test_results": "not_applicable", "failing_tests": [], "unknown_tests": []}
+        return {**c, "test_results": "not_applicable", "failing_tests": [], "unknown_tests": [], "recorded_tests": []}
     mapping = [ch for ch in rec.get("checks") or [] if isinstance(ch, dict) and ch.get("id") == "G5.TEST_MAPPING"]
     not_run = sorted({m.group(1) for ch in mapping for it in ch.get("items") or []
                       if isinstance(it, str) and (m := NOT_EXECUTED.match(it))})
@@ -303,7 +303,8 @@ def citation_view(entry: Entry | None, rid: str, wi: str) -> dict:
         results = "unknown"  # no per-TEST results in the signed record (e.g. no JUnit produced)
     else:
         results = "partial" if not_run else "recorded"
-    return {**c, "test_results": results, "failing_tests": failing_tests(rec), "unknown_tests": not_run}
+    return {**c, "test_results": results, "failing_tests": failing_tests(rec), "unknown_tests": not_run,
+            "recorded_tests": sorted(ex) if isinstance(ex, dict) else []}
 
 
 def defect_trace(entries: list[Entry], wi: str, defects: list[dict],
@@ -312,13 +313,25 @@ def defect_trace(entries: list[Entry], wi: str, defects: list[dict],
     """Defect view derived from the signed ledger (display only, never used for gate decisions).
 
     Per DEFECT: which cited records are valid failure evidence, the failing / UNKNOWN TEST ids they record, which
-    failing TEST ids the DEFECT does not link, and the first PASS of the failure's gate after it (`verified_by`, the
-    closure evidence). Problems carry the categories of DEFECT_CHECK_CATEGORIES: errors = evidence integrity and
-    invalid citations, warnings = unlinked failing tests and unknown per-TEST results. `evidence_check(path, sha)`
-    returns the problems of an evidence record; if the evidence behind the failure or the verifying PASS does not
-    match the ledger, `verified_by` is withheld. `ledger_error` means the ledger itself failed verification.
+    failing TEST ids the DEFECT does not link, and the closure evidence `verified_by`: the first PASS, after the latest
+    cited failure, of the most downstream gate that failed (a G5 PASS also implies G4 passed before it). Problems
+    carry the categories of DEFECT_CHECK_CATEGORIES (one per DEFECT and category for the trace warnings): errors =
+    evidence integrity and invalid citations, warnings = unlinked failing tests and unknown per-TEST results.
+    `evidence_check(path, sha)` returns the problems of an evidence record (an exception counts as a problem); if the
+    evidence behind a cited failure or the verifying PASS does not match the ledger, `verified_by` is withheld.
+    `ledger_error` means the ledger itself failed verification.
     """
     by_id = {e.id: e for e in entries}
+    checked: dict[tuple[str, Any], list[str]] = {}
+
+    def check(path: str, sha: Any) -> list[str]:
+        if (path, sha) not in checked:
+            try:
+                checked[(path, sha)] = list(evidence_check(path, sha)) if evidence_check else []
+            except Exception as exc:  # a malformed evidence file must not break status/lint/report
+                checked[(path, sha)] = [f"{path}: evidence check failed ({exc.__class__.__name__}: {exc})"]
+        return checked[(path, sha)]
+
     out = []
     for d in defects:
         did = d.get("id")
@@ -333,39 +346,48 @@ def defect_trace(entries: list[Entry], wi: str, defects: list[dict],
                                    f"{did}: the signed ledger failed its integrity check ({ledger_error}); "
                                    "the cited records cannot be verified"))
             view.update(citations=[{"record": r, "valid": None, "reason": "ledger integrity failed"} for r in found],
-                        unknown_records=[], failing_tests_by_record={}, failing_tests=[], unlinked_failing_tests=[],
-                        closure_gate=None, verified_by=None, verification_withheld=None, errors=errors,
-                        warnings=warnings)
+                        unknown_records=sorted(set(found)), failing_tests_by_record={}, failing_tests=[],
+                        unlinked_failing_tests=[], unknown_tests=[], closure_gate=None, verified_by=None,
+                        verification_withheld=None, errors=errors, warnings=warnings)
             out.append(view)
             continue
         citations = [citation_view(by_id.get(r), r, wi) for r in dict.fromkeys(found)]
         valid = [by_id[c["record"]] for c in citations if c["valid"]]
+        if not citations:
+            errors.append(_problem("invalid_citation", None,
+                                   f"{did} cites no record: found_in_records must list the failed gate record ids"))
         for c in citations:
             if not c["valid"]:
                 errors.append(_problem("invalid_citation", c["record"],
                                        f"{did} cites {c['record']}, which {c['reason']}; it is not failure evidence "
                                        "(ignored for failing tests and closure)"))
-        per_record = {c["record"]: c["failing_tests"] for c in citations if c["valid"]}
+        ok = [c for c in citations if c["valid"]]
+        per_record = {c["record"]: c["failing_tests"] for c in ok}
         failing = sorted({t for ts in per_record.values() for t in ts})
-        for c in citations:
-            if not c["valid"]:
-                continue
-            missing = [t for t in c["failing_tests"] if t not in linked]
-            if missing:
-                warnings.append(_problem(
-                    "unlinked_failing_test", c["record"],
-                    f"{did} does not link failing test(s) of {c['record']} in 'related': {', '.join(missing)}", missing))
-            if c["test_results"] in ("unknown", "partial"):
-                what = ", ".join(c["unknown_tests"]) or "no per-TEST results recorded"
-                warnings.append(_problem(
-                    "unknown_test_result", c["record"],
-                    f"{did}: per-TEST results of {c['record']} are UNKNOWN (not executed or not recorded): {what}",
-                    c["unknown_tests"]))
+        unlinked = [t for t in failing if t not in linked]
+        if unlinked:  # one warning per DEFECT (a 3-strike chain repeats the same failing tests)
+            recs = [c["record"] for c in ok if set(c["failing_tests"]) - linked]
+            w = _problem("unlinked_failing_test", recs[0] if len(recs) == 1 else None,
+                         f"{did} does not link failing test(s) of {', '.join(recs)} in 'related': {', '.join(unlinked)}",
+                         unlinked)
+            warnings.append({**w, "records": recs})
+        unsure = [c for c in ok if c["test_results"] in ("unknown", "partial")]
+        known = {t for c in ok for t in c.get("recorded_tests") or []}
+        unknown = sorted({t for c in unsure for t in c["unknown_tests"]} - known)
+        no_results = any(c["test_results"] == "unknown" and not c["unknown_tests"] for c in unsure) and not known
+        if unknown or no_results:
+            recs = [c["record"] for c in unsure]
+            w = _problem("unknown_test_result", recs[0] if len(recs) == 1 else None,
+                         f"{did}: per-TEST results of {', '.join(recs)} are UNKNOWN (not executed or not recorded): "
+                         + (", ".join(unknown) or "no per-TEST results recorded"), unknown)
+            warnings.append({**w, "records": recs})
         closure_gate = verified_by = None
         if valid:
+            # baseline = the latest cited failure; closure gate = the most downstream gate that failed, from the signed
+            # records (not the agent-written `gate`), so a G4 re-pass cannot close a defect whose G5 still fails
             last = max(valid, key=lambda e: e.seq)
-            # the gate of the signed failure record, not the agent-written `gate` field
-            closure_gate = str(last.record.get("gate"))
+            closure_gate = max((str(e.record.get("gate")) for e in valid),
+                               key=lambda g: GATE_ORDER.index(g) if g in GATE_ORDER else -1)
             for e in gate_entries(entries, wi, closure_gate):
                 if e.seq > last.seq and e.record.get("type") == "gate" and e.record.get("status") == "PASSED":
                     verified_by = e.id
@@ -375,7 +397,7 @@ def defect_trace(entries: list[Entry], wi: str, defects: list[dict],
             relied = {e.id: e for e in [*valid, *([by_id[verified_by]] if verified_by else [])]}
             for e in relied.values():
                 probs = [p for ev in e.record.get("evidence") or [] if isinstance(ev, dict)
-                         for p in evidence_check(str(ev.get("path")), ev.get("sha256"))]
+                         for p in check(str(ev.get("path")), ev.get("sha256"))]
                 if probs:
                     errors.append(_problem("evidence_integrity", e.id,
                                            f"{did} relies on {e.id}, whose evidence does not match the signed ledger: "
@@ -385,9 +407,8 @@ def defect_trace(entries: list[Entry], wi: str, defects: list[dict],
         view.update(citations=citations,
                     unknown_records=sorted(r for r in set(found) if not (
                         r in by_id and by_id[r].record.get("work_item") == wi and by_id[r].record.get("type") == "gate")),
-                    failing_tests_by_record=per_record, failing_tests=failing,
-                    unlinked_failing_tests=[t for t in failing if t not in linked],
-                    closure_gate=closure_gate, verified_by=verified_by, verification_withheld=withheld,
+                    failing_tests_by_record=per_record, failing_tests=failing, unlinked_failing_tests=unlinked,
+                    unknown_tests=unknown, closure_gate=closure_gate, verified_by=verified_by, verification_withheld=withheld,
                     errors=errors, warnings=warnings)
         out.append(view)
     return out

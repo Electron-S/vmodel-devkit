@@ -53,6 +53,8 @@ G4 after a failure (defects.json has entries): check each DEFECT against what ac
 explanation. `"<VM path>" status <WI> --json` shows the failed gate's checks and `failing_tests`, and per defect
 `failing_tests` and `unlinked_failing_tests` (taken from the signed ledger). The root cause must explain every failing
 case, the fix must stay within `fix_scope`, and unlinked failing tests or an unexplained failing case are findings.
+The defect trace check `errors` (`invalid_citation`, `evidence_integrity`) and `warnings` (`unlinked_failing_test`,
+`unknown_test_result`) in the same output are findings too: a DEFECT must cite the failure record itself.
 Never ask for edits to defects.json after your approval (e.g. "close the defect after this gate"): it is a gate input,
 so such an edit invalidates the gate again. `status: "fixed"` belongs to the fix itself; the validator proves closure.
 

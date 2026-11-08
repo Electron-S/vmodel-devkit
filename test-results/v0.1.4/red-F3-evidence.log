@@ -7,13 +7,13 @@
       "core_hash": "sha256:0208c7988516f050d2eabf8c50704d9e36be7c4d6eb94b4ff098dc7c2c73e0ea"
     }
   },
-  "git_head": "14f46b5",
+  "git_head": "2d4f5c6",
   "worktree_dirty": true,
   "python": "3.12.3",
-  "tests": 17,
-  "expectations_met": 17,
+  "tests": 27,
+  "expectations_met": 27,
   "violations": 0,
-  "seconds": 70.4
+  "seconds": 114.1
 }
 
 OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceChar.test_invalid_citations_alone_do_not_satisfy_the_rework_precondition
@@ -28,11 +28,28 @@ OK  expect=FAIL got=FAIL    test_defect_evidence.DefectEvidenceRed.test_mixed_ci
 OK  expect=FAIL got=FAIL    test_defect_evidence.DefectEvidenceRed.test_passed_record_alone_is_an_invalid_citation
       AssertionError: 'R00014' is not None : 0.1.3 showed R00014
 OK  expect=FAIL got=FAIL    test_defect_evidence.DefectEvidenceRed.test_report_always_has_the_defect_trace_check_section
-      AssertionError: '## Defect trace check' not found in "# WI-001 — 단어 빈도 기능\n\n- Status: **IN_PROGRESS** (profile STANDARD)\n- Generated: 2026-11-08T14:33:26+00:00 by vmodel 0.1.3 (release, core `0208c7988516`)\n- Validator integrity: OK; ledger: OK\n\n> MVP scope: only G1-G5 are implemented. G6 (integration) and G7 (system) are extension gates, so a work item can reach PARTIALLY_VERIFIED at most. T
+      AssertionError: '## Defect trace check' not found in "# WI-001 — 단어 빈도 기능\n\n- Status: **IN_PROGRESS** (profile STANDARD)\n- Generated: 2026-11-08T16:17:18+00:00 by vmodel 0.1.3 (release, core `0208c7988516`)\n- Validator integrity: OK; ledger: OK\n\n> MVP scope: only G1-G5 are implemented. G6 (integration) and G7 (system) are extension gates, so a work item can reach PARTIALLY_VERIFIED at most. T
 OK  expect=FAIL got=FAIL    test_defect_evidence.DefectEvidenceRed.test_review_required_record_is_an_invalid_citation
       AssertionError: Lists differ: [] != [('invalid_citation', 'R00013')]
 OK  expect=FAIL got=FAIL    test_defect_evidence.DefectEvidenceRed.test_unlinked_failing_tests_are_trace_warnings_everywhere
       AssertionError: Lists differ: [] != [('warning', 'unlinked_failing_test', 'R00012', ['TEST-009'])]
+OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceReviewChar.test_clean_defect_lint_exits_zero
+OK  expect=FAIL got=FAIL    test_defect_evidence.DefectEvidenceReviewRed.test_counts_agree_across_status_lint_and_report
+      AssertionError: None != {'errors': 1, 'warnings': 1}
+OK  expect=FAIL got=FAIL    test_defect_evidence.DefectEvidenceReviewRed.test_defect_without_citations_is_an_invalid_citation
+      AssertionError: Lists differ: [] != [('invalid_citation', None)]
+OK  expect=FAIL got=FAIL    test_defect_evidence.DefectEvidenceReviewRed.test_duplicate_citations_count_once
+      AssertionError: Lists differ: [] != [('invalid_citation', 'R00011')]
+OK  expect=FAIL got=FAIL    test_defect_evidence.DefectEvidenceReviewRed.test_forged_or_truncated_ledger_is_reported_in_lint_and_report
+      AssertionError: Lists differ: [] != [('evidence_integrity', None)]
+OK  expect=FAIL got=FAIL    test_defect_evidence.DefectEvidenceReviewRed.test_malformed_evidence_record_is_an_integrity_error_not_a_crash
+      AssertionError: ('evidence_integrity', 'R00012') not found in [] : []
+OK  expect=FAIL got=FAIL    test_defect_evidence.DefectEvidenceReviewRed.test_multi_gate_citation_is_not_verified_by_an_upstream_pass
+      AssertionError: Tuples differ: ('R00016', None) != (None, 'G5')
+OK  expect=FAIL got=FAIL    test_defect_evidence.DefectEvidenceReviewRed.test_three_strike_chain_counts_a_missing_link_once
+      AssertionError: Lists differ: [] != [('unlinked_failing_test', ['R00012', 'R00015', 'R00018'], ['TEST-009'])]
+OK  expect=FAIL got=FAIL    test_defect_evidence.DefectEvidenceReviewRed.test_withheld_verification_is_named_in_status_and_report
+      AssertionError: 'R00015 withheld' not found in 'DEFECT-001 [fixed; verified by R00015] G5 root cause P4; failing tests (ledger): TEST-009'
 OK  expect=FAIL got=FAIL    test_defect_evidence.DefectIntegrityRed.test_forged_ledger_is_one_integrity_error_not_invalid_citations
       AssertionError: Lists differ: [] != [('evidence_integrity', None)]
 OK  expect=FAIL got=FAIL    test_defect_evidence.DefectIntegrityRed.test_tampered_failure_evidence_is_an_integrity_error
@@ -45,5 +62,7 @@ OK  expect=FAIL got=FAIL    test_defect_evidence.DefectTestResultsRed.test_g5_fa
       AssertionError: Tuples differ: (None, None) != ('unknown', ['TEST-001', 'TEST-002', 'TEST[74 chars]09'])
 OK  expect=FAIL got=FAIL    test_defect_evidence.DefectTestResultsRed.test_partially_executed_g5_separates_failing_and_unknown
       AssertionError: Tuples differ: (None, None, None) != ('partial', ['TEST-001'], ['TEST-002', 'TE[76 chars]09'])
+OK  expect=FAIL got=FAIL    test_defect_evidence.DefectTestResultsRed.test_unknown_results_are_named_in_lint_and_report
+      AssertionError: 0 != 1 : WI-001: 6 artifact(s) present: architecture.json, defects.json, design.json, requirements.json, tests.json, workitem.json
 OK  expect=FAIL got=FAIL    test_defect_evidence.SkillReportingRed.test_final_report_steps_carry_errors_and_warnings
       AssertionError: Regex didn't match: '(?s)every ERROR and WARNING.{0,200}defect trace check' not found in '---\nname: start\ndescription: Start or continue VModel DevKit V-Model development (requirements -> architecture -> design & test specs -> implementation -> unit verification, each gated by an independent validator). Use when the user asks to develop or implement a feature, substantively chang
