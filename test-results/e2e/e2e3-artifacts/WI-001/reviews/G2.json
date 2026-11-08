@@ -1,0 +1,15 @@
+{"gate": "G2", "work_item": "WI-001", "reviewer": "vmodel:verifier", "target_hash": "sha256:c7ede5df7f66009ba14229c6c0c2cd8269ae494bb8567fdfbc8d09d9ff8e910b",
+ "reviewed_at": "2026-11-08T09:00:00Z", "verdict": "approve",
+ "summary": "Single-component architecture (ARCH-001) covers REQ-001..004 with a clear responsibility, a credible approach for the stdlib-only constraint, and justified trade-offs. No inter-component interfaces exist, so the empty interface and integration strategy are consistent. Only minor precision gaps remain.",
+ "checklist": [
+  {"item": "Every requirement realised by a component", "result": "ok", "note": "All four REQs map to ARCH-001 at src/textstats/sentences.py."},
+  {"item": "Interfaces precise", "result": "issue", "note": "The public API sentence_stats(text: str) -> tuple[int, float] and the __init__ re-export are not listed as an interface; they appear only in ASM-001 and the tradeoffs (F-1)."},
+  {"item": "Data flows consistent", "result": "ok", "note": "None needed for a single pure function."},
+  {"item": "NFR/constraint approach", "result": "ok", "note": "REQ-004 is addressed by using only re and adding no pyproject dependency."},
+  {"item": "Trade-offs justified", "result": "ok", "note": "The regex choice and module layout are reasoned. The regex handles consecutive terminators and a trailing unterminated tail (ASM-002/003), and the word-less segment rule is covered by the responsibility text and ASM-003."},
+  {"item": "Integration test strategy exercises interfaces", "result": "ok", "note": "No component interfaces; unit and system tests cover the public function."}
+ ],
+ "findings": [
+  {"id": "F-1", "severity": "minor", "description": "Record the public function sentence_stats(text: str) -> tuple[int, float] (raises TypeError for non-str) and the textstats package re-export as an entry in architecture 'interfaces', so G3 designs and the tests have an explicit contract.", "related": ["ARCH-001", "ASM-001"], "status": "open"},
+  {"id": "F-2", "severity": "info", "description": "The regex decision text does not state that segments with zero words are skipped, although ASM-003 requires it. State it in the G3 design.", "related": ["REQ-001", "ASM-003"], "status": "open"}
+ ]}

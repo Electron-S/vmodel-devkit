@@ -1,0 +1,155 @@
+{
+  "work_item": "WI-001",
+  "tests": [
+    {
+      "id": "TEST-001",
+      "level": "unit",
+      "title": "tokenize 소문자 분해",
+      "category": "normal",
+      "verifies": [
+        "DESIGN-001"
+      ],
+      "acceptance_criteria": [],
+      "procedure": "tokenize 소문자 분해",
+      "expected": "명세대로 동작"
+    },
+    {
+      "id": "TEST-002",
+      "level": "unit",
+      "title": "tokenize 빈 문자열",
+      "category": "boundary",
+      "verifies": [
+        "DESIGN-001"
+      ],
+      "acceptance_criteria": [],
+      "procedure": "tokenize 빈 문자열",
+      "expected": "명세대로 동작"
+    },
+    {
+      "id": "TEST-003",
+      "level": "unit",
+      "title": "tokenize 비문자열 TypeError",
+      "category": "abnormal",
+      "verifies": [
+        "DESIGN-001"
+      ],
+      "acceptance_criteria": [],
+      "procedure": "tokenize 비문자열 TypeError",
+      "expected": "명세대로 동작"
+    },
+    {
+      "id": "TEST-004",
+      "level": "unit",
+      "title": "count_words 집계",
+      "category": "normal",
+      "verifies": [
+        "DESIGN-002"
+      ],
+      "acceptance_criteria": [],
+      "procedure": "count_words 집계",
+      "expected": "명세대로 동작"
+    },
+    {
+      "id": "TEST-005",
+      "level": "unit",
+      "title": "count_words 빈 문자열",
+      "category": "boundary",
+      "verifies": [
+        "DESIGN-002"
+      ],
+      "acceptance_criteria": [],
+      "procedure": "count_words 빈 문자열",
+      "expected": "명세대로 동작"
+    },
+    {
+      "id": "TEST-006",
+      "level": "unit",
+      "title": "count_words 비문자열 TypeError",
+      "category": "abnormal",
+      "verifies": [
+        "DESIGN-002"
+      ],
+      "acceptance_criteria": [],
+      "procedure": "count_words 비문자열 TypeError",
+      "expected": "명세대로 동작"
+    },
+    {
+      "id": "TEST-007",
+      "level": "unit",
+      "title": "top_n 정렬",
+      "category": "normal",
+      "verifies": [
+        "DESIGN-003"
+      ],
+      "acceptance_criteria": [],
+      "procedure": "top_n 정렬",
+      "expected": "명세대로 동작"
+    },
+    {
+      "id": "TEST-008",
+      "level": "unit",
+      "title": "top_n n이 고유 단어 수보다 큼",
+      "category": "boundary",
+      "verifies": [
+        "DESIGN-003"
+      ],
+      "acceptance_criteria": [],
+      "procedure": "top_n n이 고유 단어 수보다 큼",
+      "expected": "명세대로 동작"
+    },
+    {
+      "id": "TEST-009",
+      "level": "unit",
+      "title": "top_n n<=0 ValueError",
+      "category": "abnormal",
+      "verifies": [
+        "DESIGN-003"
+      ],
+      "acceptance_criteria": [],
+      "procedure": "top_n n<=0 ValueError",
+      "expected": "명세대로 동작"
+    },
+    {
+      "id": "TEST-010",
+      "level": "integration",
+      "title": "wordfreq가 tokenizer를 통해 구두점 처리",
+      "category": "normal",
+      "verifies": [
+        "IF-001"
+      ],
+      "acceptance_criteria": [],
+      "procedure": "wordfreq가 tokenizer를 통해 구두점 처리",
+      "expected": "명세대로 동작"
+    },
+    {
+      "id": "TEST-011",
+      "level": "system",
+      "title": "AC-001 수용 시나리오",
+      "category": "normal",
+      "verifies": [
+        "REQ-001"
+      ],
+      "acceptance_criteria": [
+        "AC-001-1",
+        "AC-001-2"
+      ],
+      "procedure": "AC-001 수용 시나리오",
+      "expected": "명세대로 동작"
+    },
+    {
+      "id": "TEST-012",
+      "level": "system",
+      "title": "AC-002 수용 시나리오",
+      "category": "normal",
+      "verifies": [
+        "REQ-002"
+      ],
+      "acceptance_criteria": [
+        "AC-002-1",
+        "AC-002-2"
+      ],
+      "procedure": "AC-002 수용 시나리오",
+      "expected": "명세대로 동작"
+    }
+  ]
+}

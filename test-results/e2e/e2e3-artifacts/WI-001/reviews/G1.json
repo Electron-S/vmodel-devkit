@@ -1,0 +1,17 @@
+{"gate": "G1", "work_item": "WI-001", "reviewer": "vmodel:verifier", "target_hash": "sha256:56680e6a2795d03a3c8a9dd56f035d7e99522251c8547ff13fa5f120b5368470",
+ "reviewed_at": "2026-11-08T09:00:00Z", "verdict": "approve",
+ "summary": "All parts of the request (sentence count and average, definition of sentence/word, empty text, TypeError) map to REQ-001..003, with concrete and computable acceptance criteria (verified arithmetic of AC-001-1..5). Ambiguities (tail text, repeated punctuation, abbreviations) are recorded as assumptions. Only minor gaps remain: ASM-003/ASM-004 behaviours have no acceptance criteria.",
+ "checklist": [
+  {"item": "Every part of the request covered", "result": "ok", "note": "Function, sentence/word definitions, empty/whitespace, TypeError all covered."},
+  {"item": "Requirements atomic, unambiguous, testable", "result": "ok", "note": "REQ-001..003 have concrete input/output examples; REQ-004 is a constraint checkable by inspection."},
+  {"item": "Acceptance criteria concrete and measurable", "result": "ok", "note": "Expected values recomputed and consistent with the stated rules."},
+  {"item": "Non-functional needs and constraints", "result": "ok", "note": "Stdlib-only captured (REQ-004); no performance need stated by the request."},
+  {"item": "Conflicts analysed", "result": "ok", "note": "REQ-001/REQ-002 boundary resolved through ASM-002/003."},
+  {"item": "Critical decisions escalated to the user", "result": "ok", "note": "No security or data-loss decisions; non-interactive run noted in ASM-005 for post-hoc confirmation."},
+  {"item": "Assumptions reasonable and recorded", "result": "ok", "note": "ASM-001..005 conservative and record their impact."}
+ ],
+ "findings": [
+  {"id": "F-1", "severity": "minor", "description": "ASM-003 (consecutive punctuation, punctuation-only segments like '...' or 'Hi. ... Bye.') and ASM-004 (mid-sentence period like '3.14' splits sentences) have no acceptance criteria, so these behaviours may go untested at system level.", "related": ["ASM-003", "ASM-004", "REQ-001"], "status": "open"},
+  {"id": "F-2", "severity": "minor", "description": "REQ-001 says words are separated by whitespace ('공백') while REQ-002 lists space/tab/newline; whether Unicode whitespace is included is not stated (ASM-004 implies str.split).", "related": ["REQ-001", "REQ-002"], "status": "open"},
+  {"id": "F-3", "severity": "info", "description": "ASM-002 (unterminated tail not counted) is a literal reading but is a user-visible choice; user should confirm later.", "related": ["ASM-002", "ASM-005"], "status": "open"}
+ ]}

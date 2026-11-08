@@ -1,0 +1,544 @@
+{
+  "schema": "vmodel.gates/1",
+  "gate_states": [
+    "NOT_STARTED",
+    "IN_PROGRESS",
+    "REVIEW_REQUIRED",
+    "PASSED",
+    "FAILED",
+    "BLOCKED",
+    "STALE"
+  ],
+  "work_item_states": [
+    "NOT_STARTED",
+    "IN_PROGRESS",
+    "BLOCKED",
+    "PARTIALLY_VERIFIED",
+    "COMPLETED"
+  ],
+  "check_kinds": {
+    "mechanical": "Decided by the validator from artifact content (schema, ids, trace, hashes).",
+    "execution": "The validator executed a command itself and recorded evidence.",
+    "ai_review": "Semantic review written by the vmodel:verifier subagent. Recorded with machine_verified=false; the validator only checks that it exists, targets the current manifest hash and approves."
+  },
+  "gates": [
+    {
+      "id": "G1",
+      "phase": "P1",
+      "name": "Requirements",
+      "implemented": true,
+      "inputs": [
+        "workitem.json (original user request)"
+      ],
+      "outputs": [
+        "requirements.json",
+        "reviews/G1.json"
+      ],
+      "agents": {
+        "author": "orchestrator using agents/requirements-analyst.md",
+        "reviewer": "vmodel:verifier",
+        "decision": "user (critical issues)"
+      },
+      "required_artifacts": [
+        "workitem.json",
+        "requirements.json"
+      ],
+      "manifest": {
+        "artifacts": [
+          "workitem.json",
+          "requirements.json"
+        ],
+        "code": false
+      },
+      "item_artifacts": [
+        "requirements.json"
+      ],
+      "checks": [
+        {
+          "id": "G1.SCHEMA",
+          "kind": "mechanical",
+          "desc": "requirements.json exists and matches the schema"
+        },
+        {
+          "id": "G1.IDS",
+          "kind": "mechanical",
+          "desc": "REQ/AC ids well formed and unique across the project"
+        },
+        {
+          "id": "G1.ACCEPTANCE",
+          "kind": "mechanical",
+          "desc": "every active functional requirement has at least one acceptance criterion"
+        },
+        {
+          "id": "G1.CONFLICTS",
+          "kind": "mechanical",
+          "desc": "conflict analysis performed; every conflict resolved; referenced ids exist"
+        },
+        {
+          "id": "G1.OPEN_ISSUES",
+          "kind": "mechanical",
+          "desc": "no open critical issue; resolved critical issues decided by the user"
+        },
+        {
+          "id": "G1.CHANGE_CONTROL",
+          "kind": "mechanical",
+          "desc": "requirements changed since the last PASS are covered by a change request"
+        },
+        {
+          "id": "G1.AMBIGUITY",
+          "kind": "mechanical",
+          "desc": "vague wording warning (never blocks)"
+        },
+        {
+          "id": "G1.REVIEW",
+          "kind": "ai_review",
+          "desc": "verifier review approves the current manifest hash, no open major finding; the review must be registered in the signed ledger with 'vmodel review-submit' (verifier only)"
+        }
+      ],
+      "pass_criteria": "all checks pass (warnings allowed); pending review -> REVIEW_REQUIRED by vmodel:verifier; open critical issue -> REVIEW_REQUIRED by user"
+    },
+    {
+      "id": "G2",
+      "phase": "P2",
+      "name": "Architecture",
+      "implemented": true,
+      "inputs": [
+        "requirements.json"
+      ],
+      "outputs": [
+        "architecture.json",
+        "reviews/G2.json"
+      ],
+      "agents": {
+        "author": "orchestrator using agents/architect.md",
+        "reviewer": "vmodel:verifier"
+      },
+      "required_artifacts": [
+        "architecture.json"
+      ],
+      "manifest": {
+        "artifacts": [
+          "workitem.json",
+          "requirements.json",
+          "architecture.json"
+        ],
+        "code": false
+      },
+      "item_artifacts": [
+        "architecture.json"
+      ],
+      "checks": [
+        {
+          "id": "G2.SCHEMA",
+          "kind": "mechanical",
+          "desc": "architecture.json exists and matches the schema"
+        },
+        {
+          "id": "G2.IDS",
+          "kind": "mechanical",
+          "desc": "ARCH/IF ids well formed and unique across the project"
+        },
+        {
+          "id": "G2.REQ_MAPPING",
+          "kind": "mechanical",
+          "desc": "every active functional requirement is mapped to a component; no dangling requirement references"
+        },
+        {
+          "id": "G2.INTERFACES",
+          "kind": "mechanical",
+          "desc": "interfaces defined when there are 2+ components; providers/consumers exist"
+        },
+        {
+          "id": "G2.NFR",
+          "kind": "mechanical",
+          "desc": "every active non-functional requirement is addressed in nfr_mapping"
+        },
+        {
+          "id": "G2.INTEGRATION_STRATEGY",
+          "kind": "mechanical",
+          "desc": "integration test strategy exists and covers every interface"
+        },
+        {
+          "id": "G2.TRADEOFFS",
+          "kind": "mechanical",
+          "desc": "design trade-offs recorded (warning only)"
+        },
+        {
+          "id": "G2.REVIEW",
+          "kind": "ai_review",
+          "desc": "verifier review approves the current manifest hash; the review must be registered in the signed ledger with 'vmodel review-submit' (verifier only)"
+        }
+      ],
+      "pass_criteria": "all checks pass; pending review -> REVIEW_REQUIRED by vmodel:verifier"
+    },
+    {
+      "id": "G3",
+      "phase": "P3",
+      "name": "Detailed Design & Test Planning",
+      "implemented": true,
+      "inputs": [
+        "requirements.json",
+        "architecture.json"
+      ],
+      "outputs": [
+        "design.json",
+        "tests.json",
+        "reviews/G3.json"
+      ],
+      "agents": {
+        "author": "orchestrator using agents/detailed-designer.md; vmodel:test-designer subagent for tests.json",
+        "reviewer": "vmodel:verifier"
+      },
+      "required_artifacts": [
+        "design.json",
+        "tests.json"
+      ],
+      "manifest": {
+        "artifacts": [
+          "workitem.json",
+          "requirements.json",
+          "architecture.json",
+          "design.json",
+          "tests.json"
+        ],
+        "code": false
+      },
+      "item_artifacts": [
+        "design.json",
+        "tests.json"
+      ],
+      "checks": [
+        {
+          "id": "G3.SCHEMA",
+          "kind": "mechanical",
+          "desc": "design.json and tests.json exist and match the schemas"
+        },
+        {
+          "id": "G3.IDS",
+          "kind": "mechanical",
+          "desc": "DESIGN/TEST ids well formed and unique across the project"
+        },
+        {
+          "id": "G3.DESIGN_COVERAGE",
+          "kind": "mechanical",
+          "desc": "every component has a design unit; every functional requirement reaches a design unit"
+        },
+        {
+          "id": "G3.CONTRACTS",
+          "kind": "mechanical",
+          "desc": "signature, pre/postconditions, explicit error list and boundary conditions per unit"
+        },
+        {
+          "id": "G3.UNIT_TESTS",
+          "kind": "mechanical",
+          "desc": "every unit has unit tests: normal, abnormal for declared errors, boundary for declared boundaries"
+        },
+        {
+          "id": "G3.INTEGRATION_SYSTEM_TESTS",
+          "kind": "mechanical",
+          "desc": "integration test spec per interface; system test spec per acceptance criterion"
+        },
+        {
+          "id": "G3.TRACE",
+          "kind": "mechanical",
+          "desc": "test references exist; every functional requirement is covered by a test"
+        },
+        {
+          "id": "G3.NO_SILENT_REMOVAL",
+          "kind": "mechanical",
+          "desc": "DESIGN/TEST ids removed since the last PASS are listed in a CR or defect removed_ids"
+        },
+        {
+          "id": "G3.REVIEW",
+          "kind": "ai_review",
+          "desc": "verifier review (design + test adequacy) approves the current manifest hash; the review must be registered in the signed ledger with 'vmodel review-submit' (verifier only)"
+        }
+      ],
+      "pass_criteria": "all checks pass; pending review -> REVIEW_REQUIRED by vmodel:verifier"
+    },
+    {
+      "id": "G4",
+      "phase": "P4",
+      "name": "Implementation",
+      "implemented": true,
+      "inputs": [
+        "design.json",
+        "tests.json"
+      ],
+      "outputs": [
+        "source code",
+        "test code",
+        "reviews/G4.json",
+        "static analysis evidence"
+      ],
+      "agents": {
+        "author": "orchestrator using agents/implementer.md",
+        "reviewer": "vmodel:verifier"
+      },
+      "required_artifacts": [
+        "design.json",
+        "tests.json"
+      ],
+      "manifest": {
+        "artifacts": [
+          "workitem.json",
+          "requirements.json",
+          "architecture.json",
+          "design.json",
+          "tests.json"
+        ],
+        "code": true,
+        "notes": "code gates hash every project file except VCS/tool/venv dirs and __pycache__ bytecode, plus .vmodel/config.json, defects.json and change-requests.json"
+      },
+      "item_artifacts": [],
+      "checks": [
+        {
+          "id": "G4.FILES",
+          "kind": "mechanical",
+          "desc": "source and test files exist under the configured paths"
+        },
+        {
+          "id": "G4.UNEXPECTED_CODE",
+          "kind": "mechanical",
+          "desc": "no Python file outside configured source/tests/build_config/other paths; no symlinks"
+        },
+        {
+          "id": "G4.SYNTAX",
+          "kind": "execution",
+          "desc": "built-in Python AST syntax check of all source and test files"
+        },
+        {
+          "id": "G4.LINT",
+          "kind": "execution",
+          "desc": "configured static analyzer executed by the validator; missing tool -> BLOCKED unless the user configured syntax-only"
+        },
+        {
+          "id": "G4.DESIGN_CONFORMANCE",
+          "kind": "mechanical",
+          "desc": "each design unit's module exists and defines the designed symbol"
+        },
+        {
+          "id": "G4.TEST_CODE",
+          "kind": "mechanical",
+          "desc": "every unit TEST id has a test function (AST) whose name carries exactly that one TEST_nnn token"
+        },
+        {
+          "id": "G4.REQ_IMPLEMENTED",
+          "kind": "mechanical",
+          "desc": "every functional requirement reaches an implemented symbol"
+        },
+        {
+          "id": "G4.TEST_INTEGRITY",
+          "kind": "mechanical",
+          "desc": "test/support code defines no pytest result hooks and does not touch exit status, junit or os._exit"
+        },
+        {
+          "id": "G4.REVIEW",
+          "kind": "ai_review",
+          "desc": "verifier code review + test code adequacy review of the current code hash; the review must be registered in the signed ledger with 'vmodel review-submit' (verifier only)"
+        }
+      ],
+      "pass_criteria": "all checks pass; pending review -> REVIEW_REQUIRED by vmodel:verifier; file hashes recorded"
+    },
+    {
+      "id": "G5",
+      "phase": "P5",
+      "name": "Unit Verification",
+      "implemented": true,
+      "inputs": [
+        "G4 manifest (requirements, design, tests spec, source, test code, config)"
+      ],
+      "outputs": [
+        "test execution evidence (stdout/stderr/junit, hashes, environment)"
+      ],
+      "agents": {
+        "author": "validator (executes tests itself)",
+        "reviewer": "none (mechanical); test adequacy is reviewed at G3/G4"
+      },
+      "required_artifacts": [
+        "tests.json"
+      ],
+      "manifest": {
+        "artifacts": [
+          "workitem.json",
+          "requirements.json",
+          "architecture.json",
+          "design.json",
+          "tests.json"
+        ],
+        "code": true,
+        "notes": "code gates hash every project file except VCS/tool/venv dirs and __pycache__ bytecode, plus .vmodel/config.json, defects.json and change-requests.json"
+      },
+      "item_artifacts": [],
+      "checks": [
+        {
+          "id": "G5.PREREQ",
+          "kind": "mechanical",
+          "desc": "G4 PASSED for the current manifest hash"
+        },
+        {
+          "id": "G5.EXECUTION",
+          "kind": "execution",
+          "desc": "validator runs the unit test command itself with a scrubbed environment (no PYTHON*/PYTEST_* from the agent, no bytecode, plugin autoload off unless configured); exit code 0; junit produced"
+        },
+        {
+          "id": "G5.RESULTS",
+          "kind": "execution",
+          "desc": "tests > 0, failures = 0, errors = 0"
+        },
+        {
+          "id": "G5.TEST_MAPPING",
+          "kind": "mechanical",
+          "desc": "every unit TEST id has a passed test case (named with exactly one id) and no failed/skipped case"
+        },
+        {
+          "id": "G5.REQ_COVERAGE",
+          "kind": "mechanical",
+          "desc": "every functional requirement is linked to a passed test"
+        },
+        {
+          "id": "G5.NO_WEAKENING",
+          "kind": "mechanical",
+          "desc": "changed/removed test files justified in test_changes; previously executed TEST ids still executed"
+        },
+        {
+          "id": "G5.INPUTS_UNCHANGED",
+          "kind": "mechanical",
+          "desc": "verified files did not change during the test run"
+        }
+      ],
+      "pass_criteria": "all checks pass"
+    },
+    {
+      "id": "G6",
+      "phase": "P6",
+      "name": "Integration Verification",
+      "implemented": false,
+      "inputs": [
+        "architecture.json interfaces",
+        "tests.json integration specs"
+      ],
+      "outputs": [
+        "integration test evidence"
+      ],
+      "agents": {
+        "author": "validator",
+        "reviewer": "vmodel:verifier"
+      },
+      "required_artifacts": [
+        "tests.json"
+      ],
+      "manifest": {
+        "artifacts": [
+          "workitem.json",
+          "requirements.json",
+          "architecture.json",
+          "design.json",
+          "tests.json"
+        ],
+        "code": true,
+        "notes": "code gates hash every project file except VCS/tool/venv dirs and __pycache__ bytecode, plus .vmodel/config.json, defects.json and change-requests.json"
+      },
+      "item_artifacts": [],
+      "checks": [
+        {
+          "id": "G6.EXECUTION",
+          "kind": "execution",
+          "desc": "[EXT] run integration tests"
+        },
+        {
+          "id": "G6.IF_COVERAGE",
+          "kind": "mechanical",
+          "desc": "[EXT] every interface verified by a passed integration test"
+        }
+      ],
+      "pass_criteria": "[EXT] not implemented in the MVP"
+    },
+    {
+      "id": "G7",
+      "phase": "P7",
+      "name": "System Verification",
+      "implemented": false,
+      "inputs": [
+        "requirements.json acceptance criteria",
+        "tests.json system specs"
+      ],
+      "outputs": [
+        "system test evidence"
+      ],
+      "agents": {
+        "author": "validator",
+        "reviewer": "vmodel:verifier + user acceptance"
+      },
+      "required_artifacts": [
+        "tests.json"
+      ],
+      "manifest": {
+        "artifacts": [
+          "workitem.json",
+          "requirements.json",
+          "architecture.json",
+          "design.json",
+          "tests.json"
+        ],
+        "code": true,
+        "notes": "code gates hash every project file except VCS/tool/venv dirs and __pycache__ bytecode, plus .vmodel/config.json, defects.json and change-requests.json"
+      },
+      "item_artifacts": [],
+      "checks": [
+        {
+          "id": "G7.EXECUTION",
+          "kind": "execution",
+          "desc": "[EXT] run system/acceptance tests"
+        },
+        {
+          "id": "G7.AC_COVERAGE",
+          "kind": "mechanical",
+          "desc": "[EXT] every acceptance criterion verified by a passed system test"
+        }
+      ],
+      "pass_criteria": "[EXT] not implemented in the MVP"
+    }
+  ],
+  "profiles": {
+    "LITE": {
+      "implemented": false,
+      "required_gates": [
+        "G1",
+        "G3",
+        "G4",
+        "G5"
+      ],
+      "na_allowed_gates": [
+        "G2"
+      ],
+      "notes": "[EXT] small fixes and bug fixes; impact analysis focused; G2 may be N/A with a recorded reason; code change and tests mandatory"
+    },
+    "STANDARD": {
+      "implemented": true,
+      "required_gates": [
+        "G1",
+        "G2",
+        "G3",
+        "G4",
+        "G5",
+        "G6",
+        "G7"
+      ],
+      "notes": "MVP implements G1-G5 only; a work item that passes G1-G5 is PARTIALLY_VERIFIED, never COMPLETED, until G6/G7 exist"
+    },
+    "STRICT": {
+      "implemented": false,
+      "required_gates": [
+        "G1",
+        "G2",
+        "G3",
+        "G4",
+        "G5",
+        "G6",
+        "G7"
+      ],
+      "notes": "[EXT] all gates, user approval at G1, two independent reviews at G4, coverage threshold at G5"
+    }
+  }
+}

@@ -1,0 +1,365 @@
+{
+  "scenario": "failure",
+  "filesystem": {
+    "blockmode_crash.txt": false,
+    "blockmode_hang.txt": false,
+    "blockmode_badjson.txt": true,
+    "blockmode_exit2.txt": false,
+    "openmode_crash.txt": true,
+    "openmode_hang.txt": true,
+    "openmode_badjson.txt": true,
+    "control.txt": true,
+    "edit_target.txt": "alpha"
+  },
+  "claude": {
+    "init": {
+      "model": "claude-haiku-5-5",
+      "slash_commands": [
+        "deep-research",
+        "design",
+        "design-sync",
+        "dataviz",
+        "update-config",
+        "verify",
+        "debug",
+        "code-review",
+        "simplify",
+        "batch",
+        "fewer-permission-prompts",
+        "doctor",
+        "loop",
+        "schedule",
+        "claude-api",
+        "workflow-authoring",
+        "run",
+        "run-skill-generator",
+        "plugin-authoring",
+        "advisor",
+        "agents",
+        "auto-mode-setup",
+        "autocompact",
+        "clear",
+        "color",
+        "compact",
+        "config",
+        "output-style",
+        "context",
+        "effort",
+        "fast",
+        "focus",
+        "heapdump",
+        "init",
+        "mcp",
+        "import",
+        "model",
+        "__remote-workflow",
+        "workflow-launch-exec",
+        "reload-plugins",
+        "reload-skills",
+        "rename",
+        "security-review",
+        "usage-credits",
+        "extra-usage",
+        "usage",
+        "insights",
+        "recap",
+        "skill-doctor",
+        "goal",
+        "design-consent",
+        "design-revoke",
+        "list-agents",
+        "team-onboarding"
+      ],
+      "agents": [
+        "claude",
+        "Explore",
+        "general-purpose",
+        "Plan",
+        "statusline-setup"
+      ],
+      "plugins": [
+        {
+          "name": "hookprobe",
+          "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/a14de738-c0ad-4081-902d-8962cb287ccc/scratchpad/probe-failure-1/probe-plugin",
+          "source": "hookprobe@inline",
+          "version": "0.0.1"
+        },
+        {
+          "name": "cc-plugin-sec-default",
+          "path": "builtin",
+          "source": "cc-plugin-sec-default@builtin"
+        },
+        {
+          "name": "cc-plugin-agents-md",
+          "path": "builtin",
+          "source": "cc-plugin-agents-md@builtin"
+        },
+        {
+          "name": "cc-plugin-telemetry",
+          "path": "builtin",
+          "source": "cc-plugin-telemetry@builtin"
+        },
+        {
+          "name": "cc-plugin-privacy",
+          "path": "builtin",
+          "source": "cc-plugin-privacy@builtin"
+        },
+        {
+          "name": "cc-plugin-plugin-authoring",
+          "path": "builtin",
+          "source": "cc-plugin-plugin-authoring@builtin"
+        }
+      ],
+      "skills": [
+        "deep-research",
+        "design",
+        "design-sync",
+        "dataviz",
+        "update-config",
+        "verify",
+        "debug",
+        "code-review",
+        "simplify",
+        "batch",
+        "fewer-permission-prompts",
+        "doctor",
+        "loop",
+        "schedule",
+        "claude-api",
+        "workflow-authoring",
+        "run",
+        "run-skill-generator",
+        "plugin-authoring"
+      ],
+      "tools": [
+        "Task",
+        "Bash",
+        "CronCreate",
+        "CronDelete",
+        "CronList",
+        "DesignSync",
+        "Edit",
+        "EnterWorktree",
+        "ExitWorktree",
+        "ListAgents",
+        "Monitor",
+        "NotebookEdit",
+        "PublishPlugin",
+        "PushNotification",
+        "Read",
+        "RemoteTrigger",
+        "ReportFindings",
+        "ScheduleWakeup",
+        "SendMessage",
+        "ShareOnboardingGuide",
+        "Skill",
+        "TaskStop",
+        "ToolSearch",
+        "WebFetch",
+        "WebSearch",
+        "Workflow",
+        "Write"
+      ],
+      "permissionMode": "acceptEdits"
+    },
+    "tool_uses": [
+      {
+        "id": "toolu_01Jc6ADRUnHP53AncHzRQns5",
+        "name": "Write",
+        "input": {
+          "file_path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/a14de738-c0ad-4081-902d-8962cb287ccc/scratchpad/probe-failure-1/proj/blockmode_crash.txt",
+          "content": "ok"
+        },
+        "parent": null,
+        "result": {
+          "is_error": true,
+          "content": "PreToolUse:Write hook error: [\"/usr/bin/python3\" \"${CLAUDE_PLUGIN_ROOT}/probe.py\" A]: failed; blocking because onFailure is \"block\"\nTraceback (most recent call last):\n  File \"/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/a14de738-c0ad-4081-902d-8962cb287ccc/scratchpad/probe-failure-1/probe-plugin/probe.py\", line 10, in <module>\n    raise RuntimeError(\"probe crash\")\nRuntimeError: probe crash"
+        }
+      },
+      {
+        "id": "toolu_012VWjZbozfRjH53pp68nVbX",
+        "name": "Write",
+        "input": {
+          "file_path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/a14de738-c0ad-4081-902d-8962cb287ccc/scratchpad/probe-failure-1/proj/blockmode_hang.txt",
+          "content": "ok"
+        },
+        "parent": null,
+        "result": {
+          "is_error": true,
+          "content": "PreToolUse:Write hook error: [\"/usr/bin/python3\" \"${CLAUDE_PLUGIN_ROOT}/probe.py\" A]: timed out; blocking because onFailure is \"block\""
+        }
+      },
+      {
+        "id": "toolu_01RAgdqE6c1saApyDbuaGUBL",
+        "name": "Write",
+        "input": {
+          "file_path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/a14de738-c0ad-4081-902d-8962cb287ccc/scratchpad/probe-failure-1/proj/blockmode_badjson.txt",
+          "content": "ok"
+        },
+        "parent": null,
+        "result": {
+          "is_error": false,
+          "content": "File created successfully at: /tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/a14de738-c0ad-4081-902d-8962cb287ccc/scratchpad/probe-failure-1/proj/blockmode_badjson.txt (file state is current in your context — no need to Read it back)"
+        }
+      },
+      {
+        "id": "toolu_01JFFUHzH8itBnqrW9u5PcRq",
+        "name": "Write",
+        "input": {
+          "file_path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/a14de738-c0ad-4081-902d-8962cb287ccc/scratchpad/probe-failure-1/proj/blockmode_exit2.txt",
+          "content": "ok"
+        },
+        "parent": null,
+        "result": {
+          "is_error": true,
+          "content": "PreToolUse:Write hook error: [\"/usr/bin/python3\" \"/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/a14de738-c0ad-4081-902d-8962cb287ccc/scratchpad/probe-failure-1/probe-plugin/probe.py\" A]: probe exit 2\n\nThis hook comes from the hookprobe@inline plugin."
+        }
+      },
+      {
+        "id": "toolu_01UPTxqyucMkMhEHMPgC3QkK",
+        "name": "Write",
+        "input": {
+          "file_path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/a14de738-c0ad-4081-902d-8962cb287ccc/scratchpad/probe-failure-1/proj/openmode_crash.txt",
+          "content": "ok"
+        },
+        "parent": null,
+        "result": {
+          "is_error": false,
+          "content": "File created successfully at: /tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/a14de738-c0ad-4081-902d-8962cb287ccc/scratchpad/probe-failure-1/proj/openmode_crash.txt (file state is current in your context — no need to Read it back)"
+        }
+      },
+      {
+        "id": "toolu_01PJ5VTJ2B1Tvo1VMDBn3UCA",
+        "name": "Write",
+        "input": {
+          "file_path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/a14de738-c0ad-4081-902d-8962cb287ccc/scratchpad/probe-failure-1/proj/openmode_hang.txt",
+          "content": "ok"
+        },
+        "parent": null,
+        "result": {
+          "is_error": false,
+          "content": "File created successfully at: /tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/a14de738-c0ad-4081-902d-8962cb287ccc/scratchpad/probe-failure-1/proj/openmode_hang.txt (file state is current in your context — no need to Read it back)"
+        }
+      },
+      {
+        "id": "toolu_0174z1jbrug7FwaHNPLqFKkk",
+        "name": "Write",
+        "input": {
+          "file_path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/a14de738-c0ad-4081-902d-8962cb287ccc/scratchpad/probe-failure-1/proj/openmode_badjson.txt",
+          "content": "ok"
+        },
+        "parent": null,
+        "result": {
+          "is_error": false,
+          "content": "File created successfully at: /tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/a14de738-c0ad-4081-902d-8962cb287ccc/scratchpad/probe-failure-1/proj/openmode_badjson.txt (file state is current in your context — no need to Read it back)"
+        }
+      },
+      {
+        "id": "toolu_01Q8hnj85fJmv87SpgrpChXh",
+        "name": "Write",
+        "input": {
+          "file_path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/a14de738-c0ad-4081-902d-8962cb287ccc/scratchpad/probe-failure-1/proj/control.txt",
+          "content": "ok"
+        },
+        "parent": null,
+        "result": {
+          "is_error": false,
+          "content": "File created successfully at: /tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/a14de738-c0ad-4081-902d-8962cb287ccc/scratchpad/probe-failure-1/proj/control.txt (file state is current in your context — no need to Read it back)"
+        }
+      },
+      {
+        "id": "toolu_01MwHyTPDUFhcRsXXF31XGVS",
+        "name": "Read",
+        "input": {
+          "file_path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/a14de738-c0ad-4081-902d-8962cb287ccc/scratchpad/probe-failure-1/proj/edit_target.txt"
+        },
+        "parent": null,
+        "result": {
+          "is_error": false,
+          "content": "1\talpha\n2\t"
+        }
+      },
+      {
+        "id": "toolu_01QyqxADcF4Eod7PBMXafSr5",
+        "name": "Edit",
+        "input": {
+          "replace_all": false,
+          "file_path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/a14de738-c0ad-4081-902d-8962cb287ccc/scratchpad/probe-failure-1/proj/edit_target.txt",
+          "old_string": "alpha",
+          "new_string": "beta"
+        },
+        "parent": null,
+        "result": {
+          "is_error": true,
+          "content": "PreToolUse:Edit hook error: [/nonexistent/interpreter-xyz \"${CLAUDE_PLUGIN_ROOT}/probe.py\" C]: failed; blocking because onFailure is \"block\"\n/bin/sh: 1: /nonexistent/interpreter-xyz: not found"
+        }
+      }
+    ],
+    "final": {
+      "subtype": "success",
+      "is_error": false,
+      "result": "Steps 1, 2, 4, and 10 were blocked by the probe hooks. Steps 3, 5, 6, 7, 8, and 9 succeeded. Each step got one tool call and none were retried.\n\n1. **Write `blockmode_crash.txt`: blocked.** `PreToolUse:Write hook error: [\"/usr/bin/python3\" \"${CLAUDE_PLUGIN_ROOT}/probe.py\" A]: failed; blocking because onFailure is \"block\"`. The hook's traceback ends with `RuntimeError: probe crash`.\n2. **Write `blockmode_hang.txt`: blocked.** `PreToolUse:Write hook error: [\"/usr/bin/python3\" \"${CLAUDE_PLUGIN_ROOT}/probe.py\" A]: timed out; blocking because onFailure is \"block\"`.\n3. **Write `blockmode_badjson.txt`: succeeded.** The file was created. No hook error was reported.\n4. **Write `blockmode_exit2.txt`: blocked.** `PreToolUse:Write hook error: [\"/usr/bin/python3\" \"/tmp/claude-1000/.../probe-plugin/probe.py\" A]: probe exit 2`, followed by \"This hook comes from the hookprobe@inline plugin.\"\n5. **Write `openmode_crash.txt`: succeeded.** The file was created.\n6. **Write `openmode_hang.txt`: succeeded.** The file was created.\n7. **Write `openmode_badjson.txt`: succeeded.** The file was created.\n8. **Write `control.txt`: succeeded.** The file was created.\n9. **Read `edit_target.txt`: succeeded.** It contains `alpha` on line 1.\n10. **Edit `edit_target.txt` (alpha → beta): blocked.** `PreToolUse:Edit hook error: [/nonexistent/interpreter-xyz \"${CLAUDE_PLUGIN_ROOT}/probe.py\" C]: failed; blocking because onFailure is \"block\"`, with `/bin/sh: 1: /nonexistent/interpreter-xyz: not found`.\n\nThe blocked results match the block-mode hooks failing: the crash, hang, and exit-2 cases blocked and the bad-JSON case did not. The open-mode cases, including the crash and hang, went through. The file is unchanged because step 10 was blocked, so it still reads `alpha`.",
+      "total_cost_usd": 0.006232800000000001,
+      "num_turns": 11,
+      "duration_ms": 26887,
+      "usage": {
+        "input_tokens": 22,
+        "cache_creation_input_tokens": 12489,
+        "cache_read_input_tokens": 236180,
+        "output_tokens": 2742,
+        "output_tokens_details": {
+          "thinking_tokens": 395
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 12489,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "global",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 1012,
+            "cache_read_input_tokens": 24014,
+            "cache_creation_input_tokens": 348,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 348
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard",
+        "fallback_credit": null
+      }
+    },
+    "exit_code": 0,
+    "wall_s": 28.2,
+    "command": [
+      "claude",
+      "-p",
+      "<prompt>",
+      "--model",
+      "haiku",
+      "--max-budget-usd",
+      "0.5",
+      "--setting-sources",
+      "project,local",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--no-session-persistence",
+      "--plugin-dir",
+      "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/a14de738-c0ad-4081-902d-8962cb287ccc/scratchpad/probe-failure-1/probe-plugin",
+      "--permission-mode",
+      "acceptEdits",
+      "--permission-prompts",
+      "none"
+    ],
+    "transcript": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/a14de738-c0ad-4081-902d-8962cb287ccc/scratchpad/probe-failure-1/transcript-failure.jsonl"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "vmodel-devkit-dev",
+  "owner": {"name": "VModel DevKit"},
+  "description": "Development marketplace: loads plugins/vmodel in place. Releases use dist/.claude-plugin/marketplace.json.",
+  "plugins": [
+    {"name": "vmodel", "source": "./plugins/vmodel", "description": "V-Model workflow with an independent quality gate validator (development copy)"}
+  ]
+}

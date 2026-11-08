@@ -1,0 +1,28 @@
+{
+  "work_item": "WI-001",
+  "units": [
+    {"id": "DESIGN-001", "component": "ARCH-001", "module": "src/textstats/sentences.py", "name": "sentence_stats",
+     "kind": "function", "signature": "def sentence_stats(text: str) -> tuple[int, float]",
+     "description": "re.finditer(r'([^.!?]*)([.!?]+)', text) 로 종결 부호(연속 부호는 하나)로 끝나는 구간만 순회한다. 각 구간 본문을 str.split() 한 토큰 수가 1 이상이면 문장으로 세고 단어 수를 합산한다(단어 0개 구간은 건너뜀). 종결 부호 없는 꼬리 텍스트는 매치되지 않아 무시된다. 문장 수가 0이면 (0, 0.0), 아니면 (문장 수, 단어 합계 / 문장 수) 를 돌려준다. textstats/__init__.py 에서 재노출한다.",
+     "requirements": ["REQ-001", "REQ-002", "REQ-003", "REQ-004"],
+     "contract": {
+       "preconditions": ["text 는 str 또는 str 하위 클래스이다"],
+       "postconditions": [
+         "반환값은 길이 2 튜플 (int, float) 이고 두 번째 값은 항상 float 이다",
+         "문장 수는 단어가 1개 이상 있고 .!? 중 하나 이상으로 끝나는 구간의 개수이다",
+         "평균은 문장 본문 단어 수 합계 / 문장 수이다 (종결 부호는 단어에 포함하지 않음)",
+         "문장이 없으면 (0, 0.0) 이다",
+         "표준 라이브러리 re 만 사용하고 입력을 변경하지 않는다"]},
+     "errors": [
+       {"exception": "TypeError", "condition": "text 가 str 이 아님 (None, int, bytes 등)"}],
+     "boundary_conditions": [
+       "빈 문자열 -> (0, 0.0)",
+       "공백/탭/개행만 있는 문자열 -> (0, 0.0)",
+       "종결 부호만 있는 문자열 ('...', '?!') -> (0, 0.0)",
+       "연속 종결 부호 'Wow!! Really?! Yes.' -> (3, 1.0)",
+       "종결 부호 없는 꼬리 텍스트는 문장으로 세지 않음 ('Hi there. unfinished words' -> (1, 2.0))",
+       "종결 부호 없는 텍스트 전체 ('hello world') -> (0, 0.0)",
+       "한글 문장 '안녕 하세요. 반갑 습니다 정말!' -> (2, 2.5)",
+       "문장 중간 마침표('3.14')도 종결로 취급되어 문장이 나뉨 (알려진 한계, ASM-004)"]}
+  ]
+}

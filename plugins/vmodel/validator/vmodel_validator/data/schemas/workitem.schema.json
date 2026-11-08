@@ -1,0 +1,36 @@
+{
+  "$id": "vmodel.workitem/1",
+  "type": "object",
+  "required": [
+    "id",
+    "title",
+    "request",
+    "profile",
+    "created_at"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^WI-\\d{3,}$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "request": {
+      "type": "string",
+      "minLength": 1
+    },
+    "profile": {
+      "enum": [
+        "LITE",
+        "STANDARD",
+        "STRICT"
+      ]
+    },
+    "created_at": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

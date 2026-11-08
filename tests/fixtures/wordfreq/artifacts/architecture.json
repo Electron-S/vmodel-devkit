@@ -1,0 +1,71 @@
+{
+  "work_item": "WI-001",
+  "components": [
+    {
+      "id": "ARCH-001",
+      "name": "tokenizer",
+      "responsibility": "텍스트를 소문자 단어 목록으로 분해",
+      "requirements": [
+        "REQ-001"
+      ],
+      "location": "src/textstats/tokenizer.py"
+    },
+    {
+      "id": "ARCH-002",
+      "name": "wordfreq",
+      "responsibility": "빈도 집계와 상위 N 선택",
+      "requirements": [
+        "REQ-001",
+        "REQ-002"
+      ],
+      "location": "src/textstats/wordfreq.py"
+    }
+  ],
+  "interfaces": [
+    {
+      "id": "IF-001",
+      "name": "tokenize",
+      "provider": "ARCH-001",
+      "consumers": [
+        "ARCH-002"
+      ],
+      "description": "tokenize(text: str) -> list[str]",
+      "signature": "def tokenize(text: str) -> list[str]"
+    }
+  ],
+  "data_flows": [
+    {
+      "from": "ARCH-001",
+      "to": "ARCH-002",
+      "data": "list[str] tokens",
+      "via": "IF-001"
+    }
+  ],
+  "nfr_mapping": [
+    {
+      "requirement": "REQ-003",
+      "approach": "re, collections.Counter만 사용",
+      "components": [
+        "ARCH-001",
+        "ARCH-002"
+      ]
+    }
+  ],
+  "tradeoffs": [
+    {
+      "topic": "토큰화 방식",
+      "options": [
+        "str.split",
+        "정규식"
+      ],
+      "decision": "정규식 \\w+",
+      "rationale": "구두점 제거와 한글 지원을 한 번에 처리"
+    }
+  ],
+  "integration_test_strategy": {
+    "approach": "wordfreq가 실제 tokenizer를 통해 구두점이 섞인 텍스트를 처리하는지 확인",
+    "interfaces_covered": [
+      "IF-001"
+    ]
+  }
+}

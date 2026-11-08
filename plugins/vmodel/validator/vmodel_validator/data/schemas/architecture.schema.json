@@ -1,0 +1,212 @@
+{
+  "$id": "vmodel.architecture/1",
+  "type": "object",
+  "required": [
+    "work_item",
+    "components",
+    "interfaces",
+    "data_flows",
+    "nfr_mapping",
+    "tradeoffs",
+    "integration_test_strategy"
+  ],
+  "properties": {
+    "work_item": {
+      "type": "string",
+      "pattern": "^WI-\\d{3,}$"
+    },
+    "components": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "responsibility",
+          "requirements"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^ARCH-\\d{3,}$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "responsibility": {
+            "type": "string",
+            "minLength": 1
+          },
+          "requirements": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^REQ-\\d{3,}$"
+            }
+          },
+          "location": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "interfaces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "provider",
+          "consumers",
+          "description"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^IF-\\d{3,}$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "provider": {
+            "type": "string",
+            "pattern": "^ARCH-\\d{3,}$"
+          },
+          "consumers": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^(ARCH-\\d{3,}|EXTERNAL)$"
+            },
+            "minItems": 1
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "signature": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "data_flows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "from",
+          "to",
+          "data"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "minLength": 1
+          },
+          "to": {
+            "type": "string",
+            "minLength": 1
+          },
+          "data": {
+            "type": "string",
+            "minLength": 1
+          },
+          "via": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "nfr_mapping": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "requirement",
+          "approach",
+          "components"
+        ],
+        "properties": {
+          "requirement": {
+            "type": "string",
+            "pattern": "^REQ-\\d{3,}$"
+          },
+          "approach": {
+            "type": "string",
+            "minLength": 1
+          },
+          "components": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^ARCH-\\d{3,}$"
+            },
+            "minItems": 1
+          }
+        }
+      }
+    },
+    "tradeoffs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "topic",
+          "options",
+          "decision",
+          "rationale"
+        ],
+        "properties": {
+          "topic": {
+            "type": "string",
+            "minLength": 1
+          },
+          "options": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "decision": {
+            "type": "string",
+            "minLength": 1
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "integration_test_strategy": {
+      "type": "object",
+      "required": [
+        "approach",
+        "interfaces_covered"
+      ],
+      "properties": {
+        "approach": {
+          "type": "string",
+          "minLength": 1
+        },
+        "interfaces_covered": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^IF-\\d{3,}$"
+          }
+        },
+        "na_reason": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

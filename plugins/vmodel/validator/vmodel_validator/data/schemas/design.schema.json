@@ -1,0 +1,133 @@
+{
+  "$id": "vmodel.design/1",
+  "type": "object",
+  "required": [
+    "work_item",
+    "units"
+  ],
+  "properties": {
+    "work_item": {
+      "type": "string",
+      "pattern": "^WI-\\d{3,}$"
+    },
+    "units": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "component",
+          "module",
+          "name",
+          "kind",
+          "signature",
+          "description",
+          "requirements",
+          "contract",
+          "errors",
+          "boundary_conditions"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^DESIGN-\\d{3,}$"
+          },
+          "component": {
+            "type": "string",
+            "pattern": "^ARCH-\\d{3,}$"
+          },
+          "module": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)?$"
+          },
+          "kind": {
+            "enum": [
+              "function",
+              "class",
+              "method"
+            ]
+          },
+          "signature": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "requirements": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^REQ-\\d{3,}$"
+            }
+          },
+          "contract": {
+            "type": "object",
+            "required": [
+              "preconditions",
+              "postconditions"
+            ],
+            "properties": {
+              "preconditions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "postconditions": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "exception",
+                "condition"
+              ],
+              "properties": {
+                "exception": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "condition": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          },
+          "boundary_conditions": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "states": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    }
+  }
+}

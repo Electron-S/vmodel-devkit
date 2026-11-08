@@ -1,0 +1,74 @@
+{
+  "work_item": "WI-001",
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "type": "functional",
+      "title": "단어 빈도 계산",
+      "priority": "must",
+      "status": "active",
+      "description": "count_words(text)는 텍스트의 단어별 출현 횟수를 대소문자 구분 없이 반환한다. 단어는 영문자/숫자/한글 연속열이다.",
+      "source": "user request",
+      "acceptance_criteria": [
+        {
+          "id": "AC-001-1",
+          "criterion": "count_words('a b A')는 {'a': 2, 'b': 1}을 반환한다"
+        },
+        {
+          "id": "AC-001-2",
+          "criterion": "count_words('')는 {}를 반환한다"
+        }
+      ]
+    },
+    {
+      "id": "REQ-002",
+      "type": "functional",
+      "title": "상위 N개 단어",
+      "priority": "must",
+      "status": "active",
+      "description": "top_n(text, n)은 빈도 내림차순, 같은 빈도는 단어 오름차순으로 최대 n개의 (단어, 횟수)를 반환한다.",
+      "acceptance_criteria": [
+        {
+          "id": "AC-002-1",
+          "criterion": "top_n('b a b c a b', 2)는 [('b', 3), ('a', 2)]를 반환한다"
+        },
+        {
+          "id": "AC-002-2",
+          "criterion": "n이 0 이하이면 ValueError를 발생시킨다"
+        }
+      ]
+    },
+    {
+      "id": "REQ-003",
+      "type": "non-functional",
+      "title": "표준 라이브러리만 사용",
+      "priority": "must",
+      "status": "active",
+      "description": "외부 패키지 없이 Python 3.11 표준 라이브러리만 사용한다.",
+      "acceptance_criteria": []
+    }
+  ],
+  "conflict_analysis": {
+    "performed": true,
+    "method": "pairwise review of REQ-001..003",
+    "conflicts": []
+  },
+  "open_issues": [
+    {
+      "id": "ISSUE-001",
+      "description": "한글 단어도 단어로 인정할지",
+      "critical": true,
+      "status": "resolved",
+      "resolution": "인정한다",
+      "decided_by": "user",
+      "user_answer": "한글도 단어로 세 주세요"
+    }
+  ],
+  "assumptions": [
+    {
+      "id": "ASM-001",
+      "description": "입력 텍스트는 메모리에 올라갈 크기다",
+      "impact": "스트리밍 미지원"
+    }
+  ]
+}

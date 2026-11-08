@@ -1,0 +1,29 @@
+== uname: MINGW64_NT-10.0-26300
+== launcher version
+{
+  "version": "0.1.0",
+  "core_hash": "sha256:c5a71c249cee84a7058d2a14e32d5cc44586f24c5c4f32855439532ec247197e",
+  "mode": "dev",
+  "integrity_ok": true,
+  "problems": [],
+  "python": "3.13.14",
+  "executable": "C:\\Users\\cyyoo\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\python.exe",
+  "vmodel_home": "C:\\Users\\cyyoo\\.vmodel-devkit",
+  "plugin_root": "C:\\Users\\cyyoo\\AppData\\Local\\Temp\\vmodel 한글 테스트\\devkit\\plugins\\vmodel",
+  "os": "nt"
+}
+exit=0
+== hook guard (deny expected for .vmodel/state write)
+initialised C:\Users\cyyoo\AppData\Local\Temp\vmodel 한글 테스트\gb proj
+  python: C:\Users\cyyoo\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\python.exe
+  lint: none (on_missing_lint=syntax-only)
+  validator 0.1.0 core c5a71c249cee pinned
+  signing key: gb home\keys\f8e45cc299c34eff93ebdf67f68d0261.key
+{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": "[vmodel guard] .vmodel/state/x.json is protected: validator ledger (only the validator writes it). Use the vmodel CLI instead."}}
+exit=0
+== hook session-start
+[VModel DevKit active in this project]
+Validator CLI: "C:\Users\cyyoo\AppData\Local\Temp\vmodel 한글 테스트\devkit\plugins\vmodel\bin\vmodel" (run it with Bash; it finds Python 3.11+).
+Policy: feature development, substantive behaviour changes, bug fixes, architecture changes and large refactors follow the V-Model workflow -> use /vmodel:start <request> (or continue the open work item). Explanations, Q&A, searches, unrelated docs and read-only analysis do NOT use the workflow. If unsure, tell the user and suggest /vmodel:start.
+== status through a pipe (UTF-8 expected)
+WI-001 [BLOCKED] 한글 제목 (profile STANDARD)

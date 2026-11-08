@@ -1,0 +1,93 @@
+{
+  "work_item": "WI-001",
+  "units": [
+    {
+      "id": "DESIGN-001",
+      "component": "ARCH-001",
+      "module": "src/textstats/tokenizer.py",
+      "name": "tokenize",
+      "kind": "function",
+      "signature": "def tokenize(text: str) -> list[str]",
+      "description": "정규식 \\w+로 단어를 찾아 소문자로 반환",
+      "requirements": [
+        "REQ-001"
+      ],
+      "contract": {
+        "preconditions": [
+          "text는 str"
+        ],
+        "postconditions": [
+          "반환 목록의 각 원소는 소문자 단어"
+        ]
+      },
+      "errors": [
+        {
+          "exception": "TypeError",
+          "condition": "text가 str이 아님"
+        }
+      ],
+      "boundary_conditions": [
+        "빈 문자열이면 빈 목록"
+      ]
+    },
+    {
+      "id": "DESIGN-002",
+      "component": "ARCH-002",
+      "module": "src/textstats/wordfreq.py",
+      "name": "count_words",
+      "kind": "function",
+      "signature": "def count_words(text: str) -> dict[str, int]",
+      "description": "tokenize 결과를 Counter로 집계",
+      "requirements": [
+        "REQ-001"
+      ],
+      "contract": {
+        "preconditions": [
+          "text는 str"
+        ],
+        "postconditions": [
+          "값의 합은 토큰 수와 같다"
+        ]
+      },
+      "errors": [
+        {
+          "exception": "TypeError",
+          "condition": "text가 str이 아님"
+        }
+      ],
+      "boundary_conditions": [
+        "빈 문자열이면 빈 dict"
+      ]
+    },
+    {
+      "id": "DESIGN-003",
+      "component": "ARCH-002",
+      "module": "src/textstats/wordfreq.py",
+      "name": "top_n",
+      "kind": "function",
+      "signature": "def top_n(text: str, n: int) -> list[tuple[str, int]]",
+      "description": "빈도 내림차순, 단어 오름차순 정렬 후 n개",
+      "requirements": [
+        "REQ-002"
+      ],
+      "contract": {
+        "preconditions": [
+          "n >= 1"
+        ],
+        "postconditions": [
+          "길이 <= n",
+          "정렬 순서 유지"
+        ]
+      },
+      "errors": [
+        {
+          "exception": "ValueError",
+          "condition": "n <= 0"
+        }
+      ],
+      "boundary_conditions": [
+        "n이 고유 단어 수보다 크면 전부 반환"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,105 @@
+{
+  "$id": "vmodel.change_requests/1",
+  "type": "object",
+  "required": [
+    "work_item",
+    "change_requests"
+  ],
+  "properties": {
+    "work_item": {
+      "type": "string",
+      "pattern": "^WI-\\d{3,}$"
+    },
+    "change_requests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "description",
+          "reason",
+          "affected",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^CR-\\d{3,}$"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "requested_by": {
+            "type": "string"
+          },
+          "affected": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^(REQ|AC|ARCH|IF|DESIGN|TEST)-\\d{3,}(-\\d+)?$"
+            },
+            "minItems": 1
+          },
+          "removed_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^(REQ|DESIGN|TEST)-\\d{3,}$"
+            }
+          },
+          "test_changes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "file",
+                "since_record",
+                "reason",
+                "requirements",
+                "impact"
+              ],
+              "properties": {
+                "file": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "since_record": {
+                  "type": "string",
+                  "pattern": "^R\\d{5,}$"
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "requirements": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^REQ-\\d{3,}$"
+                  },
+                  "minItems": 1
+                },
+                "impact": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          },
+          "status": {
+            "enum": [
+              "open",
+              "applied",
+              "rejected"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

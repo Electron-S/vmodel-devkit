@@ -1,0 +1,13 @@
+#!/bin/sh
+# VModel DevKit validator launcher: finds Python 3.11+ (python3, python, py -3) and runs the CLI.
+# Override with VMODEL_PYTHON=/path/to/python.
+DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+ENTRY="$DIR/../validator/vmodel.py"
+ok() { "$@" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)' >/dev/null 2>&1; }
+if [ -n "$VMODEL_PYTHON" ]; then exec "$VMODEL_PYTHON" -I -B "$ENTRY" "$@"; fi
+for c in python3 python; do
+  if command -v "$c" >/dev/null 2>&1 && ok "$c"; then exec "$c" -I -B "$ENTRY" "$@"; fi
+done
+if command -v py >/dev/null 2>&1 && ok py -3; then exec py -3 -I -B "$ENTRY" "$@"; fi
+echo "vmodel: Python 3.11+ not found (set VMODEL_PYTHON)" >&2
+exit 2

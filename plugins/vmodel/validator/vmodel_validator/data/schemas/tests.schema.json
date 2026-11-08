@@ -1,0 +1,85 @@
+{
+  "$id": "vmodel.tests/1",
+  "type": "object",
+  "required": [
+    "work_item",
+    "tests"
+  ],
+  "properties": {
+    "work_item": {
+      "type": "string",
+      "pattern": "^WI-\\d{3,}$"
+    },
+    "tests": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "level",
+          "title",
+          "category",
+          "verifies",
+          "procedure",
+          "expected"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^TEST-\\d{3,}$"
+          },
+          "level": {
+            "enum": [
+              "unit",
+              "integration",
+              "system"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "category": {
+            "enum": [
+              "normal",
+              "abnormal",
+              "boundary"
+            ]
+          },
+          "verifies": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^(REQ|ARCH|IF|DESIGN)-\\d{3,}$"
+            },
+            "minItems": 1
+          },
+          "acceptance_criteria": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^AC-\\d{3,}-\\d+$"
+            }
+          },
+          "procedure": {
+            "type": "string",
+            "minLength": 1
+          },
+          "expected": {
+            "type": "string",
+            "minLength": 1
+          },
+          "automation": {
+            "type": "object",
+            "properties": {
+              "file": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

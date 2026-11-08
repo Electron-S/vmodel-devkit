@@ -1,0 +1,29 @@
+{
+  "description": "VModel DevKit: protect validator-owned files (fail-closed) and restore workflow state at session start",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Read|Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/bin/vmodel\" hook guard",
+            "timeout": 30,
+            "onFailure": "block"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/bin/vmodel\" hook session-start",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}

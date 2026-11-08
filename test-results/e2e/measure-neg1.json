@@ -1,0 +1,123 @@
+{
+  "tag": "neg1",
+  "claude": {
+    "exit_code": 0,
+    "wall_s": 5.9,
+    "command": [
+      "claude",
+      "-p",
+      "<prompt>",
+      "--model",
+      "haiku",
+      "--max-budget-usd",
+      "0.5",
+      "--setting-sources",
+      "project,local",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--no-session-persistence",
+      "--plugin-dir",
+      "/home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.1.2",
+      "--permission-mode",
+      "acceptEdits",
+      "--permission-prompts",
+      "none",
+      "--allowedTools",
+      "Bash(vmodel *)",
+      "Bash(/home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.1.2/bin/vmodel *)",
+      "Bash(\"/home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.1.2/bin/vmodel\" *)",
+      "Bash(*/bin/vmodel *)",
+      "Bash(*/bin/vmodel\" *)",
+      "Bash(python3 -m pytest*)",
+      "Bash(python -m pytest*)",
+      "Bash(pytest*)",
+      "Bash(ls*)",
+      "Bash(cat *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(wc *)",
+      "Bash(grep *)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(ruff *)",
+      "Bash(python3 -c *)"
+    ]
+  },
+  "final": {
+    "subtype": "success",
+    "is_error": false,
+    "result": "`src/textstats/__init__.py`에는 docstring 한 줄만 있습니다.\n\n```python\n\"\"\"textstats: small text statistics helpers (VModel DevKit sample).\"\"\"\n```\n\n이 파일은 `textstats`를 Python 패키지로 만드는 역할만 합니다. 함수, 클래스, import, `__all__`은 없어서 `import textstats`를 해도 실행되는 로직은 없습니다. 실제 텍스트 통계 기능은 같은 패키지의 다른 모듈에 있을 것으로 보이며, 그 모듈들은 이 파일에서 re-export되지 않으므로 `from textstats.모듈 import ...` 형태로 직접 가져와야 합니다. 코드는 수정하지 않았습니다.",
+    "total_cost_usd": 0.00283402,
+    "num_turns": 2,
+    "duration_ms": 4088,
+    "usage": {
+      "input_tokens": 4,
+      "cache_creation_input_tokens": 11008,
+      "cache_read_input_tokens": 32602,
+      "output_tokens": 612,
+      "output_tokens_details": {
+        "thinking_tokens": 208
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 11008,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "global",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 385,
+          "cache_read_input_tokens": 20559,
+          "cache_creation_input_tokens": 2492,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 2492
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard",
+      "fallback_credit": null
+    }
+  },
+  "registered": {
+    "skills": [
+      "vmodel:report",
+      "vmodel:rework",
+      "vmodel:start",
+      "vmodel:status",
+      "vmodel:verify"
+    ],
+    "agents": [
+      "vmodel:architect",
+      "vmodel:detailed-designer",
+      "vmodel:implementer",
+      "vmodel:requirements-analyst",
+      "vmodel:test-designer",
+      "vmodel:verifier"
+    ]
+  },
+  "skill_invocations": [],
+  "auto_trigger_vmodel_start": false,
+  "subagents": [],
+  "vmodel_commands": [],
+  "guard_denials": [],
+  "gate_records": [],
+  "review_submissions": [],
+  "work_items": [],
+  "artifacts": {},
+  "audit": {
+    "exit": 0,
+    "tail": [
+      "audit: validator 0.1.2 release core a0555e328413; 1 ledger entries; 0 evidence record(s) checked",
+      "audit OK"
+    ]
+  }
+}

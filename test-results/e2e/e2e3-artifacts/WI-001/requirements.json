@@ -1,0 +1,43 @@
+{
+  "work_item": "WI-001",
+  "requirements": [
+    {"id": "REQ-001", "type": "functional", "title": "문장 수와 문장당 평균 단어 수 계산", "priority": "must", "status": "active",
+     "description": "sentence_stats(text) 함수는 텍스트의 문장 수(int)와 문장당 평균 단어 수(float)를 (문장 수, 평균) 튜플로 돌려준다. 문장은 마침표(.), 느낌표(!), 물음표(?) 중 하나 이상으로 끝나는 구간이고, 단어는 공백으로 구분된 토큰이다. 평균은 종결 부호를 제외한 문장 본문의 단어 수 합계를 문장 수로 나눈 값이다.",
+     "source": "user request",
+     "acceptance_criteria": [
+       {"id": "AC-001-1", "criterion": "sentence_stats('Hello world. How are you?') 는 (2, 2.5) 를 돌려준다"},
+       {"id": "AC-001-2", "criterion": "sentence_stats('One two three!') 는 (1, 3.0) 을 돌려준다"},
+       {"id": "AC-001-3", "criterion": "sentence_stats('Wow!! Really?! Yes.') 는 연속 종결 부호를 한 번의 종결로 보아 (3, 1.0) 을 돌려준다"},
+       {"id": "AC-001-4", "criterion": "sentence_stats('안녕 하세요. 반갑 습니다 정말!') 는 (2, 2.5) 를 돌려준다"},
+       {"id": "AC-001-5", "criterion": "종결 부호로 끝나지 않는 꼬리 텍스트는 문장으로 세지 않는다: sentence_stats('Hi there. unfinished words') 는 (1, 2.0) 을 돌려준다"}]},
+    {"id": "REQ-002", "type": "functional", "title": "빈 텍스트 처리", "priority": "must", "status": "active",
+     "description": "빈 문자열이거나 공백(스페이스, 탭, 개행)만 있는 텍스트, 그리고 문장으로 셀 수 있는 것이 없는 텍스트는 (0, 0.0) 을 돌려준다.",
+     "source": "user request",
+     "acceptance_criteria": [
+       {"id": "AC-002-1", "criterion": "sentence_stats('') 는 (0, 0.0) 을 돌려준다"},
+       {"id": "AC-002-2", "criterion": "sentence_stats('   \\t\\n ') 는 (0, 0.0) 을 돌려준다"},
+       {"id": "AC-002-3", "criterion": "평균은 float 형식이다: sentence_stats('') 의 두 번째 값은 float 인스턴스이다"}]},
+    {"id": "REQ-003", "type": "functional", "title": "문자열이 아닌 입력 거부", "priority": "must", "status": "active",
+     "description": "입력이 str(또는 하위 클래스)이 아니면 TypeError 를 발생시킨다.",
+     "source": "user request",
+     "acceptance_criteria": [
+       {"id": "AC-003-1", "criterion": "sentence_stats(None) 는 TypeError 를 발생시킨다"},
+       {"id": "AC-003-2", "criterion": "sentence_stats(123) 과 sentence_stats(b'a.') 는 TypeError 를 발생시킨다"}]},
+    {"id": "REQ-004", "type": "constraint", "title": "표준 라이브러리만 사용", "priority": "must", "status": "active",
+     "description": "구현은 Python 표준 라이브러리만 사용하고 서드파티 패키지를 추가하지 않는다.",
+     "source": "project constraint (pyproject has no dependencies)",
+     "acceptance_criteria": []}
+  ],
+  "conflict_analysis": {"performed": true, "method": "요구사항 쌍별 검토 (REQ-001..REQ-004)", "conflicts": [
+    {"ids": ["REQ-001", "REQ-002"], "description": "종결 부호 없는 텍스트나 부호만 있는 텍스트가 REQ-001 의 문장 정의와 REQ-002 의 빈 결과 사이에서 모호할 수 있다.", "status": "resolved",
+     "resolution": "단어가 하나 이상 있는 종결 구간만 문장으로 센다(ASM-002, ASM-003). 문장이 0개이면 REQ-002 에 따라 (0, 0.0)."}
+  ]},
+  "open_issues": [],
+  "assumptions": [
+    {"id": "ASM-001", "description": "반환 형식은 (문장 수: int, 문장당 평균 단어 수: float) 튜플이고 함수 이름은 sentence_stats, 위치는 textstats.sentences 모듈이며 textstats 패키지에서도 import 할 수 있다.", "impact": "요청에 함수 시그니처가 없어 정한 값. 다른 형태가 필요하면 변경 요청 필요."},
+    {"id": "ASM-002", "description": "종결 부호로 끝나지 않는 꼬리 텍스트는 문장으로 세지 않는다 (요청의 '문장은 .!? 로 끝난다' 를 문자 그대로 해석).", "impact": "'hello world' 는 (0, 0.0)."},
+    {"id": "ASM-003", "description": "연속된 종결 부호(예 '?!', '...')는 하나의 종결로 보며, 본문에 단어가 없는 구간('...' 만 있는 경우 등)은 문장으로 세지 않는다.", "impact": "'...' 는 (0, 0.0)."},
+    {"id": "ASM-004", "description": "단어는 종결 부호를 제외한 문장 본문을 공백(str.split)으로 나눈 토큰이다. 문장 중간의 마침표(약어, 소수점 예 '3.14')도 종결로 취급되어 문장이 나뉜다.", "impact": "약어/소수점 처리는 하지 않으며 알려진 한계로 둔다."},
+    {"id": "ASM-005", "description": "비대화형 실행이라 사용자에게 질문하지 못했고, 위 항목들은 모두 안전한 기본값으로 가정했다. str 하위 클래스는 허용한다.", "impact": "사용자가 사후 확인 필요."}
+  ]
+}

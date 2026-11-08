@@ -1,0 +1,15 @@
+{"gate": "G4", "work_item": "WI-001", "reviewer": "vmodel:verifier", "target_hash": "sha256:a1aa5a502f110c6fb7f505e6f5e3ee6c0a60d2af08f5f19f7ec6f27b359bc204",
+ "reviewed_at": "2026-11-08T00:00:00Z", "verdict": "approve",
+ "summary": "sentence_stats matches DESIGN-001 (signature, TypeError, boundaries, (int, float) return). TEST-001..004 are implemented faithfully with concrete assertions; all 5 tests pass. No unrequested behaviour or dead code found.",
+ "checklist": [
+  {"item": "Code matches design contracts", "result": "ok", "note": "Signature, regex, skip of zero-word segments, (0, 0.0) fallback, TypeError for non-str all as designed."},
+  {"item": "No unrequested behaviour", "result": "ok", "note": "Only the re-export in __init__.py, which the design asks for."},
+  {"item": "Unit TEST specs implemented with TEST_nnn names", "result": "ok", "note": "test_TEST_001..004 mirror the procedures and expected values in tests.json."},
+  {"item": "Assertions meaningful", "result": "ok", "note": "Exact tuple equality plus type checks; no skips or swallowed exceptions; no conftest."},
+  {"item": "test_changes justified", "result": "na", "note": "No defects.json or change-requests.json."},
+  {"item": "Obvious defects / unsafe code", "result": "ok", "note": "None found. Regex is linear for this pattern."}
+ ],
+ "findings": [
+  {"id": "F-1", "severity": "info", "description": "The design precondition says str subclasses are accepted; no test covers one. isinstance handles it correctly.", "related": ["DESIGN-001"], "status": "open"},
+  {"id": "F-2", "severity": "info", "description": "Mid-sentence period such as 3.14 splits sentences. This is a documented known limitation (ASM-004) and is tested as such.", "related": ["TEST-004"], "status": "open"}
+ ]}

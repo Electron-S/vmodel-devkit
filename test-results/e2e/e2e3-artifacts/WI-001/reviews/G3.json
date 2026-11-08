@@ -1,0 +1,16 @@
+{"gate": "G3", "work_item": "WI-001", "reviewer": "vmodel:verifier", "target_hash": "sha256:f96175b0c49a7b1ff06390fe157bfda160f5793137b9b3b4c728368b4a886853",
+ "reviewed_at": "2026-11-08T00:00:00Z", "verdict": "approve",
+ "summary": "Single-unit design is implementable and the regex algorithm yields the stated expected values (I traced all examples, including '3.14' and the Korean case). Unit tests cover normal, abnormal and boundary cases with concrete values, and system tests cover every acceptance criterion. Only minor gaps remain.",
+ "checklist": [
+  {"item": "Units implementable as specified", "result": "ok", "note": "Regex and split logic are fully described; traced outputs match all examples."},
+  {"item": "Contracts precise and complete", "result": "ok", "note": "Pre/postconditions, TypeError and boundaries are listed. The description omits the explicit isinstance check, which is implied by the errors section."},
+  {"item": "Unit tests can detect contract violations", "result": "ok", "note": "TEST-001..004 have concrete tuples and cover TypeError, empty, punctuation-only, consecutive terminators, unterminated tail and the float type."},
+  {"item": "Integration specs cover interfaces", "result": "na", "note": "Single component, no interfaces (architecture states this)."},
+  {"item": "System specs cover every acceptance criterion", "result": "ok", "note": "TEST-005 covers AC-001-1..5; TEST-006 covers AC-002-1..3 and AC-003-1..2."},
+  {"item": "Nothing designed that is not requested", "result": "ok", "note": "Package re-export is backed by ASM-001."}
+ ],
+ "findings": [
+  {"id": "F-1", "severity": "minor", "description": "REQ-004 (stdlib only) has no verifying test or check. Consider a test or inspection that imports only the stdlib, or record it as verified by inspection.", "related": ["REQ-004"], "status": "open"},
+  {"id": "F-2", "severity": "minor", "description": "The str-subclass precondition (ASM-005) and the re-export from textstats/__init__ are not covered by a unit test. The latter is only covered indirectly by the system tests.", "related": ["DESIGN-001", "ASM-005"], "status": "open"},
+  {"id": "F-3", "severity": "info", "description": "The design description does not mention the isinstance type check step explicitly, although the errors section requires it.", "related": ["DESIGN-001"], "status": "open"}
+ ]}
