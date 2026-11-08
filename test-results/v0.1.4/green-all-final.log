@@ -1,0 +1,98 @@
+{
+  "mode": "green",
+  "plugin": {
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/74506c09-3ee2-404b-87e4-849f0fe9a096/scratchpad/wt-e0358a5/plugins/vmodel",
+    "release_manifest": null
+  },
+  "git_head": "e0358a5",
+  "worktree_dirty": false,
+  "python": "3.12.3",
+  "tests": 83,
+  "expectations_met": 83,
+  "violations": 0,
+  "seconds": 431.1
+}
+
+OK  expect=ok   got=ok      test_guard_redirects.GuardDevNullRed.test_main_session_reads_with_output_discarded
+OK  expect=ok   got=ok      test_guard_redirects.GuardDevNullRed.test_verifier_reads_with_output_discarded
+OK  expect=ok   got=ok      test_guard_redirects.GuardDifferentialAccept.test_no_write_detection_is_lost_except_pure_devnull_redirections
+OK  expect=ok   got=ok      test_guard_redirects.GuardFileRedirectRed.test_ampersand_redirects_into_protected_paths_denied
+OK  expect=ok   got=ok      test_guard_redirects.GuardFileRedirectRed.test_redirection_between_verb_and_flag_denied
+OK  expect=ok   got=ok      test_guard_redirects.GuardFileRedirectRed.test_verifier_ampersand_redirects_to_files_denied
+OK  expect=ok   got=ok      test_guard_redirects.GuardWritesChar.test_devnull_between_verb_and_flag_stays_denied
+OK  expect=ok   got=ok      test_guard_redirects.GuardWritesChar.test_fd_duplication_is_not_a_write
+OK  expect=ok   got=ok      test_guard_redirects.GuardWritesChar.test_non_bash_tools_keep_the_old_rule
+OK  expect=ok   got=ok      test_guard_redirects.GuardWritesChar.test_other_rules_ignore_devnull_suffix
+OK  expect=ok   got=ok      test_guard_redirects.GuardWritesChar.test_verifier_writes_stay_denied
+OK  expect=ok   got=ok      test_guard_redirects.GuardWritesChar.test_writes_into_protected_paths_stay_denied
+OK  expect=ok   got=ok      test_defect_closure.DefectClosureBlockedRed.test_blocked_gate_does_not_say_re_verify
+OK  expect=ok   got=ok      test_defect_closure.DefectClosureInvariant.test_display_commands_do_not_touch_ledger_or_manifests
+OK  expect=ok   got=ok      test_defect_closure.DefectClosureRed.test_claim_open_but_verified_is_annotated
+OK  expect=ok   got=ok      test_defect_closure.DefectClosureRed.test_closed_after_the_gate_passes
+OK  expect=ok   got=ok      test_defect_closure.DefectClosureRed.test_invalid_or_withheld_verification_is_never_closed
+OK  expect=ok   got=ok      test_defect_closure.DefectClosureRed.test_open_and_fix_applied_before_verification
+OK  expect=ok   got=ok      test_defect_closure.DefectClosureRed.test_report_shows_the_same_closure_state_as_status
+OK  expect=ok   got=ok      test_defect_closure.DefectClosureRed.test_source_change_after_closure_shows_verified_not_closed
+OK  expect=ok   got=ok      test_defect_closure.DefectClosureRed.test_upstream_artifact_change_keeps_it_from_closed
+OK  expect=ok   got=ok      test_defect_closure.DefectClosureReviewRed.test_claim_note_appears_in_the_report
+OK  expect=ok   got=ok      test_defect_closure.DefectClosureReviewRed.test_failure_after_the_pass_is_verified_not_closed
+OK  expect=ok   got=ok      test_defect_closure.DefectClosureReviewRed.test_ledger_failure_is_unknown_not_unverified
+OK  expect=ok   got=ok      test_defect_closure.DefectClosureReviewRed.test_multi_gate_failure_is_not_closed_by_the_upstream_pass
+OK  expect=ok   got=ok      test_defect_closure.DefectClosureReviewRed.test_rerun_after_stale_names_the_current_pass
+OK  expect=ok   got=ok      test_defect_closure.DefectClosureReviewRed.test_session_start_context_shows_the_closure_state
+OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceChar.test_invalid_citations_alone_do_not_satisfy_the_rework_precondition
+OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceChar.test_status_json_keeps_the_013_defect_keys
+OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceChar.test_three_strike_blocked_record_is_valid_failure_evidence
+OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceRed.test_environment_blocked_record_is_an_invalid_citation
+OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceRed.test_missing_foreign_and_non_gate_records_share_the_category
+OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceRed.test_mixed_citation_closes_on_the_failure_gate
+OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceRed.test_passed_record_alone_is_an_invalid_citation
+OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceRed.test_report_always_has_the_defect_trace_check_section
+OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceRed.test_review_required_record_is_an_invalid_citation
+OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceRed.test_unlinked_failing_tests_are_trace_warnings_everywhere
+OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceReviewChar.test_clean_defect_lint_exits_zero
+OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceReviewRed.test_counts_agree_across_status_lint_and_report
+OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceReviewRed.test_defect_without_citations_is_an_invalid_citation
+OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceReviewRed.test_duplicate_citations_count_once
+OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceReviewRed.test_forged_or_truncated_ledger_is_reported_in_lint_and_report
+OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceReviewRed.test_malformed_evidence_record_is_an_integrity_error_not_a_crash
+OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceReviewRed.test_multi_gate_citation_is_not_verified_by_an_upstream_pass
+OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceReviewRed.test_newer_unknown_results_are_not_hidden_by_older_results
+OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceReviewRed.test_three_strike_chain_counts_a_missing_link_once
+OK  expect=ok   got=ok      test_defect_evidence.DefectEvidenceReviewRed.test_withheld_verification_is_named_in_status_and_report
+OK  expect=ok   got=ok      test_defect_evidence.DefectIntegrityRed.test_forged_ledger_is_one_integrity_error_not_invalid_citations
+OK  expect=ok   got=ok      test_defect_evidence.DefectIntegrityRed.test_tampered_failure_evidence_is_an_integrity_error
+OK  expect=ok   got=ok      test_defect_evidence.DefectIntegrityRed.test_tampered_verification_evidence_withholds_closure
+OK  expect=ok   got=ok      test_defect_evidence.DefectTestResultsRed.test_g4_review_reject_is_not_applicable
+OK  expect=ok   got=ok      test_defect_evidence.DefectTestResultsRed.test_g5_failure_without_junit_is_unknown_not_dash
+OK  expect=ok   got=ok      test_defect_evidence.DefectTestResultsRed.test_partially_executed_g5_separates_failing_and_unknown
+OK  expect=ok   got=ok      test_defect_evidence.DefectTestResultsRed.test_unknown_results_are_named_in_lint_and_report
+OK  expect=ok   got=ok      test_defect_evidence.DefectTestResultsRed.test_unknown_warning_names_only_the_runs_that_still_decide
+OK  expect=ok   got=ok      test_defect_evidence.SkillReportingRed.test_final_report_steps_carry_errors_and_warnings
+OK  expect=ok   got=ok      test_version_compat.GateDecisionInvariant.test_manifest_hashes_are_computed_identically
+OK  expect=ok   got=ok      test_version_compat.GateDecisionInvariant.test_same_history_gives_the_same_gate_decisions
+OK  expect=ok   got=ok      test_version_compat.OldEvidenceAccept.test_013_ledger_and_evidence_verify_under_014
+OK  expect=ok   got=ok      test_defect_display_states.DisplayStateBlockedRed.test_validator_core_change_after_closure_is_reverify_required
+OK  expect=ok   got=ok      test_defect_display_states.DisplayStateChar.test_another_defects_failure_on_the_closure_gate_is_not_closed
+OK  expect=ok   got=ok      test_defect_display_states.DisplayStateChar.test_json_keeps_the_0_1_3_and_0_1_4_keys
+OK  expect=ok   got=ok      test_defect_display_states.DisplayStateChar.test_ledger_failure_after_a_failed_reverification_is_unknown
+OK  expect=ok   got=ok      test_defect_display_states.DisplayStateChar.test_states_before_verification_and_after_closure
+OK  expect=ok   got=ok      test_defect_display_states.DisplayStateChar.test_verified_by_keeps_the_past_pass_when_stale
+OK  expect=ok   got=ok      test_defect_display_states.DisplayStateInvariant.test_display_commands_do_not_touch_ledger_or_manifests
+OK  expect=ok   got=ok      test_defect_display_states.DisplayStateRed.test_failed_fix_attempt_is_verification_failed_until_a_pass
+OK  expect=ok   got=ok      test_defect_display_states.DisplayStateRed.test_failure_after_the_closure_is_verification_failed
+OK  expect=ok   got=ok      test_defect_display_states.DisplayStateRed.test_json_keeps_old_keys_and_adds_the_history
+OK  expect=ok   got=ok      test_defect_display_states.DisplayStateRed.test_report_and_session_start_use_the_same_states
+OK  expect=ok   got=ok      test_defect_display_states.DisplayStateRed.test_stale_gate_after_closure_is_reverify_required
+OK  expect=ok   got=ok      test_defect_display_states.DisplayStateRed.test_three_identical_failures_after_the_fix_is_verification_failed
+OK  expect=ok   got=ok      test_defect_display_states.DisplayStateRed.test_upstream_change_after_closure_is_reverify_required
+OK  expect=ok   got=ok      test_defect_display_states.DisplayStateRed.test_withheld_verification_is_unknown
+OK  expect=ok   got=ok      test_defect_display_states.DisplayStateReviewBlockedRed.test_integrity_block_after_a_failed_reverification_does_not_say_unblock
+OK  expect=ok   got=ok      test_defect_display_states.DisplayStateReviewRed.test_claimed_fix_rejected_at_g4_is_verification_failed_until_it_passes
+OK  expect=ok   got=ok      test_defect_display_states.DisplayStateReviewRed.test_review_required_after_a_failed_reverification_does_not_reset_it
+OK  expect=ok   got=ok      test_defect_display_states.DisplayStateReviewRed.test_three_strike_then_user_unblock_says_rework
+OK  expect=ok   got=ok      test_defect_display_states.DisplayStateReviewRed.test_upstream_failure_cited_after_the_closure_is_verification_failed
+OK  expect=ok   got=ok      test_defect_display_states.DisplayStateReviewRed.test_upstream_repass_does_not_hide_a_downstream_failure
+OK  expect=ok   got=ok      test_defect_display_states.DisplayStateReviewRed.test_verified_by_wording_is_reserved_for_closed
+OK  expect=ok   got=ok      test_defect_display_states.DisplayStateReviewRed.test_withheld_pass_is_not_shown_as_a_past_success
+OK  expect=ok   got=ok      test_defect_display_states.DisplayStateSkillWordingRed.test_skills_name_the_states_that_are_not_closed

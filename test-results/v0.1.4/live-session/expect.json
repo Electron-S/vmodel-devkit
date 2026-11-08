@@ -1,0 +1,121 @@
+[
+  {
+    "id": "A1",
+    "expect": "allow",
+    "offline_guard": "allow",
+    "ok": true,
+    "reason": null
+  },
+  {
+    "id": "A2",
+    "expect": "allow",
+    "offline_guard": "allow",
+    "ok": true,
+    "reason": null
+  },
+  {
+    "id": "A3",
+    "expect": "allow",
+    "offline_guard": "allow",
+    "ok": true,
+    "reason": null
+  },
+  {
+    "id": "A4",
+    "expect": "allow",
+    "offline_guard": "allow",
+    "ok": true,
+    "reason": null
+  },
+  {
+    "id": "A5",
+    "expect": "allow",
+    "offline_guard": "allow",
+    "ok": true,
+    "reason": null
+  },
+  {
+    "id": "A6",
+    "expect": "allow",
+    "offline_guard": "allow",
+    "ok": true,
+    "reason": null
+  },
+  {
+    "id": "B1",
+    "expect": "deny",
+    "offline_guard": "deny",
+    "ok": true,
+    "reason": "[vmodel guard] /tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/74506c09-3ee2-404b-87e4-849f0fe9a096/scratchpad/live-e0358a5/한글 드릴 프로젝트/.vmodel/state/head.json is protected: validator ledger (only the validator writes it). Use the vmodel CLI instead."
+  },
+  {
+    "id": "B2",
+    "expect": "deny",
+    "offline_guard": "deny",
+    "ok": true,
+    "reason": "[vmodel guard] /tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/74506c09-3ee2-404b-87e4-849f0fe9a096/scratchpad/live-e0358a5/한글 드릴 프로젝트/.vmodel/evidence/WI-001/probe.txt is protected: validator evidence (only the validator writes it). Use the vmodel CLI instead."
+  },
+  {
+    "id": "B3",
+    "expect": "deny",
+    "offline_guard": "deny",
+    "ok": true,
+    "reason": "[vmodel guard] this command would modify .vmodel/ through the shell; use the Write/Edit tools for work item artifacts and the vmodel CLI for everything validator-owned"
+  },
+  {
+    "id": "B4",
+    "expect": "deny",
+    "offline_guard": "deny",
+    "ok": true,
+    "reason": "[vmodel guard] this command would modify .vmodel/ through the shell; use the Write/Edit tools for work item artifacts and the vmodel CLI for everything validator-owned"
+  },
+  {
+    "id": "B5",
+    "expect": "deny",
+    "offline_guard": "deny",
+    "ok": true,
+    "reason": "[vmodel guard] this command would modify .vmodel/ through the shell; use the Write/Edit tools for work item artifacts and the vmodel CLI for everything validator-owned"
+  },
+  {
+    "id": "B6",
+    "expect": "deny",
+    "offline_guard": "deny",
+    "ok": true,
+    "reason": "[vmodel guard] this command would modify .vmodel/ through the shell; use the Write/Edit tools for work item artifacts and the vmodel CLI for everything validator-owned"
+  },
+  {
+    "id": "B7",
+    "expect": "deny",
+    "offline_guard": "deny",
+    "ok": true,
+    "reason": "[vmodel guard] this command would modify .vmodel/ through the shell; use the Write/Edit tools for work item artifacts and the vmodel CLI for everything validator-owned"
+  },
+  {
+    "id": "B8",
+    "expect": "deny",
+    "offline_guard": "deny",
+    "ok": true,
+    "reason": "[vmodel guard] this command would modify .vmodel/ through the shell; use the Write/Edit tools for work item artifacts and the vmodel CLI for everything validator-owned"
+  },
+  {
+    "id": "B9",
+    "expect": "deny",
+    "offline_guard": "deny",
+    "ok": true,
+    "reason": "[vmodel guard] this command would modify .vmodel/ through the shell; use the Write/Edit tools for work item artifacts and the vmodel CLI for everything validator-owned"
+  },
+  {
+    "id": "B10",
+    "expect": "deny",
+    "offline_guard": "deny",
+    "ok": true,
+    "reason": "[vmodel guard] this command would modify .vmodel/ through the shell; use the Write/Edit tools for work item artifacts and the vmodel CLI for everything validator-owned"
+  },
+  {
+    "id": "K1",
+    "expect": "deny",
+    "offline_guard": "deny",
+    "ok": true,
+    "reason": "[vmodel guard] this command would modify .vmodel/ through the shell; use the Write/Edit tools for work item artifacts and the vmodel CLI for everything validator-owned"
+  }
+]

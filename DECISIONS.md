@@ -199,3 +199,37 @@ F1 종료 상태 (status.py)
 - 0.1.4는 원장 기록 형식, manifest 계산, Gate 판정을 바꾸지 않는다. 0.1.3 릴리스와 같은 이력을 돌린 투영(상태·체크·실패 서명·TEST별 결과)과 같은 프로젝트의 Gate별 manifest가 일치한다(`test_version_compat`).
 - 증거 검증은 코어 해시와 무관하다(HMAC 서명 + 파일 해시). 0.1.3이 서명한 원장·증거는 0.1.4에서 audit·verify-evidence가 그대로 통과하고, 기존 기록의 `validator.version`·`core_hash`는 0.1.3 값으로 남는다. 서명된 증거를 새 해시로 다시 쓰는 경로는 없다.
 - 업그레이드 절차는 SPEC §11 그대로다. 사용자가 TTY에서 재고정(원장에 lock 기록 추가)하면 이전 PASS는 STALE이 되고, 재검증한 새 기록에 0.1.4 버전·해시가 붙는다. 한계: 재고정 전에는 새 코어가 무결성 검사로 모든 Gate를 BLOCKED로 본다. 거꾸로 0.1.4로 재고정한 프로젝트를 0.1.3으로 열어도 같은 이유로 BLOCKED다(다운그레이드도 재고정 필요).
+
+## D37. 결함 표시 상태 6종: VERIFIED를 없애고 REVERIFY_REQUIRED·VERIFICATION_FAILED로 나눈다 (2026-11-09, 사용자 지시, 0.1.4 공개 전 재빌드)
+배경: 0.1.4 첫 빌드(core `b1fee43f…`)의 VERIFIED는 "검증된 적은 있지만 그 Gate가 지금 PASSED가 아님"이었다. 그래서 Gate가 STALE이거나 다시 FAILED여도 상태 칸에 완료처럼 읽히는 VERIFIED가 찍혔다. 독립 검토가 지적했고(D36), 사용자가 상태 이름과 규칙을 정했다: OPEN, FIX_APPLIED, REVERIFY_REQUIRED, VERIFICATION_FAILED, CLOSED, UNKNOWN. 저장 구조(`open`/`fixed`)는 유지하고, 상태는 원장과 현재 Gate 결과에서 파생하며, 과거 검증 성공 이력은 따로 남긴다. STALE이면 VERIFIED·CLOSED로 표시하지 않고, 현재 검증이 실패하면 완료로 표시하지 않으며, 원장 무결성이 깨지면 추측하지 않고 UNKNOWN이다. Gate 판정 정책과 서명된 증거는 바꾸지 않는다.
+
+파생 규칙 (`status.closure_view`, 앞 조건이 우선)
+1. UNKNOWN: 원장 무결성 실패(서명·체인·head·앵커).
+2. VERIFICATION_FAILED: 결함이 실패를 인용한 Gate마다 첫 인용 실패 이후 마지막 결정적 평가(PASSED 또는 실패)를 보고, 그중 하나라도 실패(FAILED, 또는 3회 동일 실패 BLOCKED = `is_failure_record`)인 경우. REVIEW_REQUIRED와 환경 BLOCKED는 3회 실패 카운터(`consecutive_same_failures`)처럼 건너뛴다. Gate마다 보므로 상위 Gate(G4)의 재통과가 아직 다시 돌리지 않은 하위 Gate(G5)의 실패를 가리지 않는다.
+3. UNKNOWN: 그 Gate의 검증 PASS가 있지만 그 PASS나 인용된 실패 기록의 증거가 원장과 다름(`verification_withheld`).
+4. CLOSED: `verified_by`가 있고 그 Gate가 현재 입력으로 PASSED(상위 Gate가 PASSED가 아니면 `gate_state`가 이미 STALE을 낸다).
+5. REVERIFY_REQUIRED: `verified_by`가 있지만 그 Gate가 지금 PASSED가 아님(STALE, REVIEW_REQUIRED, BLOCKED).
+6. FIX_APPLIED / OPEN: 검증 없음, 주장 `fixed` / `open`.
+
+과거 성공 이력: `verified_by`(0.1.3과 같은 의미: 가장 최근 인용 실패 이후 종료 Gate의 첫 PASS)는 모든 상태에서 그대로 남는다. 새 키는 `verification_history`(첫 인용 실패 이후 종료 Gate의 PASS 기록 목록), `last_verification`(위 2의 마지막 결정적 평가: 기록·Gate·상태·실패 여부), `closure_action`(다음 조치: reverify, rework, unblock, resolve_block, check_integrity 또는 없음)이다. 텍스트에서 "verified by R…"는 CLOSED에만 쓴다. 다른 상태의 과거 성공은 "previously passed in R… (last PASS R…)"로 쓰고, 증거가 보류된 PASS는 과거 성공으로 치지 않고 "PASS R… withheld"로만 쓴다(claim_note와 report도 같다).
+
+판단이 필요했던 지점
+- 재평가 실패를 같은 결함에 다시 인용하는 경우(재작업 전제 조건이 그 인용을 요구한다): 기준을 "가장 최근 인용 실패"로 잡으면 상태가 FIX_APPLIED로 돌아가 "검증 대기"처럼 보인다. 그래서 VERIFICATION_FAILED는 첫 인용 실패 이후 마지막 결정적 평가로 판단하고, 다음 PASS에서 풀린다.
+- 인용한 상위 Gate의 실패(예: G5 실패 결함의 수정이 G4 재리뷰에서 거절되고 그 기록을 같은 결함에 인용): 종료 Gate(G5)만 보면 FIX_APPLIED("검증 대기")가 된다. 결함이 인용한 Gate 전체를 보므로 VERIFICATION_FAILED이고, 그 Gate가 다시 PASS하면(다른 인용 Gate에 남은 실패가 없을 때) 재검증이 그 단계를 넘어선 것이므로 FIX_APPLIED, 종료 Gate PASS에서 CLOSED다. 결함이 인용하지 않은 Gate(다른 결함 소유)의 실패는 그 결함 기준으로 보지 않는다. 대신 종료 Gate가 STALE이 되므로 CLOSED는 아니다.
+- 알려진 한계(재검토 지적, 고치지 않음): G5 실패 뒤 수정 없이 G4가 다시 거절되고 새 결함이 두 기록을 함께 인용하면, 수정을 시도하지 않았어도 VERIFICATION_FAILED("G4 re-verification … FAILED")로 보인다. "수정이 G4에서 거절된 경우"와 원장 이력이 같아서 원장만으로는 구분할 수 없다(주장 `open`/`fixed`는 검증되지 않은 값이라 판단에 쓰지 않았다). 어느 쪽이든 완료로 보이지 않는다.
+- `verification_history`는 서명 원장의 PASS 기록 목록이라, 증거가 보류된 PASS도 그대로 들어 있다. 보류된 기록은 `verification_withheld`로 알 수 있다. 목록 형식을 바꾸지 않으려고 표시를 따로 달지 않았다(텍스트에서는 과거 성공으로 쓰지 않는다).
+- Gate 단위 판단(보수적): 종료 Gate에 다른 결함 소유의 실패가 새로 생겨도, 이 결함은 그 Gate의 마지막 평가가 실패이므로 VERIFICATION_FAILED가 된다. 회귀인지 다른 결함인지는 기계적으로 가리지 않고, 완료로 보이지 않는 쪽을 택했다.
+- 증거 보류: 첫 빌드는 FIX_APPLIED("not verified")였다. 서명 원장에는 PASS가 있으므로 "검증 안 됨"은 추측이다. 정책 B("확인할 수 없으면 UNKNOWN")에 따라 UNKNOWN으로 바꿨다. 다만 마지막 평가가 실패면 그 사실은 서명 원장으로 확정되므로 VERIFICATION_FAILED가 앞선다.
+- Validator Core 불일치(재고정 전)로 모든 Gate가 BLOCKED인 경우: 원장 무결성 실패가 아니므로 UNKNOWN이 아니라 REVERIFY_REQUIRED(또는 마지막 재검증이 실패였으면 VERIFICATION_FAILED)이고, 조치는 resolve_block("resolve the block first")이다. 재고정하면 STALE → 재검증이다.
+- 3회 동일 실패 BLOCKED는 실패이므로 VERIFICATION_FAILED이고, 그 Gate가 지금도 그 사유로 BLOCKED일 때만 조치가 unblock(사용자 TTY)이다. `vmodel unblock`은 3회 실패 차단만 푼다. 사용자가 풀면 rework다.
+- 주장 `open`인데 원장에 PASS가 있다는 주석(`claim_note`)은 CLOSED("verified by")와 REVERIFY_REQUIRED("passed … (no longer current)")에서만 단다. VERIFICATION_FAILED에서 "verified"라는 주석은 오해를 부른다.
+
+호환
+- defects.json 스키마·enum 불변. status JSON의 0.1.3 키와 0.1.4 첫 빌드 키는 모두 남는다(`closure_action`, `verification_history`, `last_verification`은 추가). `closure_state` 값에서 VERIFIED가 사라지고 두 값이 생겼다. 0.1.4는 아직 공개(태그·푸시)하지 않았으므로 이 값을 쓰는 외부 사용자는 없다. `closure_gate_record`는 CLOSED·REVERIFY_REQUIRED에서 현재 Gate 기록, VERIFICATION_FAILED에서 실패한 재평가 기록이다.
+- 텍스트: CLOSED 줄(`verified by R…, G5 PASSED`)과 report의 `DEFECT-001 [fixed — verified by R…]`(0.1.3 문구)는 그대로다. 기존 하네스 103개는 고치지 않았다.
+- 첫 빌드용 0.1.4 테스트 중 기대값을 바꾼 것(상태 이름 변경이 원인): `test_defect_closure`의 7개 메서드(STALE·상위 변경·report·session-start·BLOCKED → REVERIFY_REQUIRED, 통과 뒤 실패 → VERIFICATION_FAILED, 증거 보류 → UNKNOWN)와 `test_version_compat` 1곳(재고정 직후 → REVERIFY_REQUIRED).
+- 스킬(start, rework)의 VERIFIED 설명을 새 상태 설명으로 바꿨다. verifier 지침에는 상태 이름이 없다.
+
+독립 검토: 첫 수정본(`73d158e`)을 별도 컨텍스트의 검토자가 읽기 전용으로 보고 부 지적 4건을 냈다(교차 Gate 실패가 FIX_APPLIED, REVIEW_REQUIRED가 실패를 지움, 무결성 BLOCKED에서 unblock 안내, 보류 PASS를 과거 성공으로 표시). 모두 `73d158e`에서 실패하는 테스트로 재현한 뒤 `c4e4da5`에서 고쳤다. Gate 단위 판단은 보수적이라 유지했다. `c4e4da5` 재검토: 주요 0, 지적 1~4 해결 확인. 새 지적 중 "상위 Gate 재통과가 하위 실패를 가려 같은 원장에서 결함끼리 표시가 엇갈림"(nit 2건)은 재현 후 Gate별 판단으로 고쳤고, `closure_action` 표기를 `reverify`로 통일했다. 교차 Gate 증상 동시 인용(부)과 보류 PASS의 JSON 표시(nit)는 위 한계로 남겼다.
+
+검증: RED는 첫 0.1.4 빌드를 해시 대조 후 보존한 사본 대상(`scripts/red_green.py`), GREEN·전체 회귀·실제 세션은 TEST_RESULTS §11. Core가 바뀌었으므로 공개 전 같은 버전으로 재빌드했다(`release.py --force`, 중간 `144428fb…`(`73d158e`)·`f837a465…`(`c4e4da5`), 최종 `sha256:5dd1d010…`(`e0358a5`)).

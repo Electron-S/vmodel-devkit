@@ -1,0 +1,47 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.1.3",
+    "release_manifest": {
+      "version": "0.1.3",
+      "core_hash": "sha256:0208c7988516f050d2eabf8c50704d9e36be7c4d6eb94b4ff098dc7c2c73e0ea"
+    }
+  },
+  "git_head": "e0358a5",
+  "worktree_dirty": false,
+  "python": "3.12.3",
+  "tests": 15,
+  "expectations_met": 15,
+  "violations": 0,
+  "seconds": 86.5
+}
+
+OK  expect=FAIL got=FAIL    test_defect_closure.DefectClosureBlockedRed.test_blocked_gate_does_not_say_re_verify
+      AssertionError: Tuples differ: (None, None) != ('REVERIFY_REQUIRED', 'BLOCKED')
+OK  expect=ok   got=ok      test_defect_closure.DefectClosureInvariant.test_display_commands_do_not_touch_ledger_or_manifests
+OK  expect=FAIL got=FAIL    test_defect_closure.DefectClosureRed.test_claim_open_but_verified_is_annotated
+      AssertionError: None != 'CLOSED'
+OK  expect=FAIL got=FAIL    test_defect_closure.DefectClosureRed.test_closed_after_the_gate_passes
+      AssertionError: Tuples differ: (None, None, None, 'R00015') != ('CLOSED', 'G5', 'PASSED', 'R00015')
+OK  expect=FAIL got=FAIL    test_defect_closure.DefectClosureRed.test_invalid_or_withheld_verification_is_never_closed
+      AssertionError: None != 'FIX_APPLIED'
+OK  expect=FAIL got=FAIL    test_defect_closure.DefectClosureRed.test_open_and_fix_applied_before_verification
+      AssertionError: Tuples differ: (None, None) != ('OPEN', None)
+OK  expect=FAIL got=FAIL    test_defect_closure.DefectClosureRed.test_report_shows_the_same_closure_state_as_status
+      AssertionError: 'closure: CLOSED' not found in '# WI-001 — 단어 빈도 기능\n\n- Status: **PARTIALLY_VERIFIED** (profile STANDARD)\n- Generated: 2026-11-08T22:20:09+00:00 by vmodel 0.1.3 (release, core `0208c7988516`)\n- Validator integrity: OK; ledger: OK\n\n> MVP scope: only G1-G5 are implemented. G6 (integration) and G7 (system) are extension gates, so a work item can reach PARTIALLY_VERIFIED at most. 
+OK  expect=FAIL got=FAIL    test_defect_closure.DefectClosureRed.test_source_change_after_closure_shows_verified_not_closed
+      AssertionError: Tuples differ: (None, None, 'R00015') != ('REVERIFY_REQUIRED', 'STALE', 'R00015')
+OK  expect=FAIL got=FAIL    test_defect_closure.DefectClosureRed.test_upstream_artifact_change_keeps_it_from_closed
+      AssertionError: None != 'REVERIFY_REQUIRED'
+OK  expect=FAIL got=FAIL    test_defect_closure.DefectClosureReviewRed.test_claim_note_appears_in_the_report
+      AssertionError: 'note: defects.json says open' not found in '# WI-001 — 단어 빈도 기능\n\n- Status: **PARTIALLY_VERIFIED** (profile STANDARD)\n- Generated: 2026-11-08T22:20:27+00:00 by vmodel 0.1.3 (release, core `0208c7988516`)\n- Validator integrity: OK; ledger: OK\n\n> MVP scope: only G1-G5 are implemented. G6 (integration) and G7 (system) are extension gates, so a work item can reach PARTIALLY_VERIF
+OK  expect=FAIL got=FAIL    test_defect_closure.DefectClosureReviewRed.test_failure_after_the_pass_is_verified_not_closed
+      AssertionError: Tuples differ: (None, None) != ('VERIFICATION_FAILED', 'FAILED')
+OK  expect=FAIL got=FAIL    test_defect_closure.DefectClosureReviewRed.test_ledger_failure_is_unknown_not_unverified
+      AssertionError: Tuples differ: (None, None) != ('UNKNOWN', None)
+OK  expect=FAIL got=FAIL    test_defect_closure.DefectClosureReviewRed.test_multi_gate_failure_is_not_closed_by_the_upstream_pass
+      AssertionError: None != 'FIX_APPLIED'
+OK  expect=FAIL got=FAIL    test_defect_closure.DefectClosureReviewRed.test_rerun_after_stale_names_the_current_pass
+      AssertionError: Tuples differ: (None, 'R00015', None) != ('CLOSED', 'R00015', 'R00018')
+OK  expect=FAIL got=FAIL    test_defect_closure.DefectClosureReviewRed.test_session_start_context_shows_the_closure_state
+      AssertionError: 'DEFECT-001 REVERIFY_REQUIRED' not found in '[VModel DevKit active in this project]\nValidator CLI: "/home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.1.3/bin/vmodel" (run it with Bash; it finds Python 3.11+). Artifact formats and role guides: \'vmodel guide <topic>\' (plugin files are outside the project).\nPolicy: feature development, substantive behaviour changes, bug fixes, archi

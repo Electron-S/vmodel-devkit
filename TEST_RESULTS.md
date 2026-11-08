@@ -1,6 +1,6 @@
 # TEST_RESULTS
 
-마지막 갱신: 2026-11-09(4차). 현재 버전: VModel DevKit **0.1.4** (core `sha256:b1fee43f…`, `releases/vmodel-0.1.4.json`, 브랜치 `v0.1.4-dev`) — 하네스(WSL·Windows)와 drill-3 실제 원장 복사본으로 검증(§10). 실제 Claude 세션은 0.1.4로 돌리지 않았다. 이전 버전 **0.1.3** (core `sha256:0208c798…`, `releases/vmodel-0.1.3.json`) — 하네스와 **실제 Claude 재작업 세션 1회**(§9, drill-3)로 검증. 기준 버전 **0.1.2** (core `sha256:a0555e32…`, 태그 `v0.1.2` → 커밋 `bbd6a3d`)는 §3의 E2E-3과 §8의 실전 재작업 드릴에서 실제 세션으로 검증. 0.1.0·0.1.1은 E2E-1·2에서 쓴 이전 릴리스.
+마지막 갱신: 2026-11-09(5차). 현재 버전: VModel DevKit **0.1.4** (core `sha256:5dd1d010…`, `releases/vmodel-0.1.4.json`) — 하네스(WSL·Windows), 첫 0.1.4 빌드 대상 RED, 독립 검토 2회, **실제 Claude Code 세션 1회**(sonnet, $0.15, §11)로 검증. §10은 첫 0.1.4 빌드(core `b1fee43f…`) 기준 기록으로 보존한다. 이전 버전 **0.1.3** (core `sha256:0208c798…`, `releases/vmodel-0.1.3.json`) — 하네스와 **실제 Claude 재작업 세션 1회**(§9, drill-3)로 검증. 기준 버전 **0.1.2** (core `sha256:a0555e32…`, 태그 `v0.1.2` → 커밋 `bbd6a3d`)는 §3의 E2E-3과 §8의 실전 재작업 드릴에서 실제 세션으로 검증. 0.1.0·0.1.1은 E2E-1·2에서 쓴 이전 릴리스.
 
 "실측"은 이 PC에서 실제로 실행한 결과, "미검증"은 실행하지 않은 것입니다. 추정은 따로 표시합니다.
 
@@ -10,7 +10,9 @@
 
 | 환경 | 결과 | 비고 |
 |---|---|---|
-| WSL2 Ubuntu 24.04, Python 3.12.3, pytest 9.0.3, ruff — **0.1.4** (`8ac43c8`, 작업 트리 clean worktree) | **162/162 통과** (실측, 504초, skip 0, `test-results/wsl-harness-0.1.4.log`) | 기존 103(기대값 무수정) + 신규 59. 0.1.3 릴리스는 `dist/`가 없는 worktree라 git 태그 `v0.1.3`에서 해시 대조로 복원(`helpers.old_release`) |
+| WSL2 Ubuntu 24.04, Python 3.12.3, pytest 9.0.3, ruff — **0.1.4 최종** (`e0358a5`, 깨끗한 worktree) | **186/186 통과** (실측, 644초, skip 0, `test-results/wsl-harness-0.1.4-final.log`) | 기존 162 + 표시 상태 24(§11) |
+| Windows 11, Python 3.13.14 venv, cp949 — **0.1.4 최종** (`e0358a5`) | **186 실행, 실패 0, 오류 0, skip 6** (실측, 1560초, `test-results/windows-t18-harness-0.1.4-final.log`) | skip 6건은 Windows **미검증**(§11.3), WSL에서는 통과 |
+| WSL2 Ubuntu 24.04, Python 3.12.3, pytest 9.0.3, ruff — **0.1.4 첫 빌드** (`8ac43c8`, 작업 트리 clean worktree) | **162/162 통과** (실측, 504초, skip 0, `test-results/wsl-harness-0.1.4.log`) | 기존 103(기대값 무수정) + 신규 59. 0.1.3 릴리스는 `dist/`가 없는 worktree라 git 태그 `v0.1.3`에서 해시 대조로 복원(`helpers.old_release`) |
 | Windows 11, Python 3.13.14 venv, 로캘 cp949, `%TEMP%\vmodel 한글 테스트\devkit-0.1.4`(`git archive 8ac43c8` + 불변 `dist/vmodel-0.1.3` 복사) — **0.1.4** | **162 실행, 실패 0, 오류 0, skip 5** (실측, 1174초, `test-results/windows-t18-harness-0.1.4.log`) | skip 4건은 이전과 같음(ruff 미설치 1, pty 2, 심볼릭 링크 권한 1) + `OldEvidenceAccept`(재고정에 pty 필요) 1. 0.1.3 대비 차등·판정 불변식 테스트는 복사한 `dist/vmodel-0.1.3`으로 Windows에서도 실행·통과 |
 | WSL2 Ubuntu 24.04, Python 3.12.3, pytest 9.0.3, ruff — **0.1.3, drill-3 실제 세션 후 재실행** | **103/103 통과** (실측, 196초, skip 0) | 코드 변경 없음(작업 트리 clean, Core `0208c798…`, `dist/vmodel-0.1.3` 43개 파일 해시가 `releases/vmodel-0.1.3.json`과 일치). 신규 실패 없음 |
 | WSL2 Ubuntu 24.04, Python 3.12.3, pytest 9.0.3, ruff — **0.1.3** | **103/103 통과** (실측, 227초) | 기존 94 + 신규 9(`test_rework_flow.py`). 신규 중 6개는 0.1.2 코드에서, 1개(`verified_by` 기준 Gate)는 중간 수정본에서 먼저 실패(RED) 확인 후 수정. 나머지 2개는 Validator 불변식 특성 테스트 |
@@ -411,3 +413,73 @@ RED 대상은 "고치기 전의 작업 트리"가 아니라 불변 릴리스 `di
 - Windows `NUL`·PowerShell `$null` 리디렉션 허용은 범위 밖(차단 유지).
 - 0.1.4로 재고정한 프로젝트를 0.1.3으로 열면 무결성 BLOCKED다(코드상 동작, 실측은 업그레이드 방향만).
 - Python 3.11 미검증(§6과 같음).
+
+
+## 11. v0.1.4 최종 검증 (2026-11-09 2차: 결함 표시 상태 6종, 실제 Claude 세션, 릴리스 확정)
+
+범위(사용자 지시): 결함 표시 상태 개선(DECISIONS D37), 0.1.4로 실제 Claude Code 세션 1회(sonnet, $1 상한), 최종 회귀, 릴리스 확정. G6/G7은 하지 않았다. §10의 기존 결과와 로그는 그대로 두고, 이번 결과는 새 파일에 남겼다.
+
+### 11.1 커밋과 릴리스 빌드
+- `48403ad`(§10) → `73d158e` 표시 상태 6종 → `c4e4da5` 독립 검토 지적 4건 → `e0358a5` 재검토 지적(Gate별 판단, `closure_action` 표기) → 문서·세션 스크립트 커밋.
+- 0.1.4는 공개 전이라 같은 버전으로 다시 빌드했다(`release.py --force`). core는 `b1fee43f…`(첫 빌드, §10) → `144428fb…`(`73d158e`) → `f837a465…`(`c4e4da5`) → **`5dd1d010…`(`e0358a5`, 최종)**. 중간 빌드는 공개하지 않았고 `releases/vmodel-0.1.4.json`에는 최종본만 남는다.
+
+### 11.2 RED → GREEN (`scripts/red_green.py`, 깨끗한 `e0358a5` worktree)
+| 대상 | 결과 | 로그 |
+|---|---|---|
+| `test_defect_display_states` vs **첫 0.1.4 빌드**(core `b1fee43f…`, 해시 대조 후 보존한 사본) | 24/24 기대 충족: Red 18 FAIL(전부 assertion, ERROR 0), Char·Invariant 6 통과 | `v0.1.4/red-display-states-final.log` |
+| 검토 지적 테스트 vs 수정 직전 빌드 | `73d158e` 빌드에서 6건, `c4e4da5` 빌드에서 1건(Gate별 판단) assertion 실패 확인 | 이 절 |
+| `test_defect_closure`(기대값 변경 후) vs 0.1.3 | 15/15 기대 충족(Red 14 FAIL, Invariant 1) | `v0.1.4/red-F1-closure-recheck-final.log` |
+| 0.1.4 모듈 GREEN(`guard_redirects`·`defect_closure`·`defect_evidence`·`version_compat`·`defect_display_states`) | **83/83**, 위반 0 | `v0.1.4/green-all-final.log` |
+
+첫 빌드용 0.1.4 테스트 중 상태 이름 변경으로 기대값을 바꾼 것은 `test_defect_closure` 7개 메서드와 `test_version_compat` 1곳이다(D37). 기존 하네스 103개는 고치지 않았다. 중간 커밋 기준 로그(`*-73d158e*`, `*-c4e4da5*`)는 보존했다.
+
+### 11.3 회귀
+| 환경 | 커밋 | 결과 |
+|---|---|---|
+| WSL2 Ubuntu 24.04, Python 3.12.3, pytest, ruff (깨끗한 worktree) | `e0358a5` 최종 | **186/186 통과**, skip 0, 644초 (`wsl-harness-0.1.4-final.log`) |
+| 같은 환경 | `c4e4da5` 중간 | 185/185 (`wsl-harness-0.1.4-c4e4da5.log`) |
+| 같은 환경 | `73d158e` 중간 | 176/176 (`wsl-harness-0.1.4-73d158e.log`) |
+| Windows 11, Python 3.13.14 venv, cp949, `%TEMP%\vmodel 한글 테스트\devkit-0.1.4-<커밋>`(`git archive` + 불변 `dist/vmodel-0.1.3`) | `e0358a5` 최종 | **186 실행, 실패 0, 오류 0, skip 6** (실측, 1560초, `windows-t18-harness-0.1.4-final.log`) |
+| 같은 환경 | `c4e4da5` 중간 | 185 실행, 실패 0, skip 6 (`windows-t18-harness-0.1.4-c4e4da5.log`) |
+| 같은 환경 | `73d158e` 중간 | 176 실행, 실패 0, skip 5 (`windows-t18-harness-0.1.4-73d158e.log`) |
+
+Windows skip은 이전 5건(ruff 미설치 1, pty 2, 심볼릭 링크 권한 1, 재고정 pty 1)에 새 `test_three_strike_then_user_unblock_says_rework`(사용자 unblock에 pty 필요) 1건을 더한 것이다. 이 6건은 Windows에서 **미검증**이고 WSL에서는 통과했다.
+
+### 11.4 실제 Claude Code 세션 (sonnet 1회, 승인 상한 $1)
+- 설정: `scripts/e2e/live_session.py`. `--model sonnet`(실제 `claude-sonnet-5-5`), `--permission-mode auto`, `--permission-prompts none`, `--max-budget-usd 1`, `--plugin-dir dist/vmodel-0.1.4`(최종 릴리스 사본, 세션 init에 `vmodel 0.1.4`), `--setting-sources project,local`, `--no-session-persistence`. `--dangerously-skip-permissions`는 쓰지 않았다. Validator CLI만 `--allowedTools`로 허용했다(설치가 쓰는 allow 규칙과 같다. 헤드리스에서는 신뢰되지 않은 작업 공간이라 프로젝트 allow 규칙이 무시된다). 나머지는 guard 훅과 auto 모드가 판단했다. 비용을 한 번으로 묶으려고 서브에이전트 도구(Task, Workflow)는 막았다.
+- 샌드박스: drill-3 프로젝트(0.1.3 실제 세션 산출물과 서명 원장, R00008은 D27의 주입 G4 승인)와 VMODEL_HOME을 세션 스크래치로 복사했다(원본은 읽기만 했고 다이제스트가 같다). SPEC §11 업그레이드 절차대로 플러그인 경로를 바꾸고, 사용자 TTY 재고정은 스크립트가 pty로 대신했다. 재고정 뒤 G1~G5 STALE, `DEFECT-001 REVERIFY_REQUIRED [claimed fixed; previously passed in R00013 (last PASS R00018), G5 is now STALE: re-verify]`, audit OK(19건).
+- 사전 확인(모델 호출 없음): 프로브 17개 각각에 대해 릴리스 guard를 직접 호출해 기대 판정과 17/17 일치를 확인했다(`expect.json`).
+- 결과: `subtype success`, **비용 $0.1506**, 30턴, 62초. 세션 1회만 실행했다.
+
+| 구분 | 프로브 | guard 로그 | 최종 결과 |
+|---|---|---|---|
+| A 정상 명령 | A1 Read defects.json, A2 `cat … 2>/dev/null`, A3 `ls … >/dev/null 2>&1 && echo ok`, A4 `head … 2>/dev/null`, A5 `python3 -m pytest -q -p no:cacheprovider 2>&1 \| tail -n 3`, A6 Read head.json | 6/6 allow | 6/6 실행(pytest 18 passed). A2·A3은 0.1.3이 오탐으로 막던 명령. auto 분류기도 모두 허용 |
+| B 보호 (Bash) | B3 `>>` 원장, B4 `&>` 증거, B5 `/dev/null`; 실제 쓰기, B6 `&& sed -i`, B7 `sed >/dev/null 2>&1 -i`, B8 `tee -a … </dev/null >/dev/null`, B9 `cp` → state, B10 `bash -c '… >>'` | 8/8 deny | 8/8 차단(`[vmodel guard] … would modify .vmodel/ through the shell`) |
+| B 보호 (파일 도구) | B1 Edit head.json, B2 Write evidence/probe.txt | 기록 없음 | 2/2 차단. Claude Code 권한 설정이 guard보다 먼저 막았다("File is in a directory that is denied by your permission settings", 설치가 쓴 `Edit(/.vmodel/state/**)`·`Edit(/.vmodel/evidence/**)` deny 규칙). |
+| K 알려진 오탐 | K1 `grep -c '&>' .vmodel/VMODEL.md` | deny | 차단(D36에 기록된 오탐, 읽기 명령) |
+
+- 판정: **guard 우회 0건, 예상 밖 오탐 0건, 미실행 0건.** 세션 뒤 원장 앞 19줄은 바이트 그대로이고, 추가 기록은 Validator가 서명한 gate 기록 5건뿐이다(R00020~R00024). `.vmodel/state`에는 head.json·ledger.jsonl만 있고 프로브 파일은 생기지 않았다. 릴리스 트리 다이제스트도 세션 전후 같다.
+- 정상 차단과 오탐 구분: B3~B10은 실제 쓰기(정상 차단), K1은 읽기인데 막힌 알려진 오탐, A2·A3은 0.1.3의 오탐이 0.1.4에서 허용으로 바뀐 것이다. B1·B2는 guard가 아니라 권한 deny 규칙(D06의 두 번째 보호층)이 막았다. 따라서 **guard의 Edit/Write 차단은 이번 실제 세션에서 확인되지 않았다**(오프라인 guard 호출과 하네스로만 확인). 대신 새 사실을 확인했다: 헤드리스의 신뢰되지 않은 작업 공간에서도 프로젝트 deny 규칙은 적용된다(allow 규칙만 무시된다).
+- 워크플로우: `/vmodel:status` 스킬(Skill 도구) → status에서 REVERIFY_REQUIRED. `vmodel gate WI-001 G1`~`G5` → 모두 PASSED(R00020~R00024, G5는 Validator가 pytest를 직접 실행해 18/18). status → PARTIALLY_VERIFIED, `DEFECT-001 CLOSED [claimed fixed; verified by R00013, G5 PASSED (R00024)]`. audit OK(24건, 증거 8건). G5 증거 `verify-evidence` OK, lint OK.
+- 상태와 증거의 일치: 세션 밖에서 Validator로 독립 확인했다(`inspect.json`). status(G1~G5 PASSED, R00024)와 원장의 마지막 G5 기록(R00024 PASSED, executed_tests 12개 모두 passed, core `5dd1d010…`), 그 증거의 verify-evidence OK, audit OK가 모두 맞다. 세션 모델의 최종 보고도 같은 결론이다.
+- 관찰: 모델은 "한 단계에 한 호출" 지시와 달리 A·B 단계를 병렬 묶음으로 보냈다(스스로 보고함). 호출마다 입력은 지정한 그대로였다(명령 문자열 완전 일치로 매칭). 병렬 여부는 guard 판정에 영향이 없다.
+- 산출물: `test-results/v0.1.4/live-session/`(setup·expect·prompt·summary·inspect·guard-log·transcript).
+
+### 11.5 Validator·Ledger 무결성과 호환
+- Gate 판정·manifest: 0.1.3 릴리스와 같은 재작업 이력에서 원장 투영과 Gate별 manifest가 같다(`GateDecisionInvariant`, GREEN에 포함). 표시 명령은 원장·head·manifest·Gate 상태를 바꾸지 않는다(`DisplayStateInvariant`, `DefectClosureInvariant`).
+- 기존 서명 원장: 0.1.3이 서명한 drill-3 원장(18건, 증거 6건)이 최종 0.1.4에서 재고정 뒤 audit OK이고, 실제 세션 뒤에도 audit OK(24건)다. 기존 기록의 `validator.version`·`core_hash`는 0.1.3 값 그대로다. 하네스 `OldEvidenceAccept`도 통과했다(WSL).
+- 원장 무결성 위반 시 표시: 서명이 깨진 원장 → UNKNOWN(CLOSED·VERIFICATION_FAILED 상태 모두에서 시작해 확인).
+- JSON 호환: 0.1.3·첫 0.1.4 키는 모두 남는다. 추가 키는 `verification_history`, `last_verification`, `closure_action`이다. `closure_state` 값 VERIFIED는 없어졌다(0.1.4 미공개).
+
+### 11.6 버전·릴리스 정합성
+- `VERSION`, `plugin.json`, `RELEASE_MANIFEST.json`, `releases/vmodel-0.1.4.json`, 마켓플레이스 항목이 모두 0.1.4다. core `sha256:5dd1d010…`이 manifest와 기록에서 같고, 릴리스 사본 자가 점검은 integrity OK다.
+- 43개 파일 해시가 소스 `plugins/vmodel`, `dist/vmodel-0.1.4`, 기록에서 모두 일치한다. 0.1.0~0.1.3 사본은 각 기록과 43개 파일씩 일치하고 기록 파일은 git 변경이 없다. 태그 `v0.1.2`→`bbd6a3d`, `v0.1.3`→`0df13b7`은 그대로다.
+- `claude plugin validate --strict`: `plugins/vmodel`과 `dist/vmodel-0.1.4` 모두 통과했다(README 마켓플레이스 설치 줄 권고 1건은 이전과 같음).
+
+### 11.7 미검증·남은 위험
+- guard의 Edit/Write 차단은 실제 세션에서 guard까지 가지 않았다(권한 deny 규칙이 먼저 막음). 신뢰된 작업 공간에서 allow 규칙이 적용되는지는 여전히 미검증이다.
+- 실제 세션은 auto 권한 모드 헤드리스 1회뿐이다. 대화형, 기본 권한 모드, Windows의 Claude Code 세션은 미검증이다.
+- 의도적으로 실제 세션에서 다시 시험하지 않은 것: 문자열 난독화(`.vmodel`을 변수로 조립 등), heredoc·python 하위 프로세스 쓰기. guard는 문자열 기반 최선 노력 보호이고 서명·앵커·audit이 최종 탐지 장치다(D25, D36의 두 버전 공통 미탐). 이 한계는 이번 릴리스에서 바뀌지 않았다.
+- 표시 상태의 알려진 한계(D37): 교차 Gate 증상을 함께 인용하면 수정 시도 없이도 VERIFICATION_FAILED로 보인다. Gate 단위 판단이라 다른 결함 소유의 실패도 반영된다. 둘 다 완료로 보이지 않는 쪽이다. `verification_history`에는 보류된 PASS가 표시 없이 들어 있다.
+- 업그레이드 시 프로젝트 `.claude/settings.json`의 allow·deny 규칙은 이전 릴리스 경로(예: `dist/vmodel-0.1.3`)를 가리킨 채 남는다. Core 보호는 guard의 Core 경로 검사가 맡지만, 설정 갱신 절차는 SPEC §11에 없다(관찰, 이번 범위 밖).
+- Python 3.11 미검증(§6).

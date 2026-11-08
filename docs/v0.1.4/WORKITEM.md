@@ -191,3 +191,23 @@ F1 (커밋 `2d4f5c6`)
 - 주요, 사실 확인: 위 F3 주요 2와 같은 원인으로 G5가 FAILED인데 CLOSED 표시. → 같은 수정.
 - 부: 재실행 뒤 옛 PASS만 표시, 원장 위조 시 "아직 검증 안 됨" 단정, BLOCKED인데 re-verify 안내. → 수정(현재 기록 표시, UNKNOWN, 차단 해소 안내).
 - 반영 안 함: VERIFIED 이름 변경 제안(사용자가 정한 상태 이름. 사용자 결정 사항으로 보고).
+
+## 9. 추가 작업 (2026-11-09 2차): 결함 표시 상태 6종 (D37)
+
+사용자 지시: VERIFIED가 STALE Gate에서도 쓰이는 문제를 고친다. 상태는 OPEN, FIX_APPLIED, REVERIFY_REQUIRED, VERIFICATION_FAILED, CLOSED, UNKNOWN. 저장 구조 유지, 원장과 현재 Gate에서 파생, 과거 성공 이력은 별도, STALE이면 VERIFIED·CLOSED 금지, 현재 검증 실패면 완료 표시 금지, 원장 무결성 실패면 UNKNOWN, CLI·JSON 호환 고려, Gate 판정·서명 증거 불변. 기존 0.1.4에서 실패하는 RED를 먼저 쓴다.
+
+RED 대상: 첫 0.1.4 빌드(core `b1fee43f…`, `releases/vmodel-0.1.4.json` 43개 파일과 해시 일치를 확인한 뒤 세션 스크래치에 보존). 검토 지적 테스트는 첫 수정본 빌드(`73d158e`, core `144428fb…`)에서도 실패를 확인했다.
+
+| 요구 | 테스트 (`tests/test_defect_display_states.py`) |
+|---|---|
+| STALE → REVERIFY_REQUIRED, VERIFIED·CLOSED 아님, 과거 PASS 유지 | `DisplayStateRed.test_stale_gate_after_closure_is_reverify_required`, `test_upstream_change_after_closure_is_reverify_required`, `DisplayStateChar.test_verified_by_keeps_the_past_pass_when_stale` |
+| 현재 검증 실패 → VERIFICATION_FAILED | `test_failure_after_the_closure_is_verification_failed`, `test_failed_fix_attempt_is_verification_failed_until_a_pass`, `test_three_identical_failures_after_the_fix_is_verification_failed`, `DisplayStateReviewRed.test_upstream_failure_cited_after_the_closure_is_verification_failed`, `test_claimed_fix_rejected_at_g4_is_verification_failed_until_it_passes`, `test_review_required_after_a_failed_reverification_does_not_reset_it`, `test_upstream_repass_does_not_hide_a_downstream_failure`, `test_three_strike_then_user_unblock_says_rework`, `DisplayStateChar.test_another_defects_failure_on_the_closure_gate_is_not_closed` |
+| 무결성 → UNKNOWN (추측 금지) | `test_withheld_verification_is_unknown`, `DisplayStateChar.test_ledger_failure_after_a_failed_reverification_is_unknown`, (기존) `test_defect_closure.test_ledger_failure_is_unknown_not_unverified` |
+| BLOCKED 안내 | `DisplayStateBlockedRed.test_validator_core_change_after_closure_is_reverify_required`, `DisplayStateReviewBlockedRed.test_integrity_block_after_a_failed_reverification_does_not_say_unblock` |
+| 문구: "verified by"는 CLOSED에만, 보류 PASS는 과거 성공 아님 | `test_verified_by_wording_is_reserved_for_closed`, `test_withheld_pass_is_not_shown_as_a_past_success` |
+| status·report·SessionStart 일치 | `test_report_and_session_start_use_the_same_states` |
+| JSON 호환 | `test_json_keeps_old_keys_and_adds_the_history`, `DisplayStateChar.test_json_keeps_the_0_1_3_and_0_1_4_keys`, (기존) `test_version_compat` |
+| 스킬 문구 | `DisplayStateSkillWordingRed.test_skills_name_the_states_that_are_not_closed` |
+| 표시 전용(원장·manifest 불변) | `DisplayStateInvariant.test_display_commands_do_not_touch_ledger_or_manifests`, (기존) `test_version_compat.GateDecisionInvariant` |
+
+독립 검토(별도 컨텍스트, 읽기 전용 worktree): `73d158e`에 대해 주요 0, 부 4건(교차 Gate 실패가 FIX_APPLIED, REVIEW_REQUIRED가 실패를 지움, 무결성 BLOCKED에서 unblock 안내, 보류 PASS를 과거 성공으로 표시)과 nit(Gate 단위 판단, 문구 부분 문자열, 테스트 공백). 부 4건은 재현 후 `c4e4da5`에서 수정했다. Gate 단위 판단은 보수적이라 유지(D37). 재검토(`c4e4da5`): 주요 0, 지적 1~4 해결 확인. 새 nit 중 "상위 Gate 재통과가 하위 실패를 가림"은 `c4e4da5` 빌드에서 실패하는 테스트로 재현한 뒤 `e0358a5`에서 Gate별 판단으로 고쳤다. 교차 Gate 증상 동시 인용(부)은 원장만으로 구분할 수 없어 한계로 남겼다(D37). 검토자의 시나리오 스크립트를 `e0358a5`에 다시 돌려 의도대로인 것을 확인했다. 수치는 TEST_RESULTS §11.

@@ -1,0 +1,1 @@
+Ignoring 3 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects["/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/74506c09-3ee2-404b-87e4-849f0fe9a096/scratchpad/live-e0358a5/한글 드릴 프로젝트"].hasTrustDialogAccepted: true in /home/cyyoo/.claude.json.

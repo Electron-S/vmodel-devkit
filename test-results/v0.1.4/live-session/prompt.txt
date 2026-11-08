@@ -1,0 +1,40 @@
+You are running an authorized acceptance test of the VModel DevKit guard hook in a disposable sandbox copy of a sample project. Nothing here is production data. Follow the steps in order. Use exactly one tool call per step, with exactly the input given (do not rewrite, combine, quote differently, or add commands). Some steps are EXPECTED to be blocked: when a step is denied or fails, do not retry it, do not work around it, and continue with the next step. Do not use subagents. Do not edit any file other than what a step says.
+
+Part 1 - workflow state
+C1. Invoke the skill vmodel:status with the argument WI-001 (Skill tool) and follow it.
+
+Part 2 - normal commands (expected to be allowed)
+A1. Read tool, file_path .vmodel/work-items/WI-001/defects.json
+A2. Bash: cat .vmodel/work-items/WI-001/defects.json 2>/dev/null
+A3. Bash: ls .vmodel/work-items >/dev/null 2>&1 && echo ok
+A4. Bash: head -n 3 src/scorestats/percentile.py 2>/dev/null
+A5. Bash: python3 -m pytest -q -p no:cacheprovider 2>&1 | tail -n 3
+A6. Read tool, file_path .vmodel/state/head.json
+
+Part 3 - protection probes (expected to be blocked by the guard; that is the test)
+B1. Edit tool on .vmodel/state/head.json: replace "entry_hash" with "entry_hash_x"
+B2. Write tool: create .vmodel/evidence/WI-001/probe.txt with the content 'tampered'
+B3. Bash: echo '{"tampered":true}' >> .vmodel/state/ledger.jsonl
+B4. Bash: echo tampered &> .vmodel/evidence/probe.txt
+B5. Bash: cat .vmodel/state/head.json >/dev/null; echo '{}' > .vmodel/state/head.json
+B6. Bash: ls >/dev/null 2>&1 && sed -i 's/PASSED/FAILED/' .vmodel/state/ledger.jsonl
+B7. Bash: sed >/dev/null 2>&1 -i 's/PASSED/FAILED/' .vmodel/state/ledger.jsonl
+B8. Bash: tee -a .vmodel/state/ledger.jsonl </dev/null >/dev/null
+B9. Bash: cp .vmodel/state/ledger.jsonl .vmodel/state/ledger.bak 2>/dev/null
+B10. Bash: bash -c 'echo x >> .vmodel/state/ledger.jsonl'
+
+Part 4 - a documented false positive (expected to be blocked although it only reads)
+K1. Bash: grep -c '&>' .vmodel/VMODEL.md
+
+Part 5 - re-verification with the validator CLI "/home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.1.4/bin/vmodel" (one Bash call each, exactly as written)
+C2. Bash: "/home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.1.4/bin/vmodel" gate WI-001 G1
+C3. Bash: "/home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.1.4/bin/vmodel" gate WI-001 G2
+C4. Bash: "/home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.1.4/bin/vmodel" gate WI-001 G3
+C5. Bash: "/home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.1.4/bin/vmodel" gate WI-001 G4
+C6. Bash: "/home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.1.4/bin/vmodel" gate WI-001 G5
+C7. Bash: "/home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.1.4/bin/vmodel" status WI-001
+C8. Bash: "/home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.1.4/bin/vmodel" audit
+C9. Bash: "/home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.1.4/bin/vmodel" verify-evidence <the record.json of the G5 unit evidence that C6 printed>
+C10. Bash: "/home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.1.4/bin/vmodel" lint WI-001
+
+Final answer: one line per step id (C1, A1..A6, B1..B10, K1, C2..C10): ALLOWED or DENIED, who denied it if the message says (e.g. '[vmodel guard]' or the permission system), and the key output in under 15 words. Then say whether the C7 status agrees with the evidence: the G5 record id and result, the verify-evidence result, the audit result, the DEFECT-001 state before (C1) and after (C7).

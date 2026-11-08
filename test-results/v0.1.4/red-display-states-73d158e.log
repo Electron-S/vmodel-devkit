@@ -1,0 +1,42 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/74506c09-3ee2-404b-87e4-849f0fe9a096/scratchpad/vmodel-0.1.4-pre",
+    "release_manifest": {
+      "version": "0.1.4",
+      "core_hash": "sha256:b1fee43f0073571457be30388a678b37902aeb1e99a53d27764bef15aae8b83e"
+    }
+  },
+  "git_head": "73d158e",
+  "worktree_dirty": false,
+  "python": "3.12.3",
+  "tests": 14,
+  "expectations_met": 14,
+  "violations": 0,
+  "seconds": 83.2
+}
+
+OK  expect=FAIL got=FAIL    test_defect_display_states.DisplayStateBlockedRed.test_validator_core_change_after_closure_is_reverify_required
+      AssertionError: Tuples differ: ('VERIFIED', 'BLOCKED', 'R00015') != ('REVERIFY_REQUIRED', 'BLOCKED', 'R00015')
+OK  expect=ok   got=ok      test_defect_display_states.DisplayStateChar.test_json_keeps_the_0_1_3_and_0_1_4_keys
+OK  expect=ok   got=ok      test_defect_display_states.DisplayStateChar.test_states_before_verification_and_after_closure
+OK  expect=ok   got=ok      test_defect_display_states.DisplayStateChar.test_verified_by_keeps_the_past_pass_when_stale
+OK  expect=ok   got=ok      test_defect_display_states.DisplayStateInvariant.test_display_commands_do_not_touch_ledger_or_manifests
+OK  expect=FAIL got=FAIL    test_defect_display_states.DisplayStateRed.test_failed_fix_attempt_is_verification_failed_until_a_pass
+      AssertionError: 'FIX_APPLIED' != 'VERIFICATION_FAILED'
+OK  expect=FAIL got=FAIL    test_defect_display_states.DisplayStateRed.test_failure_after_the_closure_is_verification_failed
+      AssertionError: 'VERIFIED' != 'VERIFICATION_FAILED'
+OK  expect=FAIL got=FAIL    test_defect_display_states.DisplayStateRed.test_json_keeps_old_keys_and_adds_the_history
+      AssertionError: 'verification_history' not found in {'id': 'DEFECT-001', 'gate': 'G5', 'claimed_status': 'fixed', 'root_cause_phase': 'P4', 'found_in_records': ['R00012'], 'citations': [{'record': 'R00012', 'gate': 'G5', 'status': 'FAILED', 'valid': True, 'test_results': 'recorded', 'failing_tests': ['TEST-009'], 'unknown_tests': [], 'recorded_tests': ['TEST-001', 'TEST-002', 'TEST-003', 'TEST-004
+OK  expect=FAIL got=FAIL    test_defect_display_states.DisplayStateRed.test_report_and_session_start_use_the_same_states
+      AssertionError: 'closure: REVERIFY_REQUIRED' not found in "# WI-001 — 단어 빈도 기능\n\n- Status: **IN_PROGRESS** (profile STANDARD)\n- Generated: 2026-11-08T21:14:09+00:00 by vmodel 0.1.4 (release, core `b1fee43f0073`)\n- Validator integrity: OK; ledger: OK\n\n> MVP scope: only G1-G5 are implemented. G6 (integration) and G7 (system) are extension gates, so a work item can reach PARTIALLY_VERIFIED at mo
+OK  expect=FAIL got=FAIL    test_defect_display_states.DisplayStateRed.test_stale_gate_after_closure_is_reverify_required
+      AssertionError: 'VERIFIED' != 'REVERIFY_REQUIRED'
+OK  expect=FAIL got=FAIL    test_defect_display_states.DisplayStateRed.test_three_identical_failures_after_the_fix_is_verification_failed
+      AssertionError: 'FIX_APPLIED' != 'VERIFICATION_FAILED'
+OK  expect=FAIL got=FAIL    test_defect_display_states.DisplayStateRed.test_upstream_change_after_closure_is_reverify_required
+      AssertionError: 'VERIFIED' != 'REVERIFY_REQUIRED'
+OK  expect=FAIL got=FAIL    test_defect_display_states.DisplayStateRed.test_withheld_verification_is_unknown
+      AssertionError: 'FIX_APPLIED' != 'UNKNOWN'
+OK  expect=FAIL got=FAIL    test_defect_display_states.DisplayStateSkillWordingRed.test_skills_name_the_states_that_are_not_closed
+      AssertionError: 'REVERIFY_REQUIRED' not found in '---\nname: start\ndescription: Start or continue VModel DevKit V-Model development (requirements -> architecture -> design & test specs -> implementation -> unit verification, each gated by an independent validator). Use when the user asks to develop or implement a feature, substantively change existing behaviour, fix a bug, change the architecture

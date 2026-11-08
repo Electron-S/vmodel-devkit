@@ -1,0 +1,64 @@
+{
+  "at": "2026-11-08T21:59:16+00:00",
+  "release": "/home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.1.4",
+  "release_digest": "32a154a52442bdb3430c5f036aed727c53e4a6ec19672353b4cc9d473189102f",
+  "drill": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/3327e00b-02b2-4423-87ce-b721cf6936c2/scratchpad/drill-3",
+  "anchor_copied": true,
+  "baseline_0_1_3": {
+    "status": "Project: /tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/74506c09-3ee2-404b-87e4-849f0fe9a096/scratchpad/live-e0358a5/한글 드릴 프로젝트\nValidator: 0.1.3 (release) core 0208c7988516 integrity OK\nLedger: OK (18 entries)\n\nWI-001 [PARTIALLY_VERIFIED] 점수 백분위수 계산(nearest-rank) (profile STANDARD)\n  G1 Requirements                     PASSED           R00014 @ 2026-11-08T12:58:44.225Z\n  G2 Architecture                     PASSED           R00015 @ 2026-11-08T12:58:44.248Z\n  G3 Detailed Design & Test Planning  PASSED           R00016 @ 2026-11-08T12:58:44.264Z\n  G4 Implementation                   PASSED           R00017 @ 2026-11-08T12:58:44.328Z\n  G5 Unit Verification                PASSED           R00018 @ 2026-11-08T12:58:45.150Z\n  G6 Integration Verification         NOT_IMPLEMENTED \n      - extension gate, not implemented in the MVP\n  G7 System Verification              NOT_IMPLEMENTED \n      - extension gate, not implemented in the MVP\n  DEFECT-001 [fixed; verified by R00013] G5 root cause P4; failing tests (ledger): TEST-001, TEST-002, TEST-010, TEST-011, TEST-012\n  next: G1-G5 verified. G6+ are extension gates (not implemented); report PARTIALLY_VERIFIED.\n\nMVP scope: only G1-G5 are implemented. G6 (integration) and G7 (system) are extension gates, so a work item can reach PARTIALLY_VERIFIED at most. This is NOT a full V-Model completion.\n",
+    "audit": [
+      0,
+      "audit: validator 0.1.3 release core 0208c7988516; 18 ledger entries; 6 evidence record(s) checked\naudit OK\n"
+    ]
+  },
+  "before_repin_new_core": "Project: /tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/74506c09-3ee2-404b-87e4-849f0fe9a096/scratchpad/live-e0358a5/한글 드릴 프로젝트\nValidator: 0.1.4 (release) core 5dd1d010cc57 integrity FAILED\n  ! validator core hash does not match .vmodel/devkit.lock.json (locked sha256:0208c7988516f050d2eabf8c50704d9e36be7c4d6eb94b4ff098dc7c2c73e0ea, running sha256:5dd1d010cc57c477c6a96e3c989eed49d09fc31c51e09f5d785d9b132db1e997); the validator was modified or a different version is running. A user must re-pin with 'vmodel lock --accept-current' in a terminal.\nLedger: OK (18 entries)\n\nWI-001 [BLOCKED] 점수 백분위수 계산(nearest-rank) (profile STANDARD); defect checks: 0 error(s), 0 warning(s)\n  G1 Requirements                     BLOCKED         \n      - validator core hash does not match .vmodel/devkit.lock.json (locked sha256:0208c7988516f050d2eabf8c50704d9e36be7c4d6eb94b4ff098dc7c2c73e0ea, running sha256:5dd1d010cc57c477c6a96e3c989eed49d09fc31c51e09f5d785d9b132db1e997); the validator was modified or a different version is running. A user must re-pin with 'vmodel lock --accept-current' in a terminal.\n  G2 Architecture                     BLOCKED         \n      - validator core hash does not match .vmodel/devkit.lock.json (locked sha256:0208c7988516f050d2eabf8c50704d9e36be7c4d6eb94b4ff098dc7c2c73e0ea, running sha256:5dd1d010cc57c477c6a96e3c989eed49d09fc31c51e09f5d785d9b132db1e997); the validator was modified or a different version is running. A user must re-pin with 'vmodel lock --accept-current'",
+  "repin_by_user_tty": "yes\r\nType 'yes' to re-pin the validator core hash (all previous PASS results become STALE): re-pinned core 5dd1d010cc57 (validator 0.1.4)\r\n",
+  "after_repin": {
+    "wi_status": "IN_PROGRESS",
+    "gates": {
+      "G1": "STALE",
+      "G2": "STALE",
+      "G3": "STALE",
+      "G4": "STALE",
+      "G5": "STALE",
+      "G6": "NOT_IMPLEMENTED",
+      "G7": "NOT_IMPLEMENTED"
+    },
+    "defects": [
+      {
+        "id": "DEFECT-001",
+        "closure_state": "REVERIFY_REQUIRED",
+        "closure_gate_status": "STALE",
+        "verified_by": "R00013",
+        "verification_history": [
+          "R00013",
+          "R00018"
+        ]
+      }
+    ],
+    "status_text": [
+      "DEFECT-001 REVERIFY_REQUIRED [claimed fixed; previously passed in R00013 (last PASS R00018), G5 is now STALE: re-verify] G5 root cause P4; failing tests (ledger): TEST-001, TEST-002, TEST-010, TEST-011, TEST-012"
+    ],
+    "audit": [
+      0,
+      "audit: validator 0.1.4 release core 5dd1d010cc57; 19 ledger entries; 6 evidence record(s) checked\naudit OK\n"
+    ]
+  },
+  "pre_session": {
+    "ledger": "sha256:dd8bdfdafbcf45601e28eb3756bd95aaf50bc049143a98a0831441c0dd61d152",
+    "ledger_bytes": 48375,
+    "ledger_records": 19,
+    "head": "sha256:6aab5d5971fac189c687287be3f56698528efbe5cbbc5decca144decf2444ef1",
+    "state_files": [
+      "head.json",
+      "ledger.jsonl"
+    ],
+    "evidence_digest": "27300b8d50932fbb5ebdcd05a0c5522e6ad931a79969d260d146d7c90b5848c5",
+    "config": "sha256:15797b45a29591445b7cc1091436213908d5c0573eb8d7b2487339d86c3b3e0f",
+    "lock": "sha256:fecf15b807555bf3e3d431f3b5fc18b448273c37dc073d6b9723e1f2db2a0e5f"
+  },
+  "original_unchanged": {
+    "project": true,
+    "home": true
+  }
+}
