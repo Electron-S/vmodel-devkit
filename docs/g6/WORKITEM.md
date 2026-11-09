@@ -254,6 +254,17 @@ REQ-G6-01~26은 설계 문서 §2가 정본이다. 아래는 바뀐 것과 새�
 
 검토자가 맞다고 확인한 것: trace 판독 퍼즈 300회 무크래시, spawned 프로세스의 경계 줄 무시, 스냅샷 단일 판독·해시, `parse`/`parse_all` 구분, 스레드 풀 패치의 동작 보존(결과·예외·run_in_executor, 20만 회 제출 1.7배 부하), `_test_windows` 8000 테스트 1.4초, forkserver·재사용 fork 풀은 이제 보수적(detached).
 
+### 7.6 6회차 (`e8a5a7e`)
+5회차 새 지적 중 N1·N1b·N2·N3(그 시나리오)·N7 닫힘, N4/N5는 문서화대로 BLOCKED, N8 보수적. 새 지적 HIGH 1, MEDIUM 4(그중 1은 설계 판단), 내부 오류 0. 검토자 재현 파일을 바탕으로 `tests/test_g6_review6.py`로 직접 재현(RED 대상 `e8a5a7e`, 5/5, `2b2b123`). 검토자의 M3(conftest `pytest_pyfunc_call`)는 G4.TEST_INTEGRITY가 이미 막아 G6에 이르지 않으므로 지적에서 뺐다(직접 실행해 G4 FAILED 확인).
+
+| 지적 | 처리 |
+|---|---|
+| M1 HIGH: 생성자가 부르는 일반 메서드(`__init__` → `_compile`)가 인터페이스 실행으로 셈(N3 불완전) | 연결·provider 실행 기록의 함수를 "진입 함수"(consumer나 테스트가 들어간 가장 바깥 provider 함수)로. 생성자에서 불린 도우미는 생성자로 기록돼 제외 |
+| M2(회귀): 테스트 파일·conftest의 데코레이터 래퍼가 가장 바깥 앵커가 되어 거짓 BLOCKED | 앵커를 스택의 테스트 파일 함수 집합으로 기록, 그중 하나가 허용 앵커면 인정 |
+| M4(회귀, 검토 번호 M3/M4): `PYTEST_PLUGINS`가 테스트 안의 중첩 pytest로 새어 ImportError → 거짓 FAILED | 플러그인이 로드되면 그 환경 변수를 지움(자식에 상속 안 됨) |
+| M5/M6: 거친 벽시계(Windows CPython 3.12 이하)에서 subprocess 시험이 자주 BLOCKED(시뮬레이션) | 모든 줄과 경계에 `perf_counter_ns`(시스템 단조 고해상도) 기록, 경계가 모두 갖고 있으면 그것으로 비교 |
+| M7(설계 판단): 요청한 fixture가 연결을 실행하고 테스트 몸체는 provider를 목으로 대체 | 보수 쪽 선택: 테스트 함수가 provider를 patch하면(G4 정적 탐지) 요청 fixture에서만 일어난 연결은 세지 않음. 사용자 확인 사항으로 보고 |
+
 ## 8. 실전 E2E 계획 (D8, 실행은 별도 승인)
 - 예산: sonnet 최대 2회, 회당 `--max-budget-usd 2`, 합계 $4 상한. `--permission-mode auto`, `--setting-sources project,local`, `--plugin-dir dist/vmodel-0.2.0`, `--dangerously-skip-permissions` 금지. 실행 전 모델 호출 없는 준비(setup)와 기대 판정 확인을 먼저 한다.
 - 시나리오 A (Provider/Consumer, G6 실패 → 결함 → 수정 → 재검증): 기존 코드가 있는 프로젝트(점수 파서 모듈과 그 통합 테스트가 이미 `tests/integration/`에 있어 `init`이 실제 경로를 등록 — D3 규칙을 그대로 지킴)에 "파서 결과를 소비하는 요약 보고 CLI를 추가해줘"를 요청한다. 파서의 오류 계약(형식 오류 줄 번호)과 소비 측 처리 사이의 불일치를 하나 미리 심어(D26 블라인드 시딩, 세션 프롬프트에 알리지 않음) 단위 테스트는 통과하고 IF 통합 테스트에서 드러나게 한다. 기대: G1~G5 PASSED → G6 FAILED(TEST_MAPPING·RESULTS) → DEFECT(gate G6, IF·TEST 연결) → 수정 → G4 재리뷰 → G5 → G6 PASSED, 결함 CLOSED. 관찰: placeholder·import-only 테스트를 쓰는지, 통합 테스트가 경로 A인지, verifier가 `interfaces` 항목을 쓰는지, guard 우회 0.

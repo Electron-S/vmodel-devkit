@@ -328,7 +328,8 @@ class TracerBase(unittest.TestCase):
         for f in sorted(self.out.glob("*.jsonl")):
             out += [json.loads(x) for x in f.read_text(encoding="utf-8").splitlines()[1:]]
         for r in out:
-            r.pop("ts", None)  # wall clock (review 4): compared without it
+            r.pop("ts", None)
+            r.pop("tc", None)  # wall clock (review 4): compared without it
         return [r for r in out if "b" not in r]  # test boundaries are checked separately
 
     def edges(self) -> list[tuple]:

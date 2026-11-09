@@ -51,7 +51,8 @@ class TracerAccept(unittest.TestCase):
             lines = f.read_text(encoding="utf-8").splitlines()
             out += [json.loads(x) for x in lines[1:]]
         for r in out:
-            r.pop("ts", None)  # 0.2.0 review 4: lines carry a wall-clock time; compared without it
+            r.pop("ts", None)
+            r.pop("tc", None)  # 0.2.0 review 4: lines carry a wall-clock time; compared without it
         return [r for r in out if "b" not in r]  # and test boundary lines (the pytest process only)
 
     def test_function_calls_are_attributed_to_the_test_and_children_are_traced(self):

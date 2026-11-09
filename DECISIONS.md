@@ -332,7 +332,8 @@ D39의 결정안에 대한 사용자 결정이다. 확정 설계(요구사항 RE
    - 경로 A, EXTERNAL consumer: provider 심볼 함수가 그 테스트에서 실행됨.
    - 경로 B: 호출 단계에서 provider 심볼 함수 실행(subprocess·ipc는 테스트와 다른 프로세스) + consumer 실행.
    - "그 테스트에서": 메인 스레드는 `PYTEST_CURRENT_TEST`, 다른 스레드는 그 스레드를 시작한 테스트, 스레드 풀 작업은 제출한 테스트, 자식 프로세스는 그 테스트의 단계 구간 안에서 한 일만(Validator 소유 pytest 플러그인 `vmodel_trace_plugin`이 `PYTEST_PLUGINS`로 실려 모든 테스트의 setup/call/teardown 시작과 끝을 기록하고, 자식 줄은 시각으로 다시 읽는다: call 구간 안이면 call, 밖이면 setup/teardown/detached, 경계와 같은 시각은 credit 없음, 경계가 없으면 귀속 안 함).
-   - 그리고 "그 테스트 자신이 한 일"이어야 한다(5회차 N7): 연결·provider 실행 기록의 앵커(호출 스택의 가장 바깥 통합 테스트 파일·conftest 함수, 스레드·풀 작업은 시작·제출한 스택에서 상속)가 테스트 함수 자신이거나 그 테스트가 요청한 fixture·setUp이어야 한다. autouse·요청하지 않은 fixture가 한 일은 Suite-level.
+   - 기록하는 provider 함수는 실행이 시작된 함수가 아니라 진입 함수(consumer나 테스트가 들어간 가장 바깥 provider 함수)다. 생성자가 부르는 도우미는 생성자로 기록돼 인터페이스 실행이 아니다(6회차 M1). 줄마다 `perf_counter_ns`도 기록해 거친 벽시계 대신 비교한다(6회차 M5·M6).
+   - 그리고 "그 테스트 자신이 한 일"이어야 한다(5회차 N7): 연결·provider 실행 기록의 앵커(호출 스택의 가장 바깥 통합 테스트 파일·conftest 함수, 스레드·풀 작업은 시작·제출한 스택에서 상속)가 테스트 함수 자신이거나 그 테스트가 요청한 fixture·setUp이어야 한다. autouse·요청하지 않은 fixture가 한 일은 Suite-level. 앵커는 스택의 테스트 파일 함수 집합이라 데코레이터 래퍼가 가리지 않는다(6회차 M2). 요청한 fixture에서만 연결이 일어났고 테스트 함수가 provider를 patch하면(G4 정적 탐지) 세지 않는다(6회차 M7, 보수 쪽 설계 판단, 사용자 확인 사항).
 3. provider는 인터페이스 심볼이다: 시그니처의 def/class와 인정된 G4 리뷰의 `provider_symbols`(그 메서드·중첩 함수 포함, 단 생성자·객체 프로토콜 메서드는 제외; 메서드 이름 시그니처는 provider 파일의 그 이름 메서드). provider 파일의 아무 함수나 import 시점 도우미는 근거가 아니다(검토 4회차 H4·H2, 5회차 N2·N3).
 4. 서명 증거: 계측은 실행 폴더의 `trace-live/`에 쓰고, Validator가 실행 직후 한 번 읽은 바이트를 `trace/`에 스냅샷해 그것으로 판정하고 해시·서명한다. 실행 뒤에도 살아 있는 프로세스가 서명된 증거를 바꾸지 못한다(M5).
 5. 함께 고친 것(4회차): 노드 ID의 `[`는 파일 부분 뒤에서만 매개변수로 자름(M3), 읽을 수 없는 최상위 디렉터리로 인한 내부 오류 제거(M4), `mocker.patch`·내장 `setattr`·`module.symbol = fake`를 provider patch 경고로(M6), `pytest.ini`·`tox.ini`·`setup.cfg`의 pythonpath(L1), if 분기에서 묶지 않은 이름은 이전 바인딩 유지(L2). pytest 프로세스 계측 파일이 잘렸거나 없으면 자식 프로세스 줄은 귀속하지 않는다(보수).

@@ -5,9 +5,15 @@ to the runtime tracer. It only observes: at the start of every test's setup, cal
 test it asks the tracer (sitecustomize in this directory) to write a boundary line with the wall-clock time, so the
 validator can tell whether a line written by a child process belongs to that test's call. Any problem is swallowed.
 """
+import os
 import sys
 
 import pytest
+
+# loaded: children of the test run must not inherit the setting (a nested pytest with its own PYTHONPATH cannot import
+# this module; review 6 M4). The validator's environment drops any PYTEST_* of the agent, so the value is ours.
+if os.environ.get("PYTEST_PLUGINS") == "vmodel_trace_plugin":
+    del os.environ["PYTEST_PLUGINS"]
 
 
 def _mark(nodeid, phase):

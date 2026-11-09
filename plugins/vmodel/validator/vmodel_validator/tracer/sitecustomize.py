@@ -9,16 +9,20 @@ submitted it, in that test's live phase ("detached" once another test runs). One
 function); a forked child writes its own file; past the record limit a {"truncated": true} line is written. Module
 and class bodies are not counted, so importing a module is not execution.
 
-Connections (D44, review 5): for a provider file named in the spec's "providers", each time one of its functions
+Connections (D44, reviews 5-6): for a provider file named in the spec's "providers", each time one of its functions
 starts the tracer walks the call stack (and takes what was inherited from the stack that started the thread or
-submitted the pool work item it runs in): the consumer functions of that provider on it, and the anchor, the outermost
-function of an integration test file or conftest.py ("tests" in the spec). It writes {"e": provider file, "f":
-function, "a": anchor} (the provider ran) and {"e", "f", "c": consumer file, "a"} (a consumer called it), one line per
-(test, phase, file, function, consumer, anchor). The validator counts these only when the anchor is the test function
-itself or a fixture/setUp it requested, never an autouse fixture. Stack scans per (test, phase, function) stop once the
-test's own anchor has been seen with every consumer, or at the cap ({"edge_scan_capped": ...}: absence is not proof).
+submitted the pool work item it runs in). It writes {"e": provider file, "f": entry, "a": anchors} (the provider ran)
+and {"e", "f": entry, "c": consumer file, "a"} (a consumer called it). The entry is the outermost provider-file function
+between the starting function and the consumer (for "ran": on the whole stack): the interface function actually
+called, so a helper run by a constructor is recorded as the constructor (review 6 M1). The anchors are the functions of
+integration test files and conftest.py ("tests" in the spec) on the stack: the validator counts a line only when one of
+them is the test function or a fixture/setUp it requested, never only an autouse fixture (review 5 N7; a set, so a
+decorator wrapper around the test does not hide it, review 6 M2). One line per (test, phase, file, entry, consumer,
+anchors). Stack scans per (test, phase, function) stop once the function was entered directly with the test's own
+anchor for every consumer, or at the cap ({"edge_scan_capped": ...}: absence is not proof).
 
-Time (review 4/5): every line carries "ts" (wall clock). A process started during a test (it inherits
+Time (reviews 4-6): every line carries "ts" (wall clock) and "tc" (time.perf_counter_ns(), the system-wide monotonic
+high-resolution counter, compared instead of the wall clock: Windows CPython <= 3.12 has a 15.6 ms wall clock). A process started during a test (it inherits
 PYTEST_CURRENT_TEST, header "spawned_in") keeps that test id for its whole life, so the validator re-reads its lines
 against exact test phase boundaries written by the validator's pytest plugin (vmodel_trace_plugin.py, loaded through
 PYTEST_PLUGINS): a line outside that test's phases is "detached", one inside its call is "call".
@@ -141,38 +145,42 @@ def _vmodel_trace_install():
             return lab
 
     def inherited():
-        """(consumer labels, anchor) from the stack that started this thread or submitted the pool work item it runs."""
+        """(consumer labels, anchors) from the stack that started this thread or submitted the pool work item it runs."""
         if threading.get_ident() == threading.main_thread().ident:
-            return frozenset(), None
+            return frozenset(), frozenset()
         via = getattr(local, "via", unset)
         if via is unset:
             th = this_thread()
             via = getattr(th, "_vmodel_via", None) if th is not None else None
-        return via or (frozenset(), None)
+        return via or (frozenset(), frozenset())
 
-    def stack_info(frame):
-        """Consumer labels of the functions on the stack and the outermost test-file function (the anchor)."""
-        found, anchor, n = set(), None, 0
+    def stack_info(frame, prov=None, entry=None):
+        """Walk from `frame` to the root: {consumer label: entry} (the outermost function of the provider file `prov`
+        seen before that consumer), the outermost provider-file function, and the test-file functions (anchors)."""
+        cons, anchors, n = {}, set(), 0
         while frame is not None and n < stack_depth:
             code = frame.f_code
             if code.co_flags & 0x1:  # functions only: a module body importing is not a call, as in record()
                 lab = label_of(code.co_filename)
-                if lab in consumers:
-                    found.add(lab)
-                elif lab in test_labels:
-                    anchor = getattr(code, "co_qualname", code.co_name)  # keeps the outermost one
+                if lab is not None:
+                    if lab == prov:
+                        entry = getattr(code, "co_qualname", code.co_name)
+                    elif lab in consumers:
+                        cons.setdefault(lab, entry)
+                    elif lab in test_labels and len(anchors) < 16:
+                        anchors.add(getattr(code, "co_qualname", code.co_name))
             frame = frame.f_back
             n += 1
-        return found, anchor
+        return cons, entry, anchors
 
     def via_here(frame):
-        """What a thread started / a work item submitted from here inherits: the consumers on this stack and the
-        anchor (the starter's own inheritance first: a thread's root is where it was started from)."""
+        """What a thread started / a work item submitted from here inherits: consumers and anchors on this stack plus
+        the starter's own inheritance."""
         if not providers:
-            return frozenset(), None
-        found, anchor = stack_info(frame)
+            return frozenset(), frozenset()
+        cons, _e, anchors = stack_info(frame)
         inh_c, inh_a = inherited()
-        return frozenset(found) | inh_c, (inh_a if inh_a is not None else anchor)
+        return frozenset(cons) | inh_c, frozenset(anchors) | inh_a
 
     def write(key, obj):
         """One line per new key; past the limits one truncation line (the validator must not read absence as proof)."""
@@ -182,7 +190,8 @@ def _vmodel_trace_install():
         with lock:
             if key in seen or state["full"]:
                 return
-            line = json.dumps({**obj, "ts": round(time.time(), 6)}, ensure_ascii=True) + "\n"
+            line = json.dumps({**obj, "ts": round(time.time(), 6), "tc": time.perf_counter_ns()},
+                              ensure_ascii=True) + "\n"
             if len(seen) >= limit or state["bytes"] + len(line) > byte_limit:
                 state["full"] = True
                 state["out"].write(json.dumps({"truncated": True}) + "\n")
@@ -207,16 +216,20 @@ def _vmodel_trace_install():
         if n >= scan_limit:
             return
         state["scans"][k] = n + 1
-        found, anchor = stack_info(frame.f_back if frame is not None else None)
+        cons, entry, anchors = stack_info(frame, lab, func)
         inh_c, inh_a = inherited()
-        anchor = inh_a if inh_a is not None else anchor
-        write(("r", test, phase, lab, func, anchor), {"t": test, "p": phase, "e": lab, "f": func, "a": anchor})
-        for c in (frozenset(found) | inh_c) & want:
-            write(("e", test, phase, lab, func, c, anchor), {"t": test, "p": phase, "e": lab, "f": func, "c": c,
-                                                             "a": anchor})
-            if anchor == own:
-                done.add(c)
-        if anchor == own:
+        for c in inh_c - set(cons):
+            cons[c] = entry  # a consumer that started this thread / submitted this work item
+        anchors = tuple(sorted(set(anchors) | inh_a))
+        a = list(anchors)
+        write(("r", test, phase, lab, entry, anchors), {"t": test, "p": phase, "e": lab, "f": entry, "a": a})
+        for c, c_entry in cons.items():
+            if c in want:
+                write(("e", test, phase, lab, c_entry, c, anchors), {"t": test, "p": phase, "e": lab, "f": c_entry,
+                                                                     "c": c, "a": a})
+                if own in anchors and c_entry == func:  # entered directly by the consumer within the test itself
+                    done.add(c)
+        if own in anchors and entry == func:
             done.add("ran")
         if n + 1 == scan_limit and not ("ran" in done and done >= want):
             write(("cap", test, phase, lab, func), {"edge_scan_capped": True, "t": test, "p": phase, "e": lab,

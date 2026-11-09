@@ -395,6 +395,7 @@ class R5TracerAccept(unittest.TestCase):
             out += [json.loads(x) for x in f.read_text(encoding="utf-8").splitlines()[1:]]
         for r in out:
             r.pop("ts", None)
+            r.pop("tc", None)
         return out
 
     def test_anchor_is_the_outermost_test_file_function(self):
@@ -402,10 +403,10 @@ class R5TracerAccept(unittest.TestCase):
                                  "os.environ['PYTEST_CURRENT_TEST'] = 'test_file.py::test_TEST_002_b (call)'\n"
                                  "test_file.test_TEST_002_b()\n"], "test_file.py::test_TEST_001_a (call)")
         self.assertEqual(res.returncode, 0, res.stderr)
-        edges = sorted((r["a"], r["c"]) for r in self.lines() if "c" in r)
+        edges = sorted((tuple(r["a"]), r["c"]) for r in self.lines() if "c" in r)
         # the thread started inside test_TEST_002_b inherits that anchor (its own stack has no test-file frame)
-        self.assertEqual(edges, [("test_TEST_001_a", "cons.py"), ("test_TEST_002_b", "cons.py"),
-                                 ("warm_up", "cons.py")], RED)
+        self.assertEqual(edges, [(("test_TEST_001_a",), "cons.py"), (("test_TEST_002_b",), "cons.py"),
+                                 (("warm_up",), "cons.py")], RED)
 
     def test_pytest_plugin_writes_phase_boundaries(self):
         res = self.run_py(["-m", "pytest", "-q", "-p", "no:cacheprovider", "test_file.py"], None, plugins=True)
@@ -414,8 +415,8 @@ class R5TracerAccept(unittest.TestCase):
         self.assertEqual(b, [(t, p) for t in ("test_TEST_001_a", "test_TEST_002_b")
                              for p in ("setup", "call", "teardown", "end")], RED)
         # inside pytest the anchor is the test function itself
-        self.assertIn(("test_file.py::test_TEST_001_a", "call", "test_TEST_001_a"),
-                      [(r["t"], r["p"], r["a"]) for r in self.lines() if "c" in r])
+        self.assertIn(("test_file.py::test_TEST_001_a", "call", ("test_TEST_001_a",)),
+                      [(r["t"], r["p"], tuple(r["a"])) for r in self.lines() if "c" in r])
 
 
 if __name__ == "__main__":

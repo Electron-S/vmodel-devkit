@@ -1883,8 +1883,9 @@ def _phase_in(runs: list[dict], ts: float) -> str:
 
 def read_runtime_trace(trace_dir: Path, prior_errors: list[str] | None = None, prior_oversized: int = 0) -> dict:
     """The tracer files (written inside the processes under test, hashed into the signed evidence). In memory:
-    `_events` (pytest node id, phase, process file, watched file, function), `_edges` (node id, phase, provider file,
-    provider function, consumer file or None, anchor), `_ran` (watched file, function) run anywhere. A process started during a test
+    `_events` (pytest node id, phase, process file, watched file, function), `_edges` (node id, phase, process file,
+    provider file, provider entry function, consumer file or None, anchors), `_ran` (watched file, function) run
+    anywhere. A process started during a test
     keeps that test id for its whole life, so its lines are re-read against the pytest process's test boundaries:
     after the test ended -> "detached", during its call -> "call" (review 4 H3/M1). `truncated`: some process hit the
     record limit, so the absence of a record is not evidence that something did not run."""
@@ -1922,47 +1923,56 @@ def read_runtime_trace(trace_dir: Path, prior_errors: list[str] | None = None, p
             if not isinstance(r, dict):
                 errors.append(f"{f.name}: unreadable line")
                 continue
-            t, ts = r.get("t"), _ts(r.get("ts"))
+            t, ts = r.get("t"), (_ts(r.get("ts")), r.get("tc") if type(r.get("tc")) is int else None)
             if r.get("truncated") is True:
                 truncated = True
                 windows_complete = windows_complete and spawned
             elif isinstance(r.get("b"), str):
-                if not spawned and ts is not None:
+                if not spawned and ts[0] is not None:
                     boundaries.setdefault(f.name, []).append((ts, r["b"], str(r.get("p") or "")))
             elif r.get("edge_scan_capped") is True:
                 if isinstance(t, str):
                     capped.add(t)
             elif isinstance(r.get("e"), str):  # a provider function ran (c absent) or a consumer called it (c)
                 c, anchor = r.get("c"), r.get("a")
-                if isinstance(t, str) and (c is None or isinstance(c, str)) and (anchor is None or isinstance(anchor, str)):
-                    raw_edges.append((t, str(r.get("p") or ""), r["e"], str(r.get("f") or ""), c, anchor, ts, spawned))
+                anchors = (anchor,) if isinstance(anchor, str) else tuple(
+                    sorted(x for x in anchor if isinstance(x, str))) if isinstance(anchor, list) else ()
+                if isinstance(t, str) and (c is None or isinstance(c, str)):
+                    raw_edges.append((t, str(r.get("p") or ""), f.name, r["e"], str(r.get("f") or ""), c, anchors, ts,
+                                      spawned))
             elif isinstance(r.get("m"), str):
                 ran_files.add(r["m"])
                 ran.add((r["m"], str(r.get("f"))))
                 if isinstance(t, str):
                     tests.setdefault(t, set()).add(r["m"])
                     raw_events.append((t, str(r.get("p") or ""), f.name, r["m"], str(r.get("f")), ts, spawned))
-    windows = _test_windows(boundaries)
+    # review 6 M5/M6: compare on the monotonic high-resolution counter when every boundary carries it (a coarse wall
+    # clock would put child lines on boundary ticks, never credited); otherwise on the wall clock
+    use_tc = bool(boundaries) and all(ts[1] is not None for seq in boundaries.values() for ts, _t, _p in seq)
+    key = 1 if use_tc else 0
+    windows = _test_windows({f: [(ts[key], t, ph) for ts, t, ph in seq] for f, seq in boundaries.items()})
     if spawned_files and (spawned_files == procs - oversized or not boundaries):
         windows_complete = False  # no pytest-process boundaries (plugin not loaded, not pytest): not attributable
     moved: dict[str, int] = {}
 
-    def phase_of(t: str, ph: str, ts: float | None, spawned: bool) -> str:
+    def phase_of(t: str, ph: str, tsc: tuple, spawned: bool) -> str:
         """A line of a process started during a test is re-read against that test's runs (review 4 H3, review 5 N1):
         its inherited phase says only when the process started."""
         if not spawned:
             return ph
+        ts = tsc[key]
         new = _phase_in(windows.get(t) or [], ts) if windows_complete and ts is not None else "detached"
         if new != ph:
             moved[new] = moved.get(new, 0) + 1
         return new
 
     events = [(t, phase_of(t, ph, ts, sp), fn, m, func) for t, ph, fn, m, func, ts, sp in raw_events]
-    edges = [(t, phase_of(t, ph, ts, sp), e, func, c, a) for t, ph, e, func, c, a, ts, sp in raw_edges]
+    edges = [(t, phase_of(t, ph, ts, sp), fn, e, func, c, a) for t, ph, fn, e, func, c, a, ts, sp in raw_edges]
     return {"active": procs > 0, "processes": procs, "spawned_processes": spawned_files, "methods": sorted(methods),
             "truncated": truncated, "ran_files": sorted(ran_files),
             "tests": {t: sorted(v) for t, v in sorted(tests.items())}, "edges": len(edges),
             "edge_scan_capped": sorted(capped)[:20], "test_boundaries": sum(len(v) for v in boundaries.values()),
+            "boundary_clock": "perf_counter_ns" if use_tc else "wall",
             "spawned_lines_reattributed": moved, "errors": errors[:20], "_events": events, "_edges": edges,
             "_ran": ran}
 
@@ -1978,8 +1988,9 @@ def test_function_of(nodeid: str) -> str:
 def trace_by_test(rt: dict) -> dict[str, dict]:
     """TEST id -> what ran during the pytest tests named with exactly that id: `functions` (file::qualname, any
     phase) with the processes they ran in, `ran` ((file, function) in any phase of the test's own execution), `call`
-    ((file, function) -> processes, call phase), `edges` ((provider file, provider function, consumer file, anchor))
-    and `prov_runs` ((provider file, provider function, anchor)). The tracer attributes another thread to the test
+    ((file, function) -> processes, call phase), `edges` ((provider file, entry function, consumer file, anchors)),
+    `prov_runs` ((provider file, entry function, anchors)) and `prov_calls` ((provider file, entry function) ->
+    processes, call phase). The tracer attributes another thread to the test
     that started it and a pool work item to the test that submitted it."""
     out: dict[str, dict] = {}
 
@@ -1988,7 +1999,7 @@ def trace_by_test(rt: dict) -> dict[str, dict]:
         if len(ids) != 1:
             return None
         return out.setdefault(next(iter(ids)), {"functions": {}, "call": {}, "ran": set(), "edges": set(),
-                                                "prov_runs": set()})
+                                                "prov_runs": set(), "prov_calls": {}})
 
     for nodeid, phase, proc, label, func in rt.get("_events") or []:
         d = entry(nodeid)
@@ -1999,14 +2010,16 @@ def trace_by_test(rt: dict) -> dict[str, dict]:
             d["ran"].add((label, func))
         if phase == "call":
             d["call"].setdefault((label, func), set()).add(proc)
-    for nodeid, phase, provider, func, consumer, anchor in rt.get("_edges") or []:
+    for nodeid, phase, proc, provider, func, consumer, anchors in rt.get("_edges") or []:
         d = entry(nodeid)
         if d is None or phase == "detached":
             continue
         if consumer is None:
-            d["prov_runs"].add((provider, func, anchor))
+            d["prov_runs"].add((provider, func, anchors))
+            if phase == "call":
+                d["prov_calls"].setdefault((provider, func), set()).add(proc)
         else:
-            d["edges"].add((provider, func, consumer, anchor))
+            d["edges"].add((provider, func, consumer, anchors))
     return out
 
 
@@ -2239,12 +2252,13 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
     if_view = []
     levels_data: dict[str, dict] = {}
     ran_all: set[tuple[str, str]] = set(rt.get("_ran") or set())
+    ran_entries = {(e, fn) for _t, _ph, _f, e, fn, c, _a in rt.get("_edges") or [] if c is None}  # interface entries
     capped = set(rt.get("edge_scan_capped") or [])
     if not rt["active"]:  # the validator injected its tracer: no trace at all is missing evidence (review N4)
         blocks.append("no runtime trace was written although the validator injected its tracer (Python started with "
                       "-I/-E/-S, PYTHONPATH replaced, or the trace removed): which test functions ran and whether the "
                       "providers ran cannot be shown")
-    empty = {"functions": {}, "call": {}, "ran": set(), "edges": set(), "prov_runs": set()}
+    empty = {"functions": {}, "call": {}, "ran": set(), "edges": set(), "prov_runs": set(), "prov_calls": {}}
     for iid, iv in sorted(wd["interfaces"].items()):
         prov_rels = set(iv["provider_modules"])
         # review 4 H4: the provider is the interface's own symbols (the signature's def/class and the accepted G4
@@ -2263,7 +2277,8 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
         # the stack that started its thread / submitted its pool work item); a provider file that is also a consumer
         # file cannot show one, so there the provider running in the test is the most that can be observed
         needs_edge = bool(cons_rels) and not (prov_rels & cons_rels)
-        prov_anywhere = any(is_prov(lab, fn) for lab, fn in ran_all)
+        prov_anywhere = any(is_prov(e, fn) for e, fn in ran_entries) if ran_entries else \
+            any(is_prov(lab, fn) for lab, fn in ran_all)
         covered_by, tests_view = [], {}
         credited: list[str] = []  # passed tests with a call path whose function ran: their level decides
         not_counted: list[tuple[str, str, str]] = []  # (test, level, reason)
@@ -2271,17 +2286,30 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
             st = executed.get(tid, "not executed")
             seen = ran.get(tid, empty)
             call_files = seen["call"]
-            prov_here = any(is_prov(lab, fn) for lab, fn in seen["ran"])
+            prov_here = any(is_prov(e, fn) for e, fn, _a in seen["prov_runs"]) or \
+                any(is_prov(lab, fn) for lab, fn in seen["ran"] if not seen["prov_runs"])
             cons_here = (not cons_rels) or any(lab in cons_rels for lab, _fn in seen["ran"])
             # review 5 N7: only what the test itself ran counts: the anchor (outermost test-file function on the stack)
             # must be the test function or a fixture / setUp it requested, never an autouse or unrequested fixture
+            own_fns = {fv["name"] for fv in tv["functions"]}
             anchors = {a for fv in tv["functions"] for a in (fv.get("anchors") or [fv["name"]])}
+            patched = any(fv.get("patched_provider") for fv in tv["functions"])
             if needs_edge:
-                linked = {a for e, fn, c, a in seen["edges"] if is_prov(e, fn) and c in cons_rels}
+                linked = [a for e, fn, c, a in seen["edges"] if is_prov(e, fn) and c in cons_rels]
             else:
-                linked = {a for e, fn, a in seen["prov_runs"] if is_prov(e, fn)} if cons_here else set()
-            connected = bool(linked & anchors)
-            foreign = sorted(str(a) for a in linked - anchors)
+                linked = [a for e, fn, a in seen["prov_runs"] if is_prov(e, fn)] if cons_here else []
+            # review 6 M5 (decision): a connection run only by a requested fixture does not count when the test
+            # function itself patches the provider; the test body's own run always counts
+            direct = any(set(a) & own_fns for a in linked)
+            via_fixture = any(set(a) & (anchors - own_fns) for a in linked)
+            connected = direct or (via_fixture and not patched)
+            foreign = sorted({x for a in linked for x in a} - anchors)
+            not_own = None if connected or not linked else (
+                "ran from its consumer in this test only inside a fixture the test requested, while the test function "
+                "patches the provider (the test body's own run did not use the real provider)" if via_fixture else
+                f"ran {'from its consumer ' if needs_edge else ''}in this test only from code the test did not request "
+                f"({', '.join(foreign) or '?'}: an autouse or unrequested fixture), not from the test function or a "
+                "fixture it requested")
             cons_call = (not cons_rels) or any(lab in cons_rels for lab, _fn in call_files)
             pick, fviews = None, []  # (level, reason, path, function view) of the best credited function
             for fv in tv["functions"]:
@@ -2294,10 +2322,7 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
                     # path A: the static call path of a function that ran, and in this test's own execution the
                     # consumer called the provider (EXTERNAL consumer: the provider ran in it)
                     cand = ("test_level", None) if connected else \
-                        ("suite_level", f"the provider{sym_text} ran {'from its consumer ' if needs_edge else ''}in this "
-                                        f"test only from code the test did not request ({', '.join(foreign)}: an "
-                                        "autouse or unrequested fixture), not from the test function or a fixture it "
-                                        "requested") if foreign else \
+                        ("suite_level", f"the provider{sym_text} {not_own}") if not_own else \
                         ("insufficient", f"the provider{sym_text} ran in this test but was not called from the consumer (no "
                                          "consumer function on its call stack, the stack that started its thread or "
                                          "submitted its pool work item): running both is not a connection")\
@@ -2322,10 +2347,11 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
                         continue
                     r["path"] = "runtime"
                     kind = (declared.get((iid, tid)) or {}).get("kind")
+                    calls = seen["prov_calls"]  # entries of the provider during the call (review 6 M1)
                     if kind in ("subprocess", "ipc"):  # proof must come from another process (review F6)
-                        p_ok = any(is_prov(*k) and v - procs for k, v in call_files.items())
+                        p_ok = any(is_prov(*k) and v - procs for k, v in calls.items())
                     else:
-                        p_ok = any(is_prov(*k) for k in call_files)
+                        p_ok = any(is_prov(*k) for k in calls)
                     where = " in a process other than the test's" if kind in ("subprocess", "ipc") else ""
                     cand = ("test_level", None) if p_ok and cons_call else \
                         ("insufficient", f"runtime path ({kind}) declared at G4 and the provider ran{where} during the "
