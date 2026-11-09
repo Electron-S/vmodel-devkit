@@ -33,7 +33,7 @@ Claude Code 위에서 ASPICE V-Model을 따르는 개발 절차(요구사항 →
 | P3 | 상세 설계·테스트 명세 | G3 Design & Test Planning | 오케스트레이터(Detailed Design) + vmodel:test-designer | vmodel:verifier | MVP |
 | P4 | 구현·정적 분석·코드 리뷰 | G4 Implementation | 오케스트레이터(Implementation 역할) | vmodel:verifier | MVP |
 | P5 | 단위 검증 | G5 Unit Verification | Validator가 직접 실행 | (기계 판정) | MVP |
-| P6 | 통합 검증 | G6 Integration Verification | — | — | EXT |
+| P6 | 통합 검증 | G6 Integration Verification | Validator가 `integration_test` 명령을 직접 실행 | (기계 판정, AI 리뷰 없음) | EXT (설계 확정 D41, 미구현) |
 | P7 | 시스템 검증 | G7 System Verification | — | — | EXT |
 
 각 Gate의 입력·출력·필수 산출물·체크 ID·PASS 기준의 정본은 `gates.json`이다. 아래는 그 요약이다.
@@ -88,12 +88,20 @@ Claude Code 위에서 ASPICE V-Model을 따르는 개발 절차(요구사항 →
 - G5.NO_WEAKENING 직전 G5 기록 대비 변경·삭제된 테스트 파일은 결함/CR의 `test_changes`(근거·관련 REQ·영향)로 정당화, 이전에 실행된 TEST ID가 사라지지 않음
 - G5.INPUTS_UNCHANGED 실행 중 검증 대상 파일이 바뀌지 않음
 
+### 3.1-1 G6 Integration Verification (설계 확정 2026-11-09, D41, 미구현)
+정본은 `docs/g6/G6-DESIGN.md`. 요약:
+- 실행: config `integration_test`(argv에 `{junit}`)를 Validator가 직접 실행한다. 적용 대상인데 명령이 없으면 BLOCKED이고 unit 명령으로 대체하지 않는다.
+- 체크: G6.PREREQ, G6.APPLICABILITY, G6.CONFIG, G6.EXECUTION, G6.RESULTS, G6.SCOPE(unit 테스트가 섞이면 실패), G6.TEST_MAPPING(integration 명세 ID마다 통과 케이스), G6.IF_COVERAGE(IF마다 통과했고 Validator의 함수 단위 정적 분석으로 provider·consumer에 닿는 integration 테스트), G6.NO_WEAKENING(이전에 실행된 ID와 이전 G2 PASS의 IF 유지, 삭제는 `removed_ids`), G6.INPUTS_UNCHANGED. 모두 기계 판정이고 ai_review 체크가 없다.
+- N/A: IF 0, integration 명세 0, 단일 컴포넌트, G2·G3 리뷰의 `integration_applicability` 확인(외부 끝점 포함), 이전 IF 삭제의 `removed_ids` 정당화가 모두 있을 때만. PASSED + `applicability: not_applicable`로 기록하고 N/A로 표시하며 결함 검증으로 치지 않는다. 확인할 수 없으면 BLOCKED.
+- G4는 통합 준비 상태(인터페이스 구현 심볼, 통합 테스트 코드, IF별 정적 도달, IF별 리뷰)를 맡는다. G5는 `integration_test`가 설정되면 integration 테스트를 실행하지 않아야 한다(G5.SCOPE).
+- G6은 G1~G5의 manifest를 바꾸지 않는다. 판정이 바뀌는 범위는 IF·통합 명세가 있는 WI의 G4와 `integration_test`를 설정한 프로젝트의 G5뿐이다(설계 §1.2). G6 manifest = 코드 manifest + `reviews/G2.json` + `reviews/G3.json`.
+
 ### 3.2 공통 전제 조건 (기록 없이 BLOCKED 반환)
 - Validator 무결성 확인 실패, 서명 키 없음, 원장 변조·롤백(외부 앵커 불일치) → 모든 Gate BLOCKED
 - 이전 Gate가 현재 해시로 PASSED가 아님
 - 직전 평가가 FAILED인데 그 기록 ID를 가리키는 결함(DEFECT) 기록이 없음 (재작업 절차 강제)
 - 동일 원인 3회 연속 실패로 BLOCKED된 뒤 사용자 `unblock`이 없음
-- 미구현 Gate(G6, G7) 요청
+- 미구현 Gate(G6, G7) 요청 (0.1.5 기준. G6은 설계 확정, D41)
 
 ## 4. 상태 정의
 
@@ -261,4 +269,4 @@ WI 하나당 병렬 서브에이전트는 최대 2개. Agent 리뷰만으로 Gat
 T01~T04의 의미적 정확성(요구사항이 사용자 의도와 맞는지 등)은 자동 평가로 보장할 수 없으며 Verifier 리뷰와 사람 검토의 몫이다.
 
 ## 14. 확장 단계 [EXT] (구현하지 않음)
-G6 통합 검증 실행, G7 시스템 수용 검증, LITE/STRICT 프로파일 실행, 다중 언어 어댑터(JUnit 기반 일반화), 커버리지 기준, 강화된 배포(서명 릴리스), CI 독립 검증, WorkMind 적용.
+G6 통합 검증 실행(설계 확정: `docs/g6/G6-DESIGN.md`, D41), G7 시스템 수용 검증, LITE/STRICT 프로파일 실행, 다중 언어 어댑터(JUnit 기반 일반화), 커버리지 기준, 강화된 배포(서명 릴리스), CI 독립 검증, WorkMind 적용.

@@ -140,19 +140,13 @@ D35에 따라 바꿀 것(Gate 판정은 바꾸지 않는다)
 - IF가 있는 실제 산출물. 지금까지 실제 세션이 textstats·scorestats 샘플로 만든 아키텍처는 모두 컴포넌트 1개, IF 0개였다(E2E-3, drill S1). 이대로면 G6은 공허하게 통과한다.
 
 ### M5. G6 Integration Verification (제안 버전 0.2.0)
-2026-11-09: 아래 1~4의 결정안(대안·장단점·G1~G5 호환·권장안·구현 영향)을 `docs/g6/G6-DESIGN-PROPOSAL.md`와 DECISIONS D39에 정리했다. 권장: 1은 선택 `integration_test` + 없으면 unit 명령으로 G6 직접 재실행, 2는 G4.TEST_CODE 확장·G6 기계 판정, 3은 IF 0·통합 명세 0일 때만 N/A(기록 PASSED + applicability), 4는 IN_PROGRESS 복귀를 의도된 동작으로 문서화. 사용자 결정 대기.
+2026-11-09 사용자가 정책 네 가지를 정했다(D41). 확정 설계·요구사항·테스트 명세·구현 절차는 `docs/g6/G6-DESIGN.md`가 정본이다(이전 결정안 D39·`G6-DESIGN-PROPOSAL.md`는 대안 비교 기록).
 
-먼저 결정하고 DECISIONS에 남길 것
-1. 실행 명령: config에 `integration_test`(argv, timeout) 항목을 따로 두는 안을 권장한다. JUnit 기반이라 언어 중립(D13)을 유지한다. 대안은 unit 명령을 재사용하고 수준별로 선택하는 것.
-2. 테스트 코드 확인 위치: G4.TEST_CODE/TEST_INTEGRITY를 integration 수준까지 넓혀 G4 리뷰가 함께 보게 하는 안을 권장한다. G5를 순수 기계 판정으로 둔 D12와 같은 구조다. 대안은 G6에서 따로 확인하는 것.
-3. IF가 0개인 아키텍처에서 G6 판정: N/A 사유를 기록하고 통과시킬지, 통합 테스트가 있으면 실행만 할지.
-4. 업그레이드 영향: G6이 구현되면 기존 PARTIALLY_VERIFIED WI는 G6이 NOT_STARTED라서 IN_PROGRESS로 돌아간다. 의도된 동작으로 문서화한다.
+착수 조건: 설계 §9의 남은 결정(§1.1 해석 확인, N/A 리뷰 확인 범위, 새 init 기본값, 업그레이드 G4 재리뷰 비용 처리, 연결 정적 확인 강도, 버전 번호). 결정 전 구현 금지.
 
-체크(초안): G6.PREREQ(G5가 현재 해시로 PASSED), G6.EXECUTION(Validator 직접 실행, D21 환경 정리 동일), G6.RESULTS, G6.TEST_MAPPING(통합 TEST ID마다 이름에 ID 하나인 통과 케이스), G6.IF_COVERAGE(모든 IF가 통과한 통합 테스트로 검증), G6.NO_WEAKENING, G6.INPUTS_UNCHANGED. AI 리뷰 없는 기계 판정.
+구현 절차(설계 §7): 브랜치 `g6-dev` → `docs/g6/WORKITEM.md` → 테스트 코드 먼저(새 모듈 8개, 픽스처 `pipeline`·`single`) → RED(불변 `dist/vmodel-0.1.5` 대상, Red는 assertion 실패) → 구현(스키마 → gates.json → G5 실행부 분리(G5 불변식 먼저) → G5.SCOPE → G4 → 적용 판단 → eval_g6 → 결함 추적 → 표시 → 지침 → init → 버전) → GREEN(기존 225개 무수정 통과) → 독립 검토(읽기 전용, detached worktree, 지적은 RED 고정 후 수정) → 회귀(WSL·Windows cp949, 릴리스 빌드, 0.1.5 → 새 버전 업그레이드 재현) → E2E(비용 승인 후) → 사용자 확정.
 
-재작업: 직전 G6 실패 기록을 인용한 DEFECT 전제 조건, 3회 실패 BLOCKED, `defect_trace`와 D35 분류(UNKNOWN·무효 인용·추적성 경고)를 G6 기록에도 적용.
-
-하네스: 정상 → G6 PASSED, 통합 테스트 실패 → FAILED, IF 미검증 → FAILED, 통합 테스트 삭제·완화 → NO_WEAKENING 실패, G5 STALE → G6 STALE, 재작업 루프, 위조 증거 거부, 한글 경로·Windows cp949. 새 샘플은 컴포넌트 2개 이상, IF 1개 이상(예: 파서 + 집계기).
+완료 기준(테스트): 설계 §6의 Red 전부가 0.1.5에서 실패하고 새 코어에서 통과, Invariant(0.1.5 대비 G1~G5 투영·manifest 동일)와 Char 통과, 기존 하네스 225개 무수정 통과, Windows 실패 0, 0.1.5 서명 원장·증거가 새 코어에서 audit·verify-evidence 통과.
 
 ### M6. G7 System Verification (제안 버전 0.3.0)
 먼저 결정할 것

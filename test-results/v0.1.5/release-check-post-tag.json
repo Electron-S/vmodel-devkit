@@ -1,0 +1,134 @@
+{
+  "head": "78517d5acb86a6ab908f23e90b7f3d8518d1178e",
+  "releases": {
+    "0.1.0": {
+      "record_version": "0.1.0",
+      "record_core_hash": "sha256:ed08cc8f9a2ad33562e59ddb1a879cb9283a29e450f6d72a59a0b7c7f0e05fdb",
+      "record_files": 43,
+      "dist_files": 43,
+      "dist_files_match_record": true,
+      "dist_core_hash_recomputed": "sha256:ed08cc8f9a2ad33562e59ddb1a879cb9283a29e450f6d72a59a0b7c7f0e05fdb",
+      "dist_manifest_equals_record": true,
+      "selfcheck": {
+        "version": "0.1.0",
+        "core_hash": "sha256:ed08cc8f9a2ad33562e59ddb1a879cb9283a29e450f6d72a59a0b7c7f0e05fdb",
+        "mode": "release",
+        "integrity_ok": true,
+        "problems": []
+      },
+      "ok": true
+    },
+    "0.1.1": {
+      "record_version": "0.1.1",
+      "record_core_hash": "sha256:85f7df6b6752024b0c4a0135e6e060aca16428631e05333e3a4d20679e6f52b7",
+      "record_files": 43,
+      "dist_files": 43,
+      "dist_files_match_record": true,
+      "dist_core_hash_recomputed": "sha256:85f7df6b6752024b0c4a0135e6e060aca16428631e05333e3a4d20679e6f52b7",
+      "dist_manifest_equals_record": true,
+      "selfcheck": {
+        "version": "0.1.1",
+        "core_hash": "sha256:85f7df6b6752024b0c4a0135e6e060aca16428631e05333e3a4d20679e6f52b7",
+        "mode": "release",
+        "integrity_ok": true,
+        "problems": []
+      },
+      "ok": true
+    },
+    "0.1.2": {
+      "record_version": "0.1.2",
+      "record_core_hash": "sha256:a0555e328413d22afeb7f3171d9969e22721f4fc3ee25b3084d9419154876e09",
+      "record_files": 43,
+      "dist_files": 43,
+      "dist_files_match_record": true,
+      "dist_core_hash_recomputed": "sha256:a0555e328413d22afeb7f3171d9969e22721f4fc3ee25b3084d9419154876e09",
+      "dist_manifest_equals_record": true,
+      "selfcheck": {
+        "version": "0.1.2",
+        "core_hash": "sha256:a0555e328413d22afeb7f3171d9969e22721f4fc3ee25b3084d9419154876e09",
+        "mode": "release",
+        "integrity_ok": true,
+        "problems": []
+      },
+      "ok": true
+    },
+    "0.1.3": {
+      "record_version": "0.1.3",
+      "record_core_hash": "sha256:0208c7988516f050d2eabf8c50704d9e36be7c4d6eb94b4ff098dc7c2c73e0ea",
+      "record_files": 43,
+      "dist_files": 43,
+      "dist_files_match_record": true,
+      "dist_core_hash_recomputed": "sha256:0208c7988516f050d2eabf8c50704d9e36be7c4d6eb94b4ff098dc7c2c73e0ea",
+      "dist_manifest_equals_record": true,
+      "selfcheck": {
+        "version": "0.1.3",
+        "core_hash": "sha256:0208c7988516f050d2eabf8c50704d9e36be7c4d6eb94b4ff098dc7c2c73e0ea",
+        "mode": "release",
+        "integrity_ok": true,
+        "problems": []
+      },
+      "ok": true
+    },
+    "0.1.4": {
+      "record_version": "0.1.4",
+      "record_core_hash": "sha256:5dd1d010cc57c477c6a96e3c989eed49d09fc31c51e09f5d785d9b132db1e997",
+      "record_files": 43,
+      "dist_files": 43,
+      "dist_files_match_record": true,
+      "dist_core_hash_recomputed": "sha256:5dd1d010cc57c477c6a96e3c989eed49d09fc31c51e09f5d785d9b132db1e997",
+      "dist_manifest_equals_record": true,
+      "selfcheck": {
+        "version": "0.1.4",
+        "core_hash": "sha256:5dd1d010cc57c477c6a96e3c989eed49d09fc31c51e09f5d785d9b132db1e997",
+        "mode": "release",
+        "integrity_ok": true,
+        "problems": []
+      },
+      "ok": true
+    },
+    "0.1.5": {
+      "record_version": "0.1.5",
+      "record_core_hash": "sha256:37071459bd445eb9873c102d3b20a605478feb0b1dc9943f0130f670c2bbf5e8",
+      "record_files": 43,
+      "dist_files": 43,
+      "dist_files_match_record": true,
+      "dist_core_hash_recomputed": "sha256:37071459bd445eb9873c102d3b20a605478feb0b1dc9943f0130f670c2bbf5e8",
+      "dist_manifest_equals_record": true,
+      "selfcheck": {
+        "version": "0.1.5",
+        "core_hash": "sha256:37071459bd445eb9873c102d3b20a605478feb0b1dc9943f0130f670c2bbf5e8",
+        "mode": "release",
+        "integrity_ok": true,
+        "problems": []
+      },
+      "ok": true
+    }
+  },
+  "source_matches_record": true,
+  "source_core_hash": "sha256:37071459bd445eb9873c102d3b20a605478feb0b1dc9943f0130f670c2bbf5e8",
+  "versions": {
+    "validator_VERSION": true,
+    "plugin_json": "0.1.5",
+    "dist_plugin_json": "0.1.5",
+    "release_record": "0.1.5",
+    "marketplace_version": "0.1.5",
+    "marketplace_source": "./vmodel-0.1.5"
+  },
+  "old_records_unchanged_since_v0.1.4": true,
+  "tags": {
+    "v0.1.2": "bbd6a3d",
+    "v0.1.3": "0df13b7",
+    "v0.1.4": "991af67"
+  },
+  "tag_v0.1.5_exists": true,
+  "main": "78517d5",
+  "main_is_ancestor_of_head": true,
+  "plugin_tree_v0.1.4_to_head_changed_files": [
+    "plugins/vmodel/.claude-plugin/plugin.json",
+    "plugins/vmodel/validator/vmodel_validator/__init__.py",
+    "plugins/vmodel/validator/vmodel_validator/cli.py",
+    "plugins/vmodel/validator/vmodel_validator/setup_project.py"
+  ],
+  "problems": [],
+  "ok": true
+}
