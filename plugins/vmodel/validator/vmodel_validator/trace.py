@@ -107,11 +107,12 @@ class TraceGraph:
                     problems.append(f"{cid} -> {rid} (requirement does not exist)")
         for iid, i in self.ifaces.items():
             for ref in [i.get("provider"), *_ids(i.get("consumers"))]:
-                if ref and ref != "EXTERNAL" and ref not in self.comps:
+                if ref and ref != "EXTERNAL" and (not isinstance(ref, str) or ref not in self.comps):
                     problems.append(f"{iid} -> {ref} (component does not exist)")
         for uid, u in self.units.items():
-            if u.get("component") and u["component"] not in self.comps:
-                problems.append(f"{uid} -> {u['component']} (component does not exist)")
+            comp = u.get("component")
+            if comp and (not isinstance(comp, str) or comp not in self.comps):
+                problems.append(f"{uid} -> {comp} (component does not exist)")
             for rid in _ids(u.get("requirements")):
                 if rid not in self.reqs:
                     problems.append(f"{uid} -> {rid} (requirement does not exist)")
@@ -135,10 +136,11 @@ class TraceGraph:
                 if cid not in out and frontier & set(_ids(c.get("requirements"))):
                     nxt.add(cid)
             for iid, i in self.ifaces.items():
-                if iid not in out and frontier & {i.get("provider"), *_ids(i.get("consumers"))}:
+                if iid not in out and frontier & {*_ids([i.get("provider")]), *_ids(i.get("consumers"))}:
                     nxt.add(iid)
             for uid, u in self.units.items():
-                if uid not in out and (frontier & set(_ids(u.get("requirements"))) or u.get("component") in frontier):
+                if uid not in out and (frontier & set(_ids(u.get("requirements"))) or
+                                       (isinstance(u.get("component"), str) and u["component"] in frontier)):
                     nxt.add(uid)
             for tid, t in self.tests.items():
                 refs = set(_ids(t.get("verifies"))) | {self.acs.get(a) for a in _ids(t.get("acceptance_criteria"))}

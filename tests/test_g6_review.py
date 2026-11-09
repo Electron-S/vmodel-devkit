@@ -217,7 +217,9 @@ class ReviewG6Red(SandboxClass):
                          "    with pytest.raises(ValueError):\n        summarize('kim,ninety')\n")
         r4, r5, code, r6 = self.to_g6()
         self.assertEqual((r4["status"], r5.get("status")), ("PASSED", "PASSED"), r4)
-        self.assertEqual(r6["status"], "FAILED", f"{RED} the provider never ran in any IF-001 test: {r6}")
+        # 0.2.0 after the second review (N8): runtime contradiction is missing evidence -> BLOCKED (was FAILED in c216910)
+        self.assertEqual((r6["status"], r6.get("blocked_reason")), ("BLOCKED", "integration_evidence_insufficient"),
+                         f"{RED} the provider never ran in any IF-001 test: {r6}")
 
     # F4: entries the tests plant in the trace or junit location never crash G6
     def test_F4_directory_in_the_trace_folder_is_a_recorded_result(self):

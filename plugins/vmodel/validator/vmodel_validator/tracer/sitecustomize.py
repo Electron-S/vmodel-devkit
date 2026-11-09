@@ -3,8 +3,10 @@
 G6 puts this directory first on PYTHONPATH and VMODEL_TRACE_SPEC in the environment of the integration test command,
 so every Python process of the run (pytest and the processes it starts) imports this file at start-up. For the
 watched files (interface provider/consumer modules and integration test files) it records which functions started,
-together with the pytest test id and phase that were current (PYTEST_CURRENT_TEST, inherited by child processes):
-one line per new (test, phase, file, function). Module and class bodies are not counted, so importing a module is not execution.
+together with the pytest test id (parameters dropped) and phase. The main thread follows PYTEST_CURRENT_TEST (inherited
+by child processes); another thread belongs to the test that started it. One line per new (test, phase, file,
+function); a forked child writes its own file; past the record limit a {"truncated": true} line is written. Module
+and class bodies are not counted, so importing a module is not execution.
 
 Trust: this runs inside the processes under test, like the test runner itself (SPEC 5.7); the validator hashes the
 files after the run and records them in the signed evidence. Any problem here is swallowed: the traced program must
@@ -29,7 +31,7 @@ def _vmodel_trace_install():
         return os.path.normcase(os.path.realpath(p))
 
     watch = {norm(k): v for k, v in spec["watch"].items()}
-    limit = int(spec.get("limit", 20000))
+    limit = int(spec.get("limit", 100000))
     mon = getattr(sys, "monitoring", None)
     tool = None
     if mon is not None and not spec.get("force_setprofile"):
@@ -41,14 +43,56 @@ def _vmodel_trace_install():
             except (ValueError, RuntimeError):
                 continue
     method = "sys.monitoring" if tool is not None else "setprofile"
-    out = open(os.path.join(spec["out"], f"{os.getpid()}-{os.urandom(4).hex()}.jsonl"), "a", encoding="utf-8",
-               buffering=1)
-    out.write(json.dumps({"v": 1, "pid": os.getpid(), "ppid": os.getppid(), "python": sys.version.split()[0],
-                          "method": method, "argv": [str(a) for a in getattr(sys, "orig_argv", sys.argv)][:20]},
-                         ensure_ascii=True) + "\n")
-    labels = {}
-    seen = set()
+    state = {"out": None, "seen": set(), "full": False}
     lock = threading.Lock()
+
+    def open_out():
+        """One file per process; a forked child gets its own (it must not write into its parent's file)."""
+        state["out"] = open(os.path.join(spec["out"], f"{os.getpid()}-{os.urandom(4).hex()}.jsonl"), "a",
+                            encoding="utf-8", buffering=1)
+        state["seen"] = set()
+        state["full"] = False
+        state["out"].write(json.dumps({"v": 1, "pid": os.getpid(), "ppid": os.getppid(),
+                                       "python": sys.version.split()[0], "method": method,
+                                       "argv": [str(a) for a in getattr(sys, "orig_argv", sys.argv)][:20]},
+                                      ensure_ascii=True) + "\n")
+
+    open_out()
+    if hasattr(os, "register_at_fork"):
+        def _child():
+            try:
+                open_out()
+            except Exception:
+                state["out"] = None
+        os.register_at_fork(after_in_child=_child)
+
+    def env_context():
+        test = os.environ.get("PYTEST_CURRENT_TEST")
+        if not test or not test.endswith(")") or " (" not in test:
+            return None, None
+        node, phase = test[:-1].rsplit(" (", 1)
+        head, sep, tail = node.rpartition("::")
+        return (head + sep + tail.split("[", 1)[0]), phase  # parameters dropped: evidence is per test function
+
+    def context():
+        """The test a running function belongs to: the main thread follows pytest's current test; another thread
+        belongs to the test (and phase) that started it, so a thread started at import time belongs to none."""
+        th = threading.current_thread()
+        if th is threading.main_thread():
+            return env_context()
+        return getattr(th, "_vmodel_context", (None, None))
+
+    original_start = threading.Thread.start
+
+    def start(self, *args, **kwargs):
+        try:
+            self._vmodel_context = context()
+        except Exception:
+            pass
+        return original_start(self, *args, **kwargs)
+
+    threading.Thread.start = start
+    labels = {}
 
     def label_of(filename):
         try:
@@ -70,16 +114,20 @@ def _vmodel_trace_install():
             return None
         if not code.co_flags & 0x1:  # CO_OPTIMIZED: functions only, not module or class bodies (import time)
             return True
-        test, phase = os.environ.get("PYTEST_CURRENT_TEST"), None
-        if test and test.endswith(")") and " (" in test:
-            test, phase = test[:-1].rsplit(" (", 1)
+        test, phase = context()
         key = (test, phase, lab, getattr(code, "co_qualname", code.co_name))
-        if key not in seen:
+        seen = state["seen"]
+        if key not in seen and state["out"] is not None:
             with lock:
-                if key not in seen and len(seen) < limit:
-                    seen.add(key)
-                    out.write(json.dumps({"t": key[0], "p": key[1], "m": key[2], "f": key[3]}, ensure_ascii=True)
-                              + "\n")
+                if key in seen or state["full"]:
+                    return True
+                if len(seen) >= limit:
+                    state["full"] = True  # the validator must not read absence as "did not run"
+                    state["out"].write(json.dumps({"truncated": True}) + "\n")
+                    return True
+                seen.add(key)
+                state["out"].write(json.dumps({"t": key[0], "p": key[1], "m": key[2], "f": key[3]},
+                                              ensure_ascii=True) + "\n")
         return True
 
     if tool is not None:

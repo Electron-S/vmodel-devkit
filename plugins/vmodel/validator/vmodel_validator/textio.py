@@ -55,6 +55,8 @@ def load_json(path: Path, label: str | None = None) -> Any:
         return json.loads(text)
     except json.JSONDecodeError as exc:
         raise ArtifactError(f"{label}: invalid JSON at line {exc.lineno} column {exc.colno}: {exc.msg}") from None
+    except (ValueError, RecursionError) as exc:  # e.g. an integer beyond the digit limit, absurd nesting (0.2.0)
+        raise ArtifactError(f"{label}: unreadable JSON: {exc.__class__.__name__}: {str(exc)[:200]}") from None
 
 
 def _atomic_write_bytes(path: Path, data: bytes) -> None:

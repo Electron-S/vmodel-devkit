@@ -133,8 +133,9 @@ def write_evidence(project, ledger, run_dir: Path, *, wi: str, gate: str, kind: 
         "stderr.bin": {"sha256": sha256_bytes(run.stderr), "bytes": len(run.stderr)},
     }
     for name, path in (extra_files or {}).items():
-        # only regular files are hashed: a test can turn junit.xml into a directory (0.2.0, review F4)
-        if path.is_file() and not path.is_symlink():
+        # a regular file (also through a symlink, hashed by content as in 0.1.x) is hashed; a directory, FIFO or device
+        # a test planted there is recorded, never read (0.2.0, reviews F4/N7)
+        if path.is_file():
             files[name] = {"sha256": sha256_file(path), "bytes": path.stat().st_size}
         elif path.exists() or path.is_symlink():
             files[name] = {"sha256": None, "bytes": 0, "missing": True, "not_regular_file": True}
