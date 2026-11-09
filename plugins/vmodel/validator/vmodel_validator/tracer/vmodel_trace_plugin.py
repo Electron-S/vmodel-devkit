@@ -43,3 +43,10 @@ def pytest_runtest_teardown(item):
 @pytest.hookimpl(trylast=True)
 def pytest_runtest_logfinish(nodeid, location):
     _mark(nodeid, "end")
+
+
+@pytest.hookimpl(optionalhook=True)
+def pytest_xdist_setupnodes(config, specs):
+    """pytest-xdist workers are pytest processes too: they must load this plugin to write their tests' boundaries
+    (review 7 R3). Each worker removes the setting again when it imports this module."""
+    os.environ["PYTEST_PLUGINS"] = "vmodel_trace_plugin"

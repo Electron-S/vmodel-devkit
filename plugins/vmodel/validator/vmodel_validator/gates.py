@@ -2302,11 +2302,15 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
             # function itself patches the provider; the test body's own run always counts
             direct = any(set(a) & own_fns for a in linked)
             via_fixture = any(set(a) & (anchors - own_fns) for a in linked)
-            connected = direct or (via_fixture and not patched)
+            # review 7 R4 (decision, Case B): a test function that patches the provider (G4's static detection) is not
+            # test-level evidence, even when part of the real provider also ran in it
+            connected = (direct or via_fixture) and not patched
             foreign = sorted({x for a in linked for x in a} - anchors)
+            patch_targets = sorted({t for fv in tv["functions"] for t in fv.get("patched_provider") or []})
             not_own = None if connected or not linked else (
-                "ran from its consumer in this test only inside a fixture the test requested, while the test function "
-                "patches the provider (the test body's own run did not use the real provider)" if via_fixture else
+                f"ran from its consumer in this test, but the test patches the provider ({', '.join(patch_targets)}): "
+                "a test that replaces part of the provider does not verify the real connection by itself"
+                if (direct or via_fixture) else
                 f"ran {'from its consumer ' if needs_edge else ''}in this test only from code the test did not request "
                 f"({', '.join(foreign) or '?'}: an autouse or unrequested fixture), not from the test function or a "
                 "fixture it requested")
@@ -2322,7 +2326,8 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
                     # path A: the static call path of a function that ran, and in this test's own execution the
                     # consumer called the provider (EXTERNAL consumer: the provider ran in it)
                     cand = ("test_level", None) if connected else \
-                        ("suite_level", f"the provider{sym_text} {not_own}") if not_own else \
+                        ("insufficient" if patched and (direct or via_fixture) else "suite_level",
+                         f"the provider{sym_text} {not_own}") if not_own else \
                         ("insufficient", f"the provider{sym_text} ran in this test but was not called from the consumer (no "
                                          "consumer function on its call stack, the stack that started its thread or "
                                          "submitted its pool work item): running both is not a connection")\

@@ -265,6 +265,17 @@ REQ-G6-01~26은 설계 문서 §2가 정본이다. 아래는 바뀐 것과 새�
 | M5/M6: 거친 벽시계(Windows CPython 3.12 이하)에서 subprocess 시험이 자주 BLOCKED(시뮬레이션) | 모든 줄과 경계에 `perf_counter_ns`(시스템 단조 고해상도) 기록, 경계가 모두 갖고 있으면 그것으로 비교 |
 | M7(설계 판단): 요청한 fixture가 연결을 실행하고 테스트 몸체는 provider를 목으로 대체 | 보수 쪽 선택: 테스트 함수가 provider를 patch하면(G4 정적 탐지) 요청 fixture에서만 일어난 연결은 세지 않음. 사용자 확인 사항으로 보고 |
 
+### 7.7 7회차 (`ce59c33`)
+6회차 5건 모두 닫힘(거친 시계 시뮬레이션 10/10 통과로 바뀜). HIGH 없음, MEDIUM 3(그중 2는 `ce59c33`의 회귀), LOW 2, 내부 오류 0. `tests/test_g6_review7.py`로 재현(RED 대상 `ce59c33`).
+
+| 지적 | 처리 |
+|---|---|
+| R1(회귀): provider 모듈 안 데코레이터의 래퍼가 진입 함수가 되어 거짓 BLOCKED | 진입 함수 선택에서 `<locals>` 클로저(래퍼)는 건너뜀 |
+| R2(기존): fixture 서버가 setup에서 준비 요청을 한 번 보내면 call 단계 실행이 중복 제거돼 BLOCKED | 고치지 않음(보수적 BLOCKED, 특성 테스트). 자식 프로세스는 함수마다 첫 실행만 기록하기 때문. 개선안: 자식이 pytest 프로세스의 현재 단계를 읽어 키에 포함 |
+| R3(회귀): xdist 작업자가 플러그인을 못 받아 경계가 없음 → BLOCKED | `pytest_xdist_setupnodes`에서 설정을 되살려 작업자가 받게 하고, 작업자는 로드 시 다시 지움 |
+| R4(판단): 클래스 provider의 다른 메서드를 목으로 바꾸고 팩토리 classmethod로 진입하면 test-level | 보수 쪽(Case B): 테스트 함수가 provider를 patch하면(G4 정적 탐지) test-level로 세지 않음. 6회차 M7 규칙을 일반화. 사용자 확인 사항 |
+| R5: 앵커 수집 상한 16 | 64로 |
+
 ## 8. 실전 E2E 계획 (D8, 실행은 별도 승인)
 - 예산: sonnet 최대 2회, 회당 `--max-budget-usd 2`, 합계 $4 상한. `--permission-mode auto`, `--setting-sources project,local`, `--plugin-dir dist/vmodel-0.2.0`, `--dangerously-skip-permissions` 금지. 실행 전 모델 호출 없는 준비(setup)와 기대 판정 확인을 먼저 한다.
 - 시나리오 A (Provider/Consumer, G6 실패 → 결함 → 수정 → 재검증): 기존 코드가 있는 프로젝트(점수 파서 모듈과 그 통합 테스트가 이미 `tests/integration/`에 있어 `init`이 실제 경로를 등록 — D3 규칙을 그대로 지킴)에 "파서 결과를 소비하는 요약 보고 CLI를 추가해줘"를 요청한다. 파서의 오류 계약(형식 오류 줄 번호)과 소비 측 처리 사이의 불일치를 하나 미리 심어(D26 블라인드 시딩, 세션 프롬프트에 알리지 않음) 단위 테스트는 통과하고 IF 통합 테스트에서 드러나게 한다. 기대: G1~G5 PASSED → G6 FAILED(TEST_MAPPING·RESULTS) → DEFECT(gate G6, IF·TEST 연결) → 수정 → G4 재리뷰 → G5 → G6 PASSED, 결함 CLOSED. 관찰: placeholder·import-only 테스트를 쓰는지, 통합 테스트가 경로 A인지, verifier가 `interfaces` 항목을 쓰는지, guard 우회 0.

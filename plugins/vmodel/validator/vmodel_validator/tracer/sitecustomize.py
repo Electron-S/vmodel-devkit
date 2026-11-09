@@ -163,12 +163,14 @@ def _vmodel_trace_install():
             if code.co_flags & 0x1:  # functions only: a module body importing is not a call, as in record()
                 lab = label_of(code.co_filename)
                 if lab is not None:
+                    qn = getattr(code, "co_qualname", code.co_name)
                     if lab == prov:
-                        entry = getattr(code, "co_qualname", code.co_name)
+                        if "<locals>" not in qn or entry is None:  # a decorator's wrapper does not hide the
+                            entry = qn                               # function it wraps (review 7 R1)
                     elif lab in consumers:
                         cons.setdefault(lab, entry)
-                    elif lab in test_labels and len(anchors) < 16:
-                        anchors.add(getattr(code, "co_qualname", code.co_name))
+                    elif lab in test_labels and len(anchors) < 64:
+                        anchors.add(qn)
             frame = frame.f_back
             n += 1
         return cons, entry, anchors
