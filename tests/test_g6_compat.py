@@ -73,6 +73,8 @@ class CompatAccept(SandboxClass):
         res = self.g6()
         self.assertEqual(res["status"], "PASSED", res)
         copy = copy_plugin(self.sb.tmp)
+        # a different core build: a released copy's file list would (rightly) keep integrity BLOCKED after the edit
+        (copy / "RELEASE_MANIFEST.json").unlink(missing_ok=True)
         gp = copy / "validator/vmodel_validator/gates.py"
         gp.write_text(gp.read_text(encoding="utf-8") + "\n# local core change\n", encoding="utf-8")
         self.sb.entry = copy / "validator" / "vmodel.py"
