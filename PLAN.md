@@ -1,6 +1,6 @@
 # PLAN
 
-현재 목표: v0.1.5 릴리스 후보(2026-11-09, 브랜치 `v0.1.5-dev`). 업그레이드 때 프로젝트 `.claude/settings.json`의 DevKit 권한 규칙이 이전 릴리스 경로에 남던 문제를 고쳤다(D38, TEST_RESULTS §12). main 병합·태그·원격 푸시는 하지 않았다(사용자 지시). G6은 착수 전 결정 네 가지의 결정안만 정리했다(D39, `docs/g6/G6-DESIGN-PROPOSAL.md`). **G6 구현은 사용자 결정 전에 시작하지 않는다.** v0.1.4는 2026-11-09 확정(태그 `v0.1.4`, main), 원격 푸시는 승인되지 않았다.
+현재 목표: v0.1.5 확정(2026-11-09, 태그 `v0.1.5`, `main` fast-forward, D40, TEST_RESULTS §13). 다음은 G6: 사용자가 정책 네 가지를 정했고(2026-11-09), 확정 설계·구현 계획은 브랜치 `g6-dev`의 DECISIONS D41과 `docs/g6/G6-DESIGN.md`에 둔다. **G6 구현은 그 문서 §9의 남은 결정 뒤 별도 세션에서 시작한다.** 원격 푸시는 승인되지 않았다.
 
 | 마일스톤 | 내용 | 완료 기준 (테스트) | 상태 |
 |---|---|---|---|
@@ -11,8 +11,8 @@
 | M4 | 샘플 프로젝트 E2E | 스크립트 E2E(T01~T18 하네스), Windows 실행(T18), 실제 Claude 세션 3회(sonnet, 회당 $4 상한), 새 세션 상태 복원(T14) | 완료 (TEST_RESULTS §3) |
 | R0.1.3 | 재작업 결함 F1~F4 수정, 실제 재작업 세션 검증 | 하네스 103/103(WSL), Windows 실패 0, drill-3 실제 세션 1회, audit OK | 완료, 태그 `v0.1.3` |
 | R0.1.4 | 결함 검증 상태 표시, guard 읽기 오탐, 실패 TEST 추적·증거 참조 (아래 §v0.1.4), 표시 상태 6종(D37), 실제 세션 1회 | 재현 테스트 RED 확인 후 수정, 기존 하네스 포함 전체 통과, Gate 판정 불변, 새 릴리스, 실제 세션에서 guard 우회 0 | 완료(2026-11-09, TEST_RESULTS §10·§11, DECISIONS D36·D37), 태그 `v0.1.4`, main fast-forward. 푸시는 미승인 |
-| R0.1.5 | 업그레이드 시 DevKit 권한 규칙 이동(D38) | 0.1.4 릴리스 대상 RED, GREEN, 전체 회귀, 독립 검토, 실제 릴리스 사본 0.1.4 → 0.1.5 재현 | 후보(`v0.1.5-dev`), 병합·태그 안 함 |
-| M5 | G6 Integration Verification (아래 §확장) | 하네스 + 새 샘플(IF 있는 2컴포넌트) | 결정안 정리됨(D39), 사용자 결정 대기. 착수 금지 |
+| R0.1.5 | 업그레이드 시 DevKit 권한 규칙 이동(D38) | 0.1.4 릴리스 대상 RED, GREEN, 전체 회귀, 독립 검토, 실제 릴리스 사본 0.1.4 → 0.1.5 재현 | 완료(2026-11-09, TEST_RESULTS §12·§13, D38·D40), 태그 `v0.1.5`, main fast-forward. 푸시는 미승인 |
+| M5 | G6 Integration Verification (아래 §확장) | 하네스 + 새 샘플(IF 있는 2컴포넌트) | 정책 사용자 결정(2026-11-09). 확정 설계는 브랜치 `g6-dev`(D41, `docs/g6/G6-DESIGN.md`). 구현 전 남은 결정 있음 |
 | M6 | G7 System Verification, STANDARD WI의 COMPLETED | 하네스 + 새 샘플 | 계획 (사용자 결정 전 착수 금지) |
 | M7 | Extension 실제 세션 E2E | 실제 Claude 세션(비용 승인 후) | 계획 |
 
@@ -29,9 +29,11 @@
 - 전부 임시 샌드박스에서만, `--setting-sources project,local`로 사용자 전역 설정 격리
 
 ## 현재 작업
-v0.1.5 후보(2026-11-09): 재고정(`lock --accept-current`)이 설치 기록의 DevKit 규칙만 새 릴리스 경로로 옮긴다. 새 규칙 추가 → 재고정 → 이전 규칙 제거 순서, 재고정 전 실패는 복원, 멱등(D38, `docs/v0.1.5/WORKITEM.md`). 실제 Claude 헤드리스 실행은 하지 않았다(비용 0). G6은 네 가지 결정안만 정리했고(D39) 구현하지 않았다. 다음 단계는 사용자가 정한다: 0.1.5 확정(병합·태그), G6 결정, 원격 푸시.
+v0.1.5 확정(2026-11-09): 재고정(`lock --accept-current`)이 설치 기록의 DevKit 규칙만 새 릴리스 경로로 옮긴다(D38). 확정 검증은 TEST_RESULTS §13(D40). 확정 중 새로 확인한 사실: 업그레이드가 `.claude/settings.json`을 바꾸므로 G4 리뷰를 다시 받아야 한다(문서 정정). 실제 Claude 헤드리스 실행은 하지 않았다(비용 0).
 
-이전: 0.1.4 확정(2026-11-09). 남은 미검증은 TEST_RESULTS §6, §9.13, §11.7, §12.
+다음: G6. 사용자가 정한 정책(명시적 integration_test 필수·대체 실행 없음, G4 준비 검토/G6 실행 증거 분리, 조건부 N/A, 기존 WI 표시 조건)을 브랜치 `g6-dev`의 `docs/g6/G6-DESIGN.md`로 구체화했다. 구현은 그 문서 §9 결정 뒤 별도 세션.
+
+이전: 0.1.4 확정(2026-11-09). 남은 미검증은 TEST_RESULTS §6, §9.13, §11.7, §12.7, §13.7.
 
 ## 헤드리스 실행 예산 (실전 재작업 드릴, 사용자 승인 2026-11-08)
 - 승인 3회만: haiku 권한 프로브 1회($0.3 상한) + sonnet S1·S2 각 1회($4 상한). 사용: $0.0025 + $0.70 + $0.33. 추가 실행은 다시 승인.
@@ -167,9 +169,9 @@ D35에 따라 바꿀 것(Gate 판정은 바꾸지 않는다)
 새 샘플로 `/vmodel:start`부터 G7 COMPLETED까지 1회, G6 실패에서 시작하는 재작업 1회. 실제 Claude 실행이라 횟수와 상한을 정해 사용자 승인을 받은 뒤에만 한다.
 
 ## 버전 이력
-- 0.1.5 (후보, 브랜치 `v0.1.5-dev`, 태그 없음): 업그레이드 시 DevKit 권한 규칙 이동(D38). Gate 판정·원장 형식·manifest·guard 불변. 검증은 TEST_RESULTS §12.
+- 0.1.5 (releases/vmodel-0.1.5.json, core `sha256:37071459…`, 태그 `v0.1.5`, 2026-11-09 확정): 업그레이드 시 DevKit 권한 규칙 이동(D38). Gate 판정·원장 형식·manifest·guard 불변. **현재 기준 버전.** 검증: WSL 225/225, Windows cp949 225 실행·실패 0·skip 40, 확정 검증 TEST_RESULTS §13(D40). 알려진 비용: 업그레이드마다 G4 재리뷰.
 - 0.1.0 (releases/vmodel-0.1.0.json): 최초 고정 릴리스. E2E-1에서 사용.
 - 0.1.1 (releases/vmodel-0.1.1.json): 스킬/에이전트가 프로젝트 밖 플러그인 파일을 Read하지 않도록 `vmodel guide <topic>` 추가. E2E-2에서 사용.
 - 0.1.2 (releases/vmodel-0.1.2.json, 태그 `v0.1.2` → `bbd6a3d`): 단일 명령 규칙(스킬·에이전트), verifier 포기 금지, 설치 시 validator CLI allow 규칙. E2E-3에서 G1~G5 완주, 실전 재작업 드릴(TEST_RESULTS §8)의 기준 버전.
-- 0.1.4 (releases/vmodel-0.1.4.json, core `sha256:5dd1d010…`, 태그 `v0.1.4`, 2026-11-09 확정): guard `/dev/null` 오탐 수정과 리디렉션 우회 차단(F2), 실패 TEST 증거 정확성(F3, D35 P1), 결함 표시 상태 OPEN·FIX_APPLIED·REVERIFY_REQUIRED·VERIFICATION_FAILED·CLOSED·UNKNOWN(F1, D32 (C)·D37). Gate 판정·원장 형식·manifest 불변. **현재 기준 버전.** 검증: WSL 186/186, Windows cp949 186 실행·실패 0·skip 6, 실제 세션 1회(guard 우회 0, audit OK). 공개 전 재빌드 이력은 §11.1.
+- 0.1.4 (releases/vmodel-0.1.4.json, core `sha256:5dd1d010…`, 태그 `v0.1.4`, 2026-11-09 확정): guard `/dev/null` 오탐 수정과 리디렉션 우회 차단(F2), 실패 TEST 증거 정확성(F3, D35 P1), 결함 표시 상태 OPEN·FIX_APPLIED·REVERIFY_REQUIRED·VERIFICATION_FAILED·CLOSED·UNKNOWN(F1, D32 (C)·D37). Gate 판정·원장 형식·manifest 불변. 검증: WSL 186/186, Windows cp949 186 실행·실패 0·skip 6, 실제 세션 1회(guard 우회 0, audit OK). 공개 전 재빌드 이력은 §11.1.
 - 0.1.3 (releases/vmodel-0.1.3.json, 태그 `v0.1.3`(태그 객체 `ef72f9a`) → `0df13b7`, 2026-11-08 확정): 드릴에서 찾은 F1~F4 수정 — 결함 `fixed`는 수정과 함께, 원장 파생 결함 추적(`failing_tests`/`unlinked_failing_tests`/`verified_by`), status에 실패 체크 표시, verifier 원인 대조 체크리스트(D28~D30). 실제 재작업 세션 1회(drill-3, TEST_RESULTS §9)에서 F1·F3·F4 통과, F2 부분 통과(누락 경고 경로는 프로브만). 확정 시 재검증: 하네스 103/103(WSL, 196초), 릴리스 사본·기록·소스 43개 파일 해시 일치, core `0208c798…`, drill-3 원장 audit OK(18건, 증거 6건). `main`은 fast-forward로 `0df13b7`(로컬, 푸시 안 함).

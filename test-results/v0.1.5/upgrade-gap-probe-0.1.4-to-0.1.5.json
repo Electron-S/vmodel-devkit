@@ -1,0 +1,219 @@
+{
+  "old": "vmodel-0.1.4",
+  "new": "vmodel-0.1.5",
+  "normal": {
+    "events": [
+      {
+        "after": "write install-record.json",
+        "pinned_version": "0.1.4",
+        "I1": true,
+        "I2": true,
+        "I3": true,
+        "deny_n": 9,
+        "allow_n": 5
+      },
+      {
+        "after": "write settings.json",
+        "pinned_version": "0.1.4",
+        "I1": true,
+        "I2": true,
+        "I3": true,
+        "deny_n": 11,
+        "allow_n": 7
+      },
+      {
+        "after": "ledger append lock",
+        "pinned_version": "0.1.4",
+        "I1": true,
+        "I2": true,
+        "I3": true,
+        "deny_n": 11,
+        "allow_n": 7
+      },
+      {
+        "after": "write devkit.lock.json",
+        "pinned_version": "0.1.5",
+        "I1": true,
+        "I2": true,
+        "I3": true,
+        "deny_n": 11,
+        "allow_n": 7
+      },
+      {
+        "after": "write settings.json",
+        "pinned_version": "0.1.5",
+        "I1": true,
+        "I2": true,
+        "I3": true,
+        "deny_n": 10,
+        "allow_n": 5
+      },
+      {
+        "after": "write install-record.json",
+        "pinned_version": "0.1.5",
+        "I1": true,
+        "I2": true,
+        "I3": true,
+        "deny_n": 10,
+        "allow_n": 5
+      }
+    ],
+    "outcome": {
+      "complete": true,
+      "error": null
+    },
+    "final": {
+      "old_core_deny": false,
+      "new_core_deny": true,
+      "user_rules_kept": true
+    }
+  },
+  "interrupted": [
+    {
+      "interrupt_after": "write install-record.json",
+      "outcome": {
+        "raised": "SetupError",
+        "message": "upgrade failed at the install record step (interrupted). Rolled back: .claude/settings.json, the install record and the lock are as before"
+      },
+      "end_state": {
+        "pinned_version": "0.1.4",
+        "pinned_core_denied": true,
+        "protect_rules_kept": true,
+        "user_rules_kept": true,
+        "old_core_deny": true,
+        "new_core_deny": false
+      },
+      "rerun": {
+        "old_core_deny": false,
+        "new_core_deny": true,
+        "user_rules_kept": true,
+        "outcome": {
+          "complete": true,
+          "error": null
+        }
+      }
+    },
+    {
+      "interrupt_after": "write settings.json",
+      "outcome": {
+        "raised": "SetupError",
+        "message": "upgrade failed at the settings step (interrupted). Rolled back: .claude/settings.json, the install record and the lock are as before"
+      },
+      "end_state": {
+        "pinned_version": "0.1.4",
+        "pinned_core_denied": true,
+        "protect_rules_kept": true,
+        "user_rules_kept": true,
+        "old_core_deny": true,
+        "new_core_deny": false
+      },
+      "rerun": {
+        "old_core_deny": false,
+        "new_core_deny": true,
+        "user_rules_kept": true,
+        "outcome": {
+          "complete": true,
+          "error": null
+        }
+      }
+    },
+    {
+      "interrupt_after": "ledger append lock",
+      "outcome": {
+        "raised": "SetupError",
+        "message": "upgrade failed at the re-pin step (interrupted) after the ledger changed (entries: 1 before, 2 now): the re-pin is or may be recorded, so nothing was rolled back. The lock is unchanged; .claude/settings.json keeps the previous and the new DevKit rules (no protection gap). Fix the cause and run 'vmod"
+      },
+      "end_state": {
+        "pinned_version": "0.1.4",
+        "pinned_core_denied": true,
+        "protect_rules_kept": true,
+        "user_rules_kept": true,
+        "old_core_deny": true,
+        "new_core_deny": true
+      },
+      "rerun": {
+        "old_core_deny": false,
+        "new_core_deny": true,
+        "user_rules_kept": true,
+        "outcome": {
+          "complete": true,
+          "error": null
+        }
+      }
+    },
+    {
+      "interrupt_after": "write devkit.lock.json",
+      "outcome": {
+        "raised": "SetupError",
+        "message": "upgrade failed at the re-pin step (interrupted) after the ledger changed (entries: 1 before, 2 now): the re-pin is or may be recorded, so nothing was rolled back. The lock is updated; .claude/settings.json keeps the previous and the new DevKit rules (no protection gap). Fix the cause and run 'vmodel"
+      },
+      "end_state": {
+        "pinned_version": "0.1.5",
+        "pinned_core_denied": true,
+        "protect_rules_kept": true,
+        "user_rules_kept": true,
+        "old_core_deny": true,
+        "new_core_deny": true
+      },
+      "rerun": {
+        "old_core_deny": false,
+        "new_core_deny": true,
+        "user_rules_kept": true,
+        "outcome": {
+          "complete": true,
+          "error": null
+        }
+      }
+    },
+    {
+      "interrupt_after": "write settings.json",
+      "outcome": {
+        "complete": false,
+        "error": "the validator was re-pinned, but removing the previous release's DevKit rules failed (interrupted). .claude/settings.json keeps the old and the new rules (no protection gap); run 'vmodel lock --accept-current' again to finish"
+      },
+      "end_state": {
+        "pinned_version": "0.1.5",
+        "pinned_core_denied": true,
+        "protect_rules_kept": true,
+        "user_rules_kept": true,
+        "old_core_deny": false,
+        "new_core_deny": true
+      },
+      "rerun": {
+        "old_core_deny": false,
+        "new_core_deny": true,
+        "user_rules_kept": true,
+        "outcome": {
+          "complete": true,
+          "error": null
+        }
+      }
+    },
+    {
+      "interrupt_after": "write install-record.json",
+      "outcome": {
+        "complete": false,
+        "error": "the validator was re-pinned, but removing the previous release's DevKit rules failed (interrupted). .claude/settings.json keeps the old and the new rules (no protection gap); run 'vmodel lock --accept-current' again to finish"
+      },
+      "end_state": {
+        "pinned_version": "0.1.5",
+        "pinned_core_denied": true,
+        "protect_rules_kept": true,
+        "user_rules_kept": true,
+        "old_core_deny": false,
+        "new_core_deny": true
+      },
+      "rerun": {
+        "old_core_deny": false,
+        "new_core_deny": true,
+        "user_rules_kept": true,
+        "outcome": {
+          "complete": true,
+          "error": null
+        }
+      }
+    }
+  ],
+  "problems": [],
+  "ok": true
+}

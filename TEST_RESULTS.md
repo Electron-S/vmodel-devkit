@@ -1,6 +1,6 @@
 # TEST_RESULTS
 
-마지막 갱신: 2026-11-09(6차, §12 v0.1.5 후보: 업그레이드 시 권한 규칙 이동, 브랜치 `v0.1.5-dev`, 태그 없음). 확정 버전: VModel DevKit **0.1.4** (core `sha256:5dd1d010…`, `releases/vmodel-0.1.4.json`) — 하네스(WSL·Windows), 첫 0.1.4 빌드 대상 RED, 독립 검토 2회, **실제 Claude Code 세션 1회**(sonnet, $0.15, §11)로 검증. §10은 첫 0.1.4 빌드(core `b1fee43f…`) 기준 기록으로 보존한다. 이전 버전 **0.1.3** (core `sha256:0208c798…`, `releases/vmodel-0.1.3.json`) — 하네스와 **실제 Claude 재작업 세션 1회**(§9, drill-3)로 검증. 기준 버전 **0.1.2** (core `sha256:a0555e32…`, 태그 `v0.1.2` → 커밋 `bbd6a3d`)는 §3의 E2E-3과 §8의 실전 재작업 드릴에서 실제 세션으로 검증. 0.1.0·0.1.1은 E2E-1·2에서 쓴 이전 릴리스.
+마지막 갱신: 2026-11-09(7차, §13 v0.1.5 확정 검증). 확정 버전: VModel DevKit **0.1.5** (core `sha256:37071459…`, `releases/vmodel-0.1.5.json`, 태그 `v0.1.5`) — §12의 하네스(WSL·Windows)·RED/GREEN·독립 검토 3회와 §13의 확정 검증(릴리스 해시, 업그레이드 공백 프로브, 원장·리뷰 호환 프로브, 깨끗한 worktree 전체 회귀)으로 검증, 실제 Claude 세션 없음. 이전 확정 버전 **0.1.4** (core `sha256:5dd1d010…`, `releases/vmodel-0.1.4.json`) — 하네스(WSL·Windows), 첫 0.1.4 빌드 대상 RED, 독립 검토 2회, **실제 Claude Code 세션 1회**(sonnet, $0.15, §11)로 검증. §10은 첫 0.1.4 빌드(core `b1fee43f…`) 기준 기록으로 보존한다. 이전 버전 **0.1.3** (core `sha256:0208c798…`, `releases/vmodel-0.1.3.json`) — 하네스와 **실제 Claude 재작업 세션 1회**(§9, drill-3)로 검증. 기준 버전 **0.1.2** (core `sha256:a0555e32…`, 태그 `v0.1.2` → 커밋 `bbd6a3d`)는 §3의 E2E-3과 §8의 실전 재작업 드릴에서 실제 세션으로 검증. 0.1.0·0.1.1은 E2E-1·2에서 쓴 이전 릴리스.
 
 "실측"은 이 PC에서 실제로 실행한 결과, "미검증"은 실행하지 않은 것입니다. 추정은 따로 표시합니다.
 
@@ -543,3 +543,44 @@ Windows skip 40 = 이전과 같은 6건(ruff 미설치 1, pty 4, 심볼릭 링�
 - 롤백 중 두 번째 Ctrl-C 무시는 결정적 테스트가 없다(코드 검토).
 - 심볼릭 링크인 settings.json은 원자적 교체로 일반 파일이 된다(install부터 있던 동작).
 - Python 3.11 미검증(§6).
+
+
+## 13. v0.1.5 확정 검증 (2026-11-09, 사용자 조건부 승인, 실제 Claude 세션 없음)
+
+사용자 승인 조건: 필수 검증(버전 일치, 릴리스·manifest 해시, 업그레이드 권한 공백, 사용자 규칙 보존, 서명 원장·Gate 판정 호환, 현재 소스 전체 회귀)이 통과하면 `main`에 `--ff-only` 병합하고 최종 검증 커밋에 annotated 태그 `v0.1.5`. 기존 태그·릴리스 기록 수정 금지, 원격 푸시 금지, 유료 헤드리스 세션 없음. 아래는 모두 이 PC에서 실제로 실행한 결과다.
+
+### 13.1 출발 상태
+- 브랜치 `v0.1.5-dev` = `8f0eaae`(문서), 마지막 코드 커밋 `aae9a99`, `main` = 태그 `v0.1.4` = `991af67`, `main`은 `8f0eaae`의 조상(fast-forward 가능). 예상과 같다.
+- `aae9a99`와 `8f0eaae`의 트리 해시가 `plugins`(`b6afbdf`), `tests`(`7777682`), `scripts`(`984cc85`) 모두 같다. 그 사이 변경은 문서·검증 기록·`releases/vmodel-0.1.5.json`뿐이다.
+
+### 13.2 버전·릴리스 해시 (`test-results/v0.1.5/release_check.py`, 결과 `release-check-pre-merge.json`)
+Validator 코드를 쓰지 않고 hashlib로 다시 계산했다(파일별 sha256, Core 해시 = validator·hooks·bin 파일 표의 정규 JSON sha256). 각 릴리스 사본의 자가 점검(`bin/vmodel version`)도 함께 비교했다.
+- `dist/vmodel-0.1.0`~`0.1.5`: 사본 43개 파일이 각 `releases/vmodel-<ver>.json`과 일치, 사본의 `RELEASE_MANIFEST.json` = 기록, 다시 계산한 Core 해시 = 기록 = 자가 점검 값, 자가 점검 `integrity_ok: true`. 0.1.5 core `sha256:37071459bd445eb9…`.
+- 소스 `plugins/vmodel` 43개 파일 = 0.1.5 기록.
+- 버전 문자열: `VERSION`, 소스·사본 `plugin.json`, 릴리스 기록, 마켓플레이스 항목(`./vmodel-0.1.5`) 모두 0.1.5.
+- `releases/vmodel-0.1.0~0.1.4.json`은 태그 `v0.1.4` 이후 변경 없음. 태그 `v0.1.2`→`bbd6a3d`, `v0.1.3`→`0df13b7`, `v0.1.4`→`991af67` 그대로. `v0.1.4` 대비 바뀐 플러그인 파일은 `plugin.json`, `__init__.py`, `cli.py`, `setup_project.py` 4개다.
+
+### 13.3 업그레이드 권한 공백·사용자 규칙 (`upgrade_gap_probe.py`, 결과 `upgrade-gap-probe-0.1.4-to-0.1.5.json`)
+실제 릴리스 사본 `dist/vmodel-0.1.4`로 설치한 프로젝트(한글·공백 경로, 임시 VMODEL_HOME, 사용자 allow 2개(하나는 0.1.4 경로 언급)·deny 1개·env)에 0.1.5의 업그레이드 트랜잭션을 별도 프로세스로 실행하고, 파일 쓰기와 원장 기록 직후마다 디스크 상태를 확인했다. I1 지금 lock이 가리키는 릴리스의 Core deny 규칙이 settings에 있음, I2 0.1.4가 쓴 `.vmodel`·VMODEL_HOME 보호 deny 규칙이 모두 있음, I3 사용자 allow·deny가 순서대로 모두 있음.
+- 정상 경로: 쓰기 지점 6개(설치 기록 → settings 추가 → 원장 lock 기록 → lock 파일 → settings 제거 → 설치 기록 확정) 모두에서 I1~I3 성립. 끝 상태: 0.1.4 Core deny 없음, 0.1.5 Core deny 있음, 사용자 규칙 유지. 강제 종료(SIGKILL)는 두 쓰기 사이에서만 일어나므로 이 6개 상태가 남을 수 있는 상태 전부다.
+- 지점마다 쓰기 직후 KeyboardInterrupt(새 샌드박스 6개): 원장 기록 전 3개 지점은 바이트 복원, 그 뒤 3개 지점은 상위 집합 또는 완료 상태로 남고, 6개 모두 I1~I3 성립. 같은 명령을 다시 실행하면 6개 모두 새 규칙만 남고 사용자 규칙 유지.
+- 관찰(nit, 고치지 않음): settings 제거 쓰기 직후에 중단되면 안내 문구가 ".claude/settings.json keeps the old and the new rules"라고 하지만 실제로는 이전 규칙이 이미 지워진 상태다. 보호는 유지된다(새 규칙 있음, 재실행으로 마무리). 릴리스를 바꾸지 않으므로 다음 버전 후보로 기록한다.
+
+### 13.4 서명 원장·Gate 판정 호환
+- 릴리스 사본 대상 GREEN(`scripts/red_green.py --mode green --plugin dist/vmodel-0.1.5`, 로그 `green-release-confirm-0.1.5.log`): `test_upgrade_settings`, `test_upgrade_review`, `test_upgrade_review2`, `test_upgrade_review3`, `test_version_compat` **42/42 기대 충족, 위반 0**, 91.8초. 여기에 `GateDecisionInvariant`(0.1.3과 같은 이력에서 원장 투영·manifest 동일), `OldEvidenceAccept`(0.1.3이 서명한 원장·증거가 새 코어에서 검증), `test_gates_still_pass_after_upgrade`, `test_user_settings_survive_upgrade_and_uninstall`, `test_upgrade_from_014_release_then_014_uninstall`이 포함된다. 로그의 `worktree_dirty: true`는 이번에 추가한 `test-results/v0.1.5/` 프로브 파일(추적 전) 때문이며 플러그인·테스트 파일은 커밋 상태 그대로다.
+- 리뷰 유지 확인(`upgrade_review_cost_probe.py`, 결과 `upgrade-review-cost-0.1.4-to-0.1.5.json`): 0.1.4 릴리스로 설치해 G1~G5 PASS한 프로젝트를 0.1.5로 재고정(pty)한 뒤 새 리뷰 없이 재평가했다. 0.1.4가 쓴 원장 10건이 바이트 그대로 앞부분에 남고 audit OK. G1~G3은 PASSED(리뷰 대상 해시가 그대로), **G4는 REVIEW_REQUIRED**(리뷰 대상 해시 불일치). 원인: 업그레이드가 `.claude/settings.json`의 DevKit 규칙을 옮기고, 이 파일은 G4/G5 코드 manifest에 들어 있다(`project.py` 제외 목록에 `.claude` 없음). 같은 프로브로 0.1.3 → 0.1.4를 돌리면 settings가 바뀌지 않아 G1~G5가 리뷰 없이 모두 PASSED였다. 즉 **0.1.5부터 업그레이드마다 WI당 G4 verifier 리뷰가 한 번 더 든다.** D38의 "추가 비용은 없다"는 재실행 비용에만 맞고 리뷰 비용에는 틀렸다(D40에서 정정, SPEC §11·README 업그레이드 절에 반영). Gate 판정 규칙·원장 형식은 바뀌지 않았고 보호 공백도 아니므로 확정을 막는 실패로 보지 않았다. 해결 여부는 G6 설계의 사용자 결정 항목으로 넘겼다(`docs/g6/G6-DESIGN.md` §9 4번).
+
+### 13.5 전체 회귀
+| 환경 | 커밋 | 결과 |
+|---|---|---|
+| WSL2 Ubuntu 24.04, Python 3.12.3, pytest, ruff (깨끗한 detached worktree, dirty 0) | `8f0eaae` | **225/225 통과**, skip 0, 718초 (`wsl-harness-0.1.5-release-8f0eaae.log`) |
+| Windows 11, Python 3.13.14 venv, cp949 | `aae9a99` (§12.3) | 225 실행, 실패 0, skip 40. 이번에 다시 돌리지 않았다. `8f0eaae`·확정 커밋과 `plugins`·`tests`·`scripts` 트리가 같으므로 그 결과가 같은 코드에 대한 것이다 |
+
+### 13.6 병합·태그
+이 기록을 담은 커밋을 최종 검증 커밋으로 하고, 그 뒤에 `git merge --ff-only`로 `main`을 옮기고 그 커밋에 annotated 태그 `v0.1.5`를 만든다. 최종 SHA와 병합 후 재확인 결과는 HANDOFF와 다음 기록(`test-results/v0.1.5/release-check-post-tag.json`)에 남긴다. 원격 푸시는 하지 않는다.
+
+### 13.7 미검증·남은 위험 (확정 후에도 그대로)
+- 실제 Claude Code 세션에서 업그레이드한 프로젝트를 쓰는 것(새 CLI allow 규칙이 신뢰된 작업 공간에서 권한 확인을 없애는지 포함)은 확인하지 않았다(유료 세션 없음).
+- Windows의 pty 경로(업그레이드 TTY 확인·Ctrl-C·계획 대조 등 34건 + 기존 6건)는 Windows에서 돌리지 않았다. Windows에서 Claude Code가 settings.json을 연 채로 있을 때의 원자적 교체는 미실측.
+- 마켓플레이스 캐시 경로에서 실행될 때 규칙이 가리킬 경로, 다운그레이드 자동화 없음(수동 절차의 규칙 공백), Python 3.11은 §12.7과 같이 미검증이다.
+- 업그레이드마다 G4 재리뷰 비용(§13.4), 제거 직후 중단 시 안내 문구 부정확(§13.3)은 알려진 한계로 남는다.

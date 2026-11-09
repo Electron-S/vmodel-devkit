@@ -1,0 +1,60 @@
+{
+  "mode": "green",
+  "plugin": {
+    "path": "/home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.1.5",
+    "release_manifest": {
+      "version": "0.1.5",
+      "core_hash": "sha256:37071459bd445eb9873c102d3b20a605478feb0b1dc9943f0130f670c2bbf5e8"
+    }
+  },
+  "git_head": "8f0eaae",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "tests": 42,
+  "expectations_met": 42,
+  "violations": 0,
+  "seconds": 91.8
+}
+
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsAccept.test_gates_still_pass_after_upgrade
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsAccept.test_second_upgrade_is_a_no_op_for_settings
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsAccept.test_upgrade_from_014_release_then_014_uninstall
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsChar.test_repin_of_init_only_project_leaves_settings_alone
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsChar.test_repin_without_tty_or_without_yes_changes_nothing
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsChar.test_second_install_and_second_uninstall_change_nothing
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsChar.test_user_settings_survive_upgrade_and_uninstall
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsInProcessAccept.test_plan_and_transaction_in_process
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsInvariant.test_guard_still_blocks_agents_and_protects_the_running_core
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsRed.test_failed_repin_restores_settings_record_and_lock
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsRed.test_install_over_another_release_points_to_the_upgrade
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsRed.test_install_record_tracks_the_new_release
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsRed.test_interrupted_after_the_record_write_is_completed_on_rerun
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsRed.test_interrupted_upgrade_superset_is_completed_on_rerun
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsRed.test_invalid_settings_aborts_before_repin
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsRed.test_plan_is_shown_before_confirmation_and_backup_is_kept
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsRed.test_rules_follow_the_new_release_after_repin
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsRed.test_unwritable_settings_aborts_without_repinning
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsRed.test_user_rule_equal_to_a_devkit_rule_stays_user_owned
+OK  expect=ok   got=ok      test_upgrade_review.UpgradeReviewChar.test_plan_check_refuses_when_settings_change_while_the_prompt_is_open
+OK  expect=ok   got=ok      test_upgrade_review.UpgradeReviewInProcessChar.test_removal_step_failure_leaves_a_superset_and_a_rerun_finishes
+OK  expect=ok   got=ok      test_upgrade_review.UpgradeReviewInProcessRed.test_failed_settings_restore_keeps_devkit_ownership
+OK  expect=ok   got=ok      test_upgrade_review.UpgradeReviewRed.test_abbreviated_accept_option_is_rejected
+OK  expect=ok   got=ok      test_upgrade_review.UpgradeReviewRed.test_ctrl_c_while_waiting_for_the_ledger_rolls_everything_back
+OK  expect=ok   got=ok      test_upgrade_review.UpgradeReviewRed.test_devkit_allow_rules_the_user_removed_stay_removed
+OK  expect=ok   got=ok      test_upgrade_review.UpgradeReviewRed.test_failure_after_the_ledger_record_is_not_reported_as_rolled_back
+OK  expect=ok   got=ok      test_upgrade_review.UpgradeReviewRed.test_install_over_an_older_version_at_the_same_path_points_to_the_upgrade
+OK  expect=ok   got=ok      test_upgrade_review.UpgradeReviewRed.test_no_tty_is_refused_before_settings_are_read
+OK  expect=ok   got=ok      test_upgrade_review.UpgradeReviewRed.test_plan_check_covers_a_project_installed_while_the_prompt_was_open
+OK  expect=ok   got=ok      test_upgrade_review.UpgradeReviewRed.test_unreadable_settings_is_reported_not_a_crash
+OK  expect=ok   got=ok      test_upgrade_review.UpgradeReviewRed.test_upgrade_backups_are_covered_by_a_deny_rule
+OK  expect=ok   got=ok      test_upgrade_review2.UpgradeReview2Char.test_abbreviated_option_is_an_argument_error
+OK  expect=ok   got=ok      test_upgrade_review2.UpgradeReview2Char.test_interrupt_message_names_the_step
+OK  expect=ok   got=ok      test_upgrade_review2.UpgradeReview2Char.test_removing_one_previous_allow_rule_withholds_only_its_counterpart
+OK  expect=ok   got=ok      test_upgrade_review2.UpgradeReview2InProcessRed.test_a_concurrent_ledger_record_is_not_mistaken_for_our_re_pin
+OK  expect=ok   got=ok      test_upgrade_review2.UpgradeReview2Red.test_install_that_never_had_allow_rules_gets_them
+OK  expect=ok   got=ok      test_upgrade_review3.UpgradeReview3Char.test_a_decline_carries_over_two_release_changes_and_uninstall_restores
+OK  expect=ok   got=ok      test_upgrade_review3.UpgradeReview3Red.test_a_declined_rule_the_user_added_back_is_not_withheld_on_the_next_release
+OK  expect=ok   got=ok      test_upgrade_review3.UpgradeReview3Red.test_same_release_re_pin_after_a_decline_shows_no_change_block
+OK  expect=ok   got=ok      test_version_compat.GateDecisionInvariant.test_manifest_hashes_are_computed_identically
+OK  expect=ok   got=ok      test_version_compat.GateDecisionInvariant.test_same_history_gives_the_same_gate_decisions
+OK  expect=ok   got=ok      test_version_compat.OldEvidenceAccept.test_013_ledger_and_evidence_verify_under_014

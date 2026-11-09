@@ -2,7 +2,7 @@
 
 Claude Code용 V-Model 개발 환경입니다. 요구사항(G1) → 아키텍처(G2) → 상세 설계·테스트 명세(G3) → 구현(G4) → 단위 검증(G5)을 Quality Gate로 나누고, **독립 Validator가 직접 실행하고 서명한 증거로만** Gate를 통과시킵니다. AI가 "통과했다"고 쓴 파일이나 보고는 증거로 인정하지 않습니다.
 
-현재 버전은 **MVP(0.1.5 릴리스 후보, 기준 릴리스 0.1.4)** 입니다. STANDARD 프로필의 G1~G5만 동작하고, G6(통합)·G7(시스템)·LITE·STRICT는 설계만 되어 있습니다. 그래서 G1~G5를 모두 통과한 Work Item도 `PARTIALLY_VERIFIED`까지만 갑니다. V-Model 전체 완료가 아닙니다.
+현재 버전은 **MVP 0.1.5**(2026-11-09 확정, 태그 `v0.1.5`) 입니다. STANDARD 프로필의 G1~G5만 동작하고, G6(통합)·G7(시스템)·LITE·STRICT는 설계만 되어 있습니다. 그래서 G1~G5를 모두 통과한 Work Item도 `PARTIALLY_VERIFIED`까지만 갑니다. V-Model 전체 완료가 아닙니다.
 
 자세한 요구사항과 Gate 정의는 [SPEC.md](SPEC.md), 설계 결정은 [DECISIONS.md](DECISIONS.md), 검증 결과는 [TEST_RESULTS.md](TEST_RESULTS.md)에 있습니다.
 
@@ -74,6 +74,7 @@ guard 훅이 에이전트의 실행을 막습니다. 터미널에서 직접 실�
 - 업그레이드 (0.1.5부터):
   1. Claude 세션을 닫고, 터미널에서 새 릴리스로 `dist/vmodel-0.1.5/bin/vmodel lock --project <dir> --accept-current --reason "0.1.5로 업그레이드"`를 실행합니다. 확인 전에 `.claude/settings.json`에서 추가·제거될 DevKit 규칙(이전 릴리스 경로 → 새 릴리스 경로)을 보여 줍니다. `yes`를 입력하면 새 규칙을 먼저 추가하고, Core 해시를 재고정한 뒤, 설치가 추가했던 이전 릴리스 규칙만 지웁니다. 직접 추가한 규칙은 그대로 둡니다. 이전 파일 사본은 `.vmodel/install/backup/upgrade-<시각>/`에 남습니다.
   2. 플러그인 경로(`--plugin-dir` 또는 마켓플레이스)를 새 릴리스로 바꿉니다. 원장 이력은 유지되고, 기존 PASS는 Core가 바뀌었으므로 모두 STALE이 되어 다시 검증해야 합니다.
+  3. 다시 검증할 때 G1~G3은 산출물이 그대로면 리뷰를 새로 받지 않고 `vmodel gate`만으로 통과합니다. **G4는 verifier 리뷰를 다시 받아야 합니다.** 업그레이드가 `.claude/settings.json`의 규칙을 옮기는데, 이 파일이 G4 코드 manifest에 들어 있어 이전 리뷰의 대상 해시와 달라지기 때문입니다(0.1.5에서 확인, TEST_RESULTS §13.4).
   - 중간에 실패하면: 재고정 전 단계의 실패는 settings·설치 기록·lock을 원래대로 되돌립니다. 이전 규칙 제거만 실패하면 이전+새 규칙이 함께 남은 안전한 상태로 끝나므로 같은 명령을 다시 실행하면 됩니다. 같은 명령을 여러 번 실행해도 settings는 한 번만 바뀝니다.
   - 0.1.4 이하로 내리기: 그 릴리스에는 설정 갱신이 없으므로 세션을 닫고 `<현재>/bin/vmodel uninstall` → `<이전>/bin/vmodel install` → `<이전>/bin/vmodel lock --accept-current` 순서로 합니다(uninstall과 install 사이에는 DevKit 규칙이 없습니다).
   - 0.1.4까지의 절차(재고정만 하거나 uninstall 후 install)는 규칙이 이전 릴리스 경로에 남거나, 두 명령 사이에 보호 규칙이 비는 문제가 있었습니다(DECISIONS D38).

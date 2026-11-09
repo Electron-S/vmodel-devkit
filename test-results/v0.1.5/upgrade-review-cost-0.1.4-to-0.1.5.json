@@ -1,0 +1,36 @@
+{
+  "old": "vmodel-0.1.4",
+  "new": "vmodel-0.1.5",
+  "repinned": true,
+  "old_ledger_entries": 10,
+  "old_ledger_prefix_kept": true,
+  "audit_exit_code_after": 0,
+  "settings_changed_by_upgrade": true,
+  "status_after_upgrade": {
+    "G1": "STALE",
+    "G2": "STALE",
+    "G3": "STALE",
+    "G4": "STALE",
+    "G5": "STALE",
+    "G6": "NOT_IMPLEMENTED",
+    "G7": "NOT_IMPLEMENTED"
+  },
+  "reevaluate_without_new_reviews": {
+    "G1": {
+      "status": "PASSED",
+      "review_check": "pass"
+    },
+    "G2": {
+      "status": "PASSED",
+      "review_check": "pass"
+    },
+    "G3": {
+      "status": "PASSED",
+      "review_check": "pass"
+    },
+    "G4": {
+      "status": "REVIEW_REQUIRED",
+      "review_check": "pending"
+    }
+  }
+}

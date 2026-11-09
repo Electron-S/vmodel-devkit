@@ -249,7 +249,7 @@ F1 종료 상태 (status.py)
 
 기각한 대안: (a) 별도 `vmodel upgrade` 명령 — 재고정과 따로 실행하면 빠뜨리기 쉽다. (b) 경로 패턴으로 이전 릴리스 규칙을 찾아 바꾸기 — 사용자 규칙을 지울 수 있다. (c) 이전 규칙을 먼저 지우고 새 규칙 추가(uninstall → install) — 보호 공백. (d) 이전 규칙을 남겨 두기 — 쓰지 않는 CLI에 대한 allow가 남고, 설치 기록이 실제 settings와 어긋난다.
 
-한계: 0.1.4 이하로 내리는 다운그레이드는 그 릴리스에 설정 갱신이 없어 자동화하지 못한다(SPEC §11 수동 절차, 그 사이 규칙 공백). 마켓플레이스로 등록해 Claude Code가 플러그인을 다른 경로(캐시)에서 실행하면 규칙이 가리킬 경로는 미검증이다(TEST_RESULTS §6과 같은 미검증 항목). Windows에서 Claude Code가 settings.json을 연 채로 있으면 원자적 교체가 실패할 수 있다(그 경우 재고정 전 실패로 복원된다, 미실측). `.claude/settings.json`은 G4/G5 manifest에 포함되므로 업그레이드로 settings가 바뀌면 G4/G5가 STALE이 되는데, Core 해시 변경으로 어차피 모든 PASS가 STALE이라 추가 비용은 없다.
+한계: 0.1.4 이하로 내리는 다운그레이드는 그 릴리스에 설정 갱신이 없어 자동화하지 못한다(SPEC §11 수동 절차, 그 사이 규칙 공백). 마켓플레이스로 등록해 Claude Code가 플러그인을 다른 경로(캐시)에서 실행하면 규칙이 가리킬 경로는 미검증이다(TEST_RESULTS §6과 같은 미검증 항목). Windows에서 Claude Code가 settings.json을 연 채로 있으면 원자적 교체가 실패할 수 있다(그 경우 재고정 전 실패로 복원된다, 미실측). `.claude/settings.json`은 G4/G5 manifest에 포함되므로 업그레이드로 settings가 바뀌면 G4/G5가 STALE이 되는데, Core 해시 변경으로 어차피 모든 PASS가 STALE이라 추가 비용은 없다. (D40에서 정정: 재실행 비용은 같지만 G4 리뷰 대상 해시가 바뀌어 G4 verifier 리뷰를 다시 받아야 한다.)
 
 독립 검토: 첫 수정본(`0e691d0`)에서 지적 12건을 받아 재현 테스트(`tests/test_upgrade_review.py`)로 고정한 뒤 고쳤다. 재검토(`c57f7c5`)는 지적 5의 수정이 0.1.2 이전 기록을 오판하는 부 지적 1건과 nit 3건을 냈고, 같은 방식(`tests/test_upgrade_review2.py`)으로 고쳤다. 처리표는 `docs/v0.1.5/WORKITEM.md` §7. 원장 증가 판단은 개수가 아니라 우리 lock 기록(사유·새 core 해시) 유무로 하고, 롤백 중에는 SIGINT를 무시한다. 세 번째 확인(`be372f4`)의 부 지적 1건(사용자가 다시 넣은 규칙을 남은 `declined_allow`가 보류)과 nit 1건도 같은 방식(`tests/test_upgrade_review3.py`)으로 고쳤다. 반영하지 않은 것: 같은 문자열 중 첫 번째 제거(위 2), 0.1.5 업그레이드 뒤 이전 CLI로 재고정할 때의 deny 공백(다운그레이드 수동 절차의 한계).
 
@@ -262,3 +262,10 @@ PLAN M5의 "먼저 결정하고 DECISIONS에 남길 것" 네 가지에 대한 �
 3. IF 0개: 권장 A+B. IF 0개이고 integration 명세도 0개일 때만 N/A. 기록 상태는 PASSED, `applicability: not_applicable`과 사유(`na_reason`, 없으면 G2에서 리뷰된 `integration_test_strategy.approach`)를 남기고 실행 체크는 skip. 표시는 `PASSED (N/A: no interfaces)`. integration 명세가 있으면 실행한다. `na_reason` 필수화는 하지 않는다(기존 WI의 G2 재리뷰 비용). 대안 D(새 상태 NOT_APPLICABLE)는 상태 머신 변경이 넓어 권하지 않는다.
 4. 업그레이드 영향: 권장 A. G6 구현 버전에서 기존 PARTIALLY_VERIFIED WI가 G6 평가 전까지 IN_PROGRESS로 보이는 것을 의도된 동작으로 문서화한다. 업그레이드는 Core 해시 변경으로 어차피 G1~G5 재검증이 필요하고, IF 0개 WI는 G6이 N/A로 끝난다. grandfather·자동 평가·프로파일 버전은 권하지 않는다.
 버전은 0.2.0(PLAN 제안). 결정되면 이 항목을 확정본으로 바꾸고 M5에 착수한다.
+
+## D40. v0.1.5 확정과 업그레이드 리뷰 비용 정정 (2026-11-09, 사용자 조건부 승인)
+사용자 결정: 필수 검증이 통과하면 v0.1.5를 확정한다(`main` fast-forward, 최종 검증 커밋에 annotated 태그 `v0.1.5`, 기존 태그·릴리스 기록 불변, 원격 푸시 없음). 검증 결과는 TEST_RESULTS §13: 릴리스 0.1.0~0.1.5 사본·기록·소스 해시와 버전 문자열 일치, 0.1.4 → 0.1.5 실제 사본 업그레이드의 모든 쓰기 지점과 중단 지점에서 권한 공백 없음·사용자 규칙 유지, 릴리스 사본 대상 업그레이드·호환 테스트 42/42, 깨끗한 worktree WSL 225/225. 필수 검증 실패가 없어 확정했다.
+
+정정: D38 한계 절의 "업그레이드로 settings가 바뀌어 G4/G5가 STALE이 되는 데 추가 비용은 없다"는 재실행 비용에만 맞다. `.claude/settings.json`은 G4/G5 코드 manifest에 들어 있고 G4 리뷰는 그 manifest 해시를 대상으로 하므로, 0.1.5 업그레이드 뒤 G4는 verifier 리뷰를 다시 받아야 REVIEW_REQUIRED에서 벗어난다(0.1.4 → 0.1.5 프로브로 확인, 0.1.3 → 0.1.4는 settings가 그대로라 리뷰 없이 통과했다). 판정 규칙·원장 형식·보호 정책 문제는 아니라서 확정을 막지 않았다. 문서(SPEC §11, README 업그레이드 절)에 비용을 적었고, manifest에서 settings 파일을 뺄지는 G6 설계의 사용자 결정 항목으로 넘겼다(`docs/g6/G6-DESIGN.md` §9 4번). 업그레이드 프로브에서 본 nit 하나(제거 쓰기 직후 중단 시 안내 문구가 "이전+새 규칙이 남음"이라고 하지만 이전 규칙은 이미 지워짐, 보호는 유지)도 다음 버전 후보로 남긴다.
+
+Windows 회귀는 `aae9a99`에서 돈 결과(실패 0, skip 40)를 쓴다. 확정 커밋과 `plugins`·`tests`·`scripts` 트리 해시가 같다. pty가 필요한 Windows 경로, 실제 Claude 세션에서의 업그레이드는 미검증으로 남는다(TEST_RESULTS §13.7).
