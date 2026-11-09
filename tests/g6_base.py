@@ -96,7 +96,8 @@ def replace_function(path: Path, name: str, new_source: str | None) -> None:
     text = path.read_text(encoding="utf-8")
     pat = re.compile(rf"\n\ndef {re.escape(name)}\(.*?(?=\n\n\ndef |\Z)", re.S)
     assert pat.search(text), f"{name} not in {path}"
-    text = pat.sub("" if new_source is None else "\n\n" + new_source.strip("\n") + "\n", text, count=1)
+    repl = "" if new_source is None else "\n\n" + new_source.strip("\n") + "\n"
+    text = pat.sub(lambda _m: repl, text, count=1)  # a function: re.sub must not interpret backslashes in the source
     path.write_text(text.rstrip("\n") + "\n", encoding="utf-8")
 
 

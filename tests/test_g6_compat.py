@@ -132,32 +132,38 @@ class CompatInvariant(unittest.TestCase):
         if old is None:
             self.skipTest("0.1.5 release not available")
 
-        def run(plugin) -> tuple[list, dict]:
+        def run(plugin) -> tuple[list, Sandbox]:
             sb = Sandbox(fixture=SINGLE, plugin=plugin)
-            try:
-                sb.init()
-                sb.new_wi()
-                advance(sb, "G5", na=True)
-                p = sb.root / "src/meanstat/stats.py"
-                p.write_text(p.read_text(encoding="utf-8").replace("if not values", "if values is None"),
-                             encoding="utf-8")
-                sb.review("G4")
-                sb.gate("G4")
-                failed = sb.gate("G5")[1]
-                sb.add_defect(failed.get("record_id") or "R00000", "G5", fix_scope=["src/meanstat/stats.py"])
-                proj = [(r["gate"], r["status"], r.get("failure_signature"),
-                         tuple((c["id"], c["status"]) for c in r["checks"]),
-                         tuple(sorted((r.get("executed_tests") or {}).items())))
-                        for r in ledger_records(sb) if r.get("type") == "gate" and r["gate"] in GATES5]
-                hashes = {g: sb.vm("hash", "WI-001", g, "--json")[1] for g in GATES5}
-                return proj, {g: json.loads(h)["files"] for g, h in hashes.items()}
-            finally:
-                sb.cleanup()
+            sb.init()
+            sb.new_wi()
+            advance(sb, "G5", na=True)
+            p = sb.root / "src/meanstat/stats.py"
+            p.write_text(p.read_text(encoding="utf-8").replace("if not values", "if values is None"), encoding="utf-8")
+            sb.review("G4")
+            sb.gate("G4")
+            failed = sb.gate("G5")[1]
+            sb.add_defect(failed.get("record_id") or "R00000", "G5", fix_scope=["src/meanstat/stats.py"])
+            proj = [(r["gate"], r["status"], r.get("failure_signature"),
+                     tuple((c["id"], c["status"]) for c in r["checks"]),
+                     tuple(sorted((r.get("executed_tests") or {}).items())))
+                    for r in ledger_records(sb) if r.get("type") == "gate" and r["gate"] in GATES5]
+            return proj, sb
 
-        new_proj, new_files = run(PLUGIN)
-        old_proj, old_files = run(old)
-        self.assertEqual(new_proj, old_proj)
-        self.assertEqual(new_files, old_files)
+        new_proj, sb = run(PLUGIN)
+        try:
+            old_proj, sb_old = run(old)
+            sb_old.cleanup()
+            self.assertEqual(new_proj, old_proj)  # C1: same history, same G1-G5 decisions
+            # C2: the same project hashed by both cores gives the same G1-G5 manifests
+            for g in GATES5:
+                files = {}
+                for plugin in (PLUGIN, old):
+                    sb.entry = plugin / "validator" / "vmodel.py"
+                    code, out = sb.vm("hash", "WI-001", g, "--json")
+                    files[str(plugin)] = json.loads(out)["files"]
+                self.assertEqual(files[str(PLUGIN)], files[str(old)], g)
+        finally:
+            sb.cleanup()
 
     def test_T17_015_signed_evidence_verifies_with_this_core(self):
         old = old_release("0.1.5")
