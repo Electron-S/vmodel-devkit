@@ -56,7 +56,7 @@ REQ-G6-01~26은 설계 문서 §2가 정본이다. 아래는 바뀐 것과 새�
 - **REQ-G6-30 (경로 B 선언)** G4 리뷰 `interfaces[]` 항목에 `runtime_paths: [{"test": "TEST-xxx", "kind": "subprocess"|"ipc"|"api"|"dynamic_import", "test_file_sha256": "sha256:…", "entry", "note"}]`를 둔다. G4는 선언이 (a) 그 IF를 `verifies`에 가진 integration TEST, (b) Validator가 그 함수에서 찾은 실행 경로 종류, (c) 그 함수가 있는 테스트 파일의 현재 sha256과 맞을 때만 인정한다. 안 맞으면 pending(재리뷰). `vmodel wiring WI`가 verifier에게 함수 위치·분류·해시를 보여 준다(읽기 전용).
 - **REQ-G6-31 (실행 계측)** G6은 통합 명령을 Validator Core의 계측 모듈(`tracer/sitecustomize.py`)을 `PYTHONPATH`로 주입해 실행한다. 실행 중 생긴 모든 Python 프로세스(하위 프로세스 포함)가 감시 대상 파일(IF provider·consumer 설계 단위 모듈, integration 테스트 파일)의 함수 실행을 그때의 pytest 테스트 ID(`PYTEST_CURRENT_TEST`)와 함께 기록한다. 계측 파일은 실행 폴더 `trace/`에 남고 서명된 record.json에 해시와 요약이 들어간다. 계측 실패는 테스트를 깨지 않는다.
 - **REQ-G6-32 (경로 B 판정)** 경로 B로 IF가 덮이려면 모두 필요하다: 선언이 현재 G4 PASS가 인정한 리뷰(`G4.REVIEW` `review_sha256` = 지금 `reviews/G4.json`)에 있음, 선언 해시 = 지금 테스트 파일 해시, Validator가 다시 찾은 실행 경로 종류와 일치, 그 테스트 함수가 이번 실행에서 실제로 돌았고 passed, 계측이 그 테스트의 **호출 단계**에서 provider 모듈 함수 실행과(ARCH consumer가 있으면) consumer 모듈 함수 실행을 기록, 선언 종류가 subprocess·ipc면 provider 실행이 테스트 함수와 **다른 프로세스**에서 일어남(검토 F6). 선언은 있지만 실행 증거가 부족하면 G6은 BLOCKED(`integration_evidence_insufficient`, 중립 차단)이고 PASS하지 않는다. AI 리뷰 문장만으로 IF를 덮지 않는다.
-- **REQ-G6-33 (실행 확인, 검토 1·2회차로 확정)** G6은 계측이 실행을 본 분석 대상 함수만 IF 근거로 쓴다. 경로 A 함수는 그 테스트 동안(setup·call·teardown 어느 단계든, 그 테스트가 시작한 스레드 포함) provider(와 ARCH consumer) 함수가 실제로 돌아야 근거다. 근거가 없는 주장(경로 A 정적 도달·경로 B 선언)은 같은 IF가 다른 테스트로 덮였으면 경고, 아니면 BLOCKED(`integration_evidence_insufficient`)다. 계측이 아예 없으면(Python을 `-I`/`-E`로 시작, trace 삭제 등) BLOCKED이고 JUnit만으로 인정하지 않는다. 계측이 상한에 걸려 잘렸으면 "실행되지 않음" 판단은 BLOCKED로 바꾼다. 데이터 타입만 주고받는 IF(dataclass·Enum)는 provider 함수 실행이 기록되지 않아 BLOCKED가 된다(한계: provider 함수를 실행하는 테스트가 필요).
+- **REQ-G6-33 (실행 확인, 검토 3회차로 확정, D43)** G6은 계측이 실행을 본 분석 대상 함수만 IF 근거로 쓴다. 경로 A는 그 함수의 실행과 **실행 전체에서** provider(와 ARCH consumer) 함수가 한 번이라도 실행됨을 요구한다(아무 데서도 안 돌았으면 BLOCKED `integration_evidence_insufficient`). 테스트별 provider 귀속은 경고만 낸다. 경로 B 근거 없는 선언은 IF가 덮이면 경고, 아니면 BLOCKED. 계측이 아예 없으면 BLOCKED(JUnit만으로 인정하지 않음), 잘렸으면 "실행되지 않음" 판단은 BLOCKED. 데이터 전용 IF(dataclass·Enum)는 BLOCKED(한계).
 - **REQ-G6-34 (D7, OUT_OF_SCOPE)** 결함 표시 상태에 OUT_OF_SCOPE를 더한다(D37의 6종 + 1). 조건: 결함의 종료 Gate(인용한 실패 중 가장 하위)가 G6이고, G6이 지금 PASSED + `applicability: not_applicable`(현재 manifest, STALE 아님). 표시에는 제거된 IF·TEST ID와 그것을 `removed_ids`에 둔 CR·DEFECT ID와 사유, 과거 FAILED 기록을 함께 보인다. CLOSED로 치지 않고 `verified_by`는 비운다. 결함 저장 형식은 그대로다(스키마 enum에 G6·P6·IF만 추가).
 
 ## 3. 아키텍처·영향 분석
@@ -190,7 +190,26 @@ REQ-G6-01~26은 설계 문서 §2가 정본이다. 아래는 바뀐 것과 새�
 1회차의 F2 G6 기대값(모든 IF-001 테스트가 목이면 FAILED)은 N8 결정에 따라 BLOCKED로 바꿨다(`test_F2_mocked_provider_in_every_test_of_the_interface_fails_g6`, 근거 주석).
 
 ### 7.3 3회차 (`08469ae`)
-(진행 중)
+2회차 수정의 재검토. N1~N11·P1·P2 중 닫힘 9, 부분 5(N1·N5a·N6·N10·P1/P2 계열), 그리고 새 지적 14건(주요 7). 핵심은 **같은 프로세스 안의 테스트별 귀속이 양쪽으로 틀린다**는 것: 정상 코드(fixture가 띄운 서버, 모듈 수준 스레드 풀)가 거짓 BLOCKED가 되고, autouse·세션 fixture·asyncio 작업은 목 테스트에 근거를 줬다. 귀속 규칙을 덧대는 대신 판정에 믿을 수 있는 실행 사실만 쓰기로 했다(D43). 지적은 `tests/test_g6_review3.py`로 재현(RED 대상 = `git archive 08469ae plugins/vmodel`, 13/13 목표 assertion 실패) 후 수정 `14b34af`.
+
+| 지적 | 처리 |
+|---|---|
+| R1 주요: autouse·teardown fixture가 provider를 돌리면 목 테스트가 근거 | D43: 테스트별 귀속은 경고만, 판정은 실행 전체의 provider 실행 + 함수 실행. 목 판단은 G4 리뷰(D41 결정 2) |
+| R2 주요(회귀): fixture가 띄운 API 서버의 처리 스레드가 setup 단계로 기록돼 경로 B BLOCKED, 공유 스레드 풀 consumer가 BLOCKED | 스레드는 소유 테스트의 **현재** 단계로 기록(소유 테스트가 끝나면 detached), 경로 A 테스트별 귀속은 경고만 |
+| R3 주요: asyncio 작업으로 목 테스트에 근거 | D43으로 경로 A 판정에서 테스트별 귀속을 쓰지 않음. 경로 B의 의도적 위조는 같은 프로세스 한계(F5) |
+| R4 주요(회귀): 모듈 수준 `report.DEBUG = True`가 `report` 바인딩을 지움 | 대입 대상은 평범한 이름만 바인딩 |
+| R5 주요(회귀): `try: import … except ImportError: x = None` 대체 값이 import를 덮음, 바인딩 순회가 너비 우선 | 실제 소스 순서, if/try 분기 병합에서 import·def·class·별칭이 다른 분기의 대체 값보다 우선. 함수 안에서도 같은 대체 패턴 인정 |
+| R6 주요(회귀): `src/__init__.py` + `pythonpath = ["src"]`, 중첩 소스 루트 | import 루트를 프로젝트 루트·pyproject pythonpath(명시)·설정 source glob 접두사·최상위 디렉터리(추론)에서. 추론 루트에서는 표준 라이브러리 이름을 점유하지 않음 |
+| R7 주요: 순환 star 별칭으로 RecursionError 내부 오류 | symbol() 재진입 방지, 분석 중 RecursionError는 판단 불가로 처리 |
+| R8 부: 계측 상한(10만 줄)이 판독 상한(32MiB)보다 커서 잘림 표지가 사라짐 | 계측 바이트 상한 24MiB, 판독 상한을 넘는 파일은 잘린 것으로 |
+| R9 부: `consumers: 5`로 trace 내부 오류 | 방어적 목록 처리 |
+| R10 부(0.1.x부터): 원장 줄의 거대 정수로 status·gate·audit 내부 오류 | 원장 판독이 ValueError·RecursionError를 원장 오류로(BLOCKED) |
+| R11 부: pytest.raises 등에 넘긴 모든 인자를 호출로 봄 | 호출되는 인자 위치만(raises·warns·assertRaises/Warns는 두 번째, *Regex는 세 번째, deprecated_call은 첫 번째) |
+| R12 부(전부터): 매개변수 ID에 `::`(IPv6) | 노드 ID에서 `[`를 먼저 잘라 냄 |
+| R13 nit: 계측이 `current_thread()`로 _DummyThread를 만듦 | `get_ident()`와 `threading._active` 조회 |
+| R14 nit: IF_COVERAGE BLOCKED 설명이 항상 "declared runtime paths" | 일반 문구로 |
+
+문서화로 남긴 것(검토자도 문서화가 맞다고 본 것): forkserver·이전 테스트가 만든 fork 풀의 귀속, 세션·모듈 범위 fixture 서버의 경로 B(BLOCKED, 보수적), 데이터 전용 IF(BLOCKED), "provider가 돎 = 파일의 어떤 함수든", 절단·삭제는 PASS가 아니라 BLOCKED, 의도적 위조(F5), lambda 추적 범위(N5d)의 선택. **3회차 수정(`14b34af`) 자체는 독립 재검토를 받지 않았다**(미검증, §8 이후 남은 위험).
 
 ## 8. 실전 E2E 계획 (D8, 실행은 별도 승인)
 - 예산: sonnet 최대 2회, 회당 `--max-budget-usd 2`, 합계 $4 상한. `--permission-mode auto`, `--setting-sources project,local`, `--plugin-dir dist/vmodel-0.2.0`, `--dangerously-skip-permissions` 금지. 실행 전 모델 호출 없는 준비(setup)와 기대 판정 확인을 먼저 한다.

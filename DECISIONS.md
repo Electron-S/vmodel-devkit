@@ -291,7 +291,7 @@ D39의 결정안에 대한 사용자 결정이다. 확정 설계(요구사항 RE
 5. D5 정적 도달 + 실제 통합 증거: 설계 §4.6의 "하위 프로세스·동적 import는 도달 아님"을 버리고 두 경로로 나눴다.
    - 경로 A(정적): 테스트 함수의 **호출식**에서 시작한 소스 모듈 import 폐포에 provider(와 ARCH consumer)가 있어야 한다. import·참조만으로는 도달이 아니고, 테스트 안의 중첩 def·class·lambda 본문은 테스트가 이름으로 부를 때만 따라간다(호출 없는 함수는 placeholder로 G4 FAILED).
    - 경로 B(실행 경로): 정적 호출 경로는 없지만 subprocess·IPC·API·동적 import 호출이 있는 테스트. G4는 verifier 리뷰의 `interfaces[].runtime_paths`(TEST, 종류, 테스트 파일 sha256)가 Validator가 찾은 종류·현재 해시와 맞을 때만 인정하고, 아니면 REVIEW_REQUIRED다. G6은 Validator Core의 계측 모듈(`tracer/sitecustomize.py`)을 `PYTHONPATH`로 실행 중 모든 Python 프로세스에 넣어, 그 테스트(`PYTEST_CURRENT_TEST`) 동안 provider(와 consumer) 함수가 실행됐는지 기록하고 해시를 서명 증거에 넣는다. 선언은 있는데 실행 증거가 없으면 BLOCKED(`integration_evidence_insufficient`, 중립)이고 PASS하지 않는다. AI 리뷰 문장만으로는 IF를 덮지 않는다.
-   - 경로 A도 실행 확인을 받는다(REQ-G6-33). G6은 계측이 실행을 본 분석 대상 함수만 근거로 쓰고, 그 테스트 동안(어느 단계든, 그 테스트가 시작한 스레드 포함) provider가 실제로 돌아야 근거다. 근거 없는 주장은 IF가 다른 테스트로 덮이면 경고, 아니면 BLOCKED. 계측이 없으면 BLOCKED(JUnit만으로 인정하지 않음). 처음 구현은 경고만 했고 "실행되지 않은 함수"도 근거로 썼다(검토 1회차 F1·F2). 2회차 구현은 호출 단계만 인정하고 FAILED를 냈는데 fixture·setup_method 테스트를 거짓으로 떨어뜨려(N8) 어느 단계든 인정·BLOCKED로 바꿨다(`docs/g6/WORKITEM.md` §7).
+   - (D43이 이 항목을 대체: 경로 A의 테스트별 귀속은 경고만, 판정은 함수 실행 + 실행 전체의 provider 실행.) 경로 A도 실행 확인을 받는다(REQ-G6-33). G6은 계측이 실행을 본 분석 대상 함수만 근거로 쓰고, 그 테스트 동안(어느 단계든, 그 테스트가 시작한 스레드 포함) provider가 실제로 돌아야 근거다. 근거 없는 주장은 IF가 다른 테스트로 덮이면 경고, 아니면 BLOCKED. 계측이 없으면 BLOCKED(JUnit만으로 인정하지 않음). 처음 구현은 경고만 했고 "실행되지 않은 함수"도 근거로 썼다(검토 1회차 F1·F2). 2회차 구현은 호출 단계만 인정하고 FAILED를 냈는데 fixture·setup_method 테스트를 거짓으로 떨어뜨려(N8) 어느 단계든 인정·BLOCKED로 바꿨다(`docs/g6/WORKITEM.md` §7).
    - 별도 프로세스라는 이유로 G7로 보내지 않는다. 판정 대상은 인터페이스다.
 6. D6 버전 0.2.0. 0.1.5 태그·릴리스 사본은 그대로다.
 7. D7 범위 삭제된 G6 결함: 설계 기본값(기존 상태 + 주석)을 버리고 표시 상태 OUT_OF_SCOPE를 더했다(D37의 6종 + 1). 결함의 종료 Gate가 G6이고 G6이 지금 N/A(현재 manifest)일 때다. `scope_removal`에 실패 기록의 IF·통합 TEST ID와 그것을 `removed_ids`에 둔 CR/DEFECT와 사유를 보인다. CLOSED가 아니고 `verified_by`·`verification_history`는 N/A 기록을 세지 않는다. 결함 저장 형식은 enum(G6, P6, IF)만 넓혔다.
@@ -308,3 +308,16 @@ D39의 결정안에 대한 사용자 결정이다. 확정 설계(요구사항 RE
 - placeholder 탐지는 integration 수준 테스트에만 한다(unit 테스트 G4 판정 불변, REQ-G6-13).
 - 계측 한계(SPEC §5.7과 같은 같은 프로세스 신뢰 경계): 테스트 코드는 계측 파일을 위조할 수 있다(검토 F5에서 재현, 환경 변수를 훑어 찾으면 된다). G4.TEST_INTEGRITY의 `VMODEL_TRACE` 문자열 검사는 우발적 언급만 잡고 의도적 위조는 막지 못한다. 기존 증거 신뢰 모델(최종 신뢰 경계는 CI·별도 사용자 재검증)을 그대로 따른다. `-I`/`-E`로 시작한 Python, 세션 범위 fixture가 띄운 하위 프로세스(처음 테스트에 귀속), pytest가 아닌 러너는 경로 B를 증명하지 못해 BLOCKED가 된다(보수적).
 - 읽기 전용 `vmodel wiring WI`: verifier가 경로 B를 선언할 때 쓰는 분류·해시를 보인다.
+
+## D43. G6 판정에는 믿을 수 있는 실행 사실만 쓴다 (2026-11-09, 독립 검토 3회차 반영, v0.2.0 후보)
+배경: 검토 1회차(F2)는 "목으로 provider를 대체한 경로 A 테스트"를 G6에서 막자고 제안했고, 2·3회차 구현은 계측의 **테스트별 귀속**(이 테스트 동안 provider가 돌았는가)을 판정 조건으로 썼다. 3회차 검토는 같은 프로세스 안의 귀속이 양쪽으로 틀린다는 것을 재현했다: 함수 범위 fixture가 띄운 HTTP 서버의 처리 스레드, 모듈 수준 `ThreadPoolExecutor`를 쓰는 consumer처럼 정상 코드가 거짓 BLOCKED가 되고(R2), 반대로 autouse·세션 fixture나 asyncio 작업이 provider를 돌리면 목 테스트가 근거를 얻었다(R1, R3). 귀속 규칙을 계속 덧대면 수렴하지 않는다고 판단했다.
+
+결정: G6 판정 조건에는 다음처럼 믿을 수 있는 실행 사실만 쓴다.
+1. 근거가 되는 테스트 함수는 계측이 실제 실행을 본 것이어야 한다(테스트 함수 본문은 pytest 메인 스레드에서 돌아 `PYTEST_CURRENT_TEST`로 정확히 귀속된다).
+2. 경로 A: 정적 호출 경로 + 그 함수의 실행 + **실행 전체에서** provider(와 ARCH consumer) 함수가 한 번이라도 실행됨. 아무 데서도 안 돌았으면 BLOCKED(`integration_evidence_insufficient`: 전부 목이거나 데이터 전용 IF). 테스트별로 provider가 귀속되지 않으면 **경고**만 낸다("mocked? or run in a shared thread/pool").
+3. 경로 B: 선언(G4 리뷰, 테스트 파일 해시) + 그 테스트의 호출 단계에서 provider 실행. subprocess·ipc는 테스트 함수와 다른 프로세스(자식은 환경을 물려받아 정확히 귀속), api·dynamic_import는 그 테스트가 시작한 스레드(소유 테스트가 실행 중일 때의 단계로 기록, 끝난 뒤는 detached) 또는 메인 스레드. 근거 없는 선언은 IF가 다른 테스트로 덮이면 경고, 아니면 BLOCKED.
+4. 계측이 아예 없으면 BLOCKED, 잘렸으면 "실행되지 않음" 판단은 BLOCKED.
+
+결과와 대가: 목만 쓴 경로 A 테스트도 그 IF의 provider가 실행 어딘가에서 돌면 **경고와 함께 통과**한다. 이는 D41 결정 2(목 대체 여부는 G4 리뷰의 판단)와 같은 자리로 돌아간 것이며, 기계적으로는 G4 patch 경고, G6 테스트별 경고, "실행 전체에서 provider가 안 돎" BLOCKED가 남는다. 검토 1회차 F2의 G6 시나리오와 2회차 N1 시나리오의 기대값은 이 결정으로 "경고 있는 PASSED"로 바뀌었다(테스트에 근거 주석). 같은 프로세스 신뢰 경계(SPEC §5.7) 안에서 의도적으로 테스트 결과·계측을 꾸미는 코드는 막지 못한다(F5).
+
+문서화한 한계: forkserver 자식과 이전 테스트가 만든 fork 풀의 작업자는 그 서버·풀을 시작한 테스트의 환경을 물려받는다(경로 B 귀속이 틀릴 수 있음, Python 3.14부터 Linux 기본값이 forkserver). 세션·모듈 범위 fixture가 띄운 서버는 처음 테스트에만 귀속돼 이후 테스트의 경로 B는 BLOCKED가 될 수 있다(보수적). 데이터 전용 IF는 BLOCKED. "provider가 돎"은 provider 파일의 어떤 함수든 실행됐다는 뜻이다. 정적 분석은 Python 근사이며 의도적으로 꾸민 코드(동적 setattr, exec 등)를 모두 잡지 못한다.
