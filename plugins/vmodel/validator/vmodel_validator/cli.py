@@ -18,7 +18,7 @@ from .project import Project, ProjectError
 from .runner import check_evidence, utc_now
 from .schema_lite import validate
 from .setup_project import (SetupError, env_summary, init_project, install_claude, new_work_item, next_id,
-                            repin_lock, uninstall)
+                            plan_settings_sync, uninstall, upgrade_project)
 from .status import (impact_view, project_status, render_impact, render_problem, render_status, render_trace,
                      report_markdown, trace_view)
 from .textio import ArtifactError, load_json, read_stdin_bytes, read_text, setup_stdio, write_text
@@ -374,10 +374,32 @@ def cmd_lock(args) -> int:
     if not args.accept_current:
         _json(p.lock())
         return 0
-    if not _require_tty("re-pin the validator core hash (all previous PASS results become STALE)"):
+    plan = plan_settings_sync(p.root)  # read-only; refuses settings it cannot parse before anything is asked
+    action = "re-pin the validator core hash (all previous PASS results become STALE)"
+    if plan is not None and plan["settings_change"]:
+        out("The DevKit permission rules in .claude/settings.json will follow this release:")
+        out(f"  validator {plan['from_version']} at {plan['from_plugin_root']}")
+        out(f"  -> validator {plan['to_version']} at {plan['to_plugin_root']}")
+        for op, label in (("add", "add"), ("remove", "remove")):
+            for kind in ("deny", "allow"):
+                for rule in plan[f"{op}_{kind}"]:
+                    out(f"  {label} {kind}: {rule}")
+        out("  New rules are added before the old ones are removed. Rules you added yourself are kept as they are.")
+        action += " and update the DevKit permission rules listed above"
+    if not _require_tty(action):
         return 3
-    lock = repin_lock(p, args.reason or "user re-pinned validator")
+    res = upgrade_project(p, args.reason or "user re-pinned validator", plan)
+    lock = res["lock"]
     out(f"re-pinned core {short(lock['core_hash'])} (validator {lock['validator_version']})")
+    if plan is not None and plan["settings_change"]:
+        added = len(plan["add_deny"]) + len(plan["add_allow"])
+        removed = len(plan["remove_deny"]) + len(plan["remove_allow"])
+        out(f"  .claude/settings.json: {added} DevKit rule(s) added, {removed} removed; your own rules unchanged")
+    if res["backup"]:
+        out(f"  previous settings, install record and lock saved in: {res['backup']}")
+    if not res["complete"]:
+        out(f"  WARNING: {res['error']}")
+        return 2
     return 0
 
 

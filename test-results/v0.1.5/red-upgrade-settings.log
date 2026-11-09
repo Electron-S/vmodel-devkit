@@ -1,0 +1,41 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.1.4",
+    "release_manifest": {
+      "version": "0.1.4",
+      "core_hash": "sha256:5dd1d010cc57c477c6a96e3c989eed49d09fc31c51e09f5d785d9b132db1e997"
+    }
+  },
+  "git_head": "991af67",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "tests": 14,
+  "expectations_met": 14,
+  "violations": 0,
+  "seconds": 38.1
+}
+
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsChar.test_repin_of_init_only_project_leaves_settings_alone
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsChar.test_repin_without_tty_or_without_yes_changes_nothing
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsChar.test_second_install_and_second_uninstall_change_nothing
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsChar.test_user_settings_survive_upgrade_and_uninstall
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsInvariant.test_guard_still_blocks_agents_and_protects_the_running_core
+OK  expect=FAIL got=FAIL    test_upgrade_settings.UpgradeSettingsRed.test_failed_repin_restores_settings_record_and_lock
+      AssertionError: {'.cl[2370 chars]"0.1.4",\n  "core_hash": "sha256:5dd1d010cc57c[976 chars]}\n'} != {'.cl[2370 chars]"0.1.3",\n  "core_hash": "sha256:0208c7988516f[976 chars]}\n'}
+OK  expect=FAIL got=FAIL    test_upgrade_settings.UpgradeSettingsRed.test_install_over_another_release_points_to_the_upgrade
+      AssertionError: 'lock --accept-current' not found in "vmodel: error: already installed (.vmodel/install-record.json exists); run 'vmodel uninstall' first\n"
+OK  expect=FAIL got=FAIL    test_upgrade_settings.UpgradeSettingsRed.test_install_record_tracks_the_new_release
+      AssertionError: PosixPath('/home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.1.3') != PosixPath('/home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.1.4')
+OK  expect=FAIL got=FAIL    test_upgrade_settings.UpgradeSettingsRed.test_interrupted_upgrade_superset_is_completed_on_rerun
+      AssertionError: 'Edit(//home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.1.3/**)' unexpectedly found in ['Read(./.env)', 'Edit(/.vmodel/state/**)', 'Edit(/.vmodel/evidence/**)', 'Edit(/.vmodel/config.json)', 'Edit(/.vmodel/devkit.lock.json)', 'Edit(/.vmodel/install-record.json)', 'Read(//tmp/vmodel-test-osikzezd/vmodel home/keys/**)', 'Edit(//tmp/vmodel-test-osikzezd/vmodel home/**)', 'Edit(//home/c
+OK  expect=FAIL got=FAIL    test_upgrade_settings.UpgradeSettingsRed.test_invalid_settings_aborts_before_repin
+      AssertionError: 'not valid JSON' not found in "yes\r\nType 'yes' to re-pin the validator core hash (all previous PASS results become STALE): re-pinned core 5dd1d010cc57 (validator 0.1.4)\r\n"
+OK  expect=FAIL got=FAIL    test_upgrade_settings.UpgradeSettingsRed.test_plan_is_shown_before_confirmation_and_backup_is_kept
+      AssertionError: 'Edit(//home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.1.4/**)' not found in 'no\r\n'
+OK  expect=FAIL got=FAIL    test_upgrade_settings.UpgradeSettingsRed.test_rules_follow_the_new_release_after_repin
+      AssertionError: 'Edit(//home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.1.4/**)' not found in ['Read(./.env)', 'Edit(/.vmodel/state/**)', 'Edit(/.vmodel/evidence/**)', 'Edit(/.vmodel/config.json)', 'Edit(/.vmodel/devkit.lock.json)', 'Edit(/.vmodel/install-record.json)', 'Read(//tmp/vmodel-test-6o37qak0/vmodel home/keys/**)', 'Edit(//tmp/vmodel-test-6o37qak0/vmodel home/**)', 'Edit(//home/cyyoo/deve
+OK  expect=FAIL got=FAIL    test_upgrade_settings.UpgradeSettingsRed.test_unwritable_settings_aborts_without_repinning
+      AssertionError: 're-pinned core' unexpectedly found in "yes\r\nType 'yes' to re-pin the validator core hash (all previous PASS results become STALE): re-pinned core 5dd1d010cc57 (validator 0.1.4)\r\n"
+OK  expect=FAIL got=FAIL    test_upgrade_settings.UpgradeSettingsRed.test_user_rule_equal_to_a_devkit_rule_stays_user_owned
+      AssertionError: 'Edit(//home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.1.4/**)' not found in ['Read(./.env)', 'Edit(/.vmodel/state/**)', 'Edit(/.vmodel/evidence/**)', 'Edit(/.vmodel/config.json)', 'Edit(/.vmodel/devkit.lock.json)', 'Edit(/.vmodel/install-record.json)', 'Read(//tmp/vmodel-test-ptk8fukk/vmodel home/keys/**)', 'Edit(//tmp/vmodel-test-ptk8fukk/vmodel home/**)', 'Edit(//home/cyyoo/deve

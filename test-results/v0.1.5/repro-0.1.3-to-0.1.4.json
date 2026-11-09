@@ -1,0 +1,147 @@
+{
+  "old": "<repo>/dist/vmodel-0.1.3",
+  "new": "<repo>/dist/vmodel-0.1.4",
+  "python": "3.12.3",
+  "A_user_settings": {
+    "permissions": {
+      "allow": [
+        "Bash(npm test)",
+        "Read(/<repo>/dist/vmodel-0.1.3/README.md)"
+      ],
+      "deny": [
+        "Read(./.env)"
+      ]
+    },
+    "env": {
+      "FOO": "bar"
+    }
+  },
+  "A_install_old": {
+    "exit": 0,
+    "rules": {
+      "deny": {
+        "total": 9,
+        "old_release": [
+          "Edit(/<repo>/dist/vmodel-0.1.3/**)"
+        ],
+        "new_release": []
+      },
+      "allow": {
+        "total": 5,
+        "old_release": [
+          "Read(/<repo>/dist/vmodel-0.1.3/README.md)",
+          "Bash(<repo>/dist/vmodel-0.1.3/bin/vmodel *)",
+          "Bash(\"<repo>/dist/vmodel-0.1.3/bin/vmodel\" *)"
+        ],
+        "new_release": []
+      }
+    }
+  },
+  "A_install_record_old": {
+    "validator_version": "0.1.3",
+    "plugin_root": "<repo>/dist/vmodel-0.1.3",
+    "added_deny": [
+      "Edit(/.vmodel/state/**)",
+      "Edit(/.vmodel/evidence/**)",
+      "Edit(/.vmodel/config.json)",
+      "Edit(/.vmodel/devkit.lock.json)",
+      "Edit(/.vmodel/install-record.json)",
+      "Read(/<tmp>/vmodel home/keys/**)",
+      "Edit(/<tmp>/vmodel home/**)",
+      "Edit(/<repo>/dist/vmodel-0.1.3/**)"
+    ],
+    "added_allow": [
+      "Bash(vmodel *)",
+      "Bash(<repo>/dist/vmodel-0.1.3/bin/vmodel *)",
+      "Bash(\"<repo>/dist/vmodel-0.1.3/bin/vmodel\" *)"
+    ]
+  },
+  "A_status_before_repin_validator_ok": false,
+  "A_repin_new_tty": "yes\r\nType 'yes' to re-pin the validator core hash (all previous PASS results become STALE): re-pinned core 5dd1d010cc57 (validator 0.1.4)\r\n",
+  "A_after": {
+    "lock_plugin_root": "<repo>/dist/vmodel-0.1.4",
+    "lock_version": "0.1.4",
+    "settings_bytes_unchanged": true,
+    "rules": {
+      "deny": {
+        "total": 9,
+        "old_release": [
+          "Edit(/<repo>/dist/vmodel-0.1.3/**)"
+        ],
+        "new_release": []
+      },
+      "allow": {
+        "total": 5,
+        "old_release": [
+          "Read(/<repo>/dist/vmodel-0.1.3/README.md)",
+          "Bash(<repo>/dist/vmodel-0.1.3/bin/vmodel *)",
+          "Bash(\"<repo>/dist/vmodel-0.1.3/bin/vmodel\" *)"
+        ],
+        "new_release": []
+      }
+    },
+    "install_record_plugin_root": "<repo>/dist/vmodel-0.1.3",
+    "guard_edit_new_core": "deny",
+    "status_validator_ok": true
+  },
+  "A_uninstall_new": {
+    "exit": 0,
+    "out": "removed VModel entries from .claude/settings.json",
+    "rules": {
+      "exists": true,
+      "deny": [
+        "Read(./.env)"
+      ],
+      "allow": [
+        "Bash(npm test)",
+        "Read(/<repo>/dist/vmodel-0.1.3/README.md)"
+      ]
+    },
+    "equals_user_settings": true
+  },
+  "B_between_uninstall_and_install": {
+    "rules": {
+      "deny": {
+        "total": 1,
+        "old_release": [],
+        "new_release": []
+      },
+      "allow": {
+        "total": 2,
+        "old_release": [
+          "Read(/<repo>/dist/vmodel-0.1.3/README.md)"
+        ],
+        "new_release": []
+      }
+    },
+    "devkit_deny_present": false
+  },
+  "B_install_new": {
+    "exit": 0,
+    "rules": {
+      "deny": {
+        "total": 9,
+        "old_release": [],
+        "new_release": [
+          "Edit(/<repo>/dist/vmodel-0.1.4/**)"
+        ]
+      },
+      "allow": {
+        "total": 5,
+        "old_release": [
+          "Read(/<repo>/dist/vmodel-0.1.3/README.md)"
+        ],
+        "new_release": [
+          "Bash(<repo>/dist/vmodel-0.1.4/bin/vmodel *)",
+          "Bash(\"<repo>/dist/vmodel-0.1.4/bin/vmodel\" *)"
+        ]
+      }
+    }
+  },
+  "B_repin_new_tty": "yes\r\nType 'yes' to re-pin the validator core hash (all previous PASS results become STALE): re-pinned core 5dd1d010cc57 (validator 0.1.4)\r\n",
+  "C_install_new_over_old": {
+    "exit": 2,
+    "out": "vmodel: error: already installed (.vmodel/install-record.json exists); run 'vmodel uninstall' first",
+    "settings_unchanged": true
+  }
+}

@@ -16,13 +16,13 @@ from typing import Any
 
 from . import VERSION
 from .gates import load_schema
-from .hashing import sha256_file
+from .hashing import sha256_bytes, sha256_file
 from .integrity import RELEASE_MANIFEST, check_self, plugin_root
 from .ledger import Ledger, anchor_path, create_key
 from .project import VMODEL_DIR, Project, vmodel_home
 from .runner import utc_now
 from .schema_lite import validate
-from .textio import ArtifactError, load_json, read_text, write_json, write_text
+from .textio import ArtifactError, load_json, read_text, write_bytes, write_json, write_text
 
 DATA = Path(__file__).resolve().parent / "data"
 IMPORT_LINE = "@.vmodel/VMODEL.md"
@@ -221,6 +221,17 @@ def install_claude(root: Path, *, claude_md_import: bool = False, enable_plugin:
         raise SetupError("run 'vmodel init' first (.vmodel/config.json missing)")
     record_path = project.vdir / "install-record.json"
     if record_path.exists():
+        try:
+            prev = load_json(record_path, "install-record.json")
+        except ArtifactError:
+            prev = None
+        prev = prev if isinstance(prev, dict) else {}
+        prev_root = prev.get("plugin_root")
+        if isinstance(prev_root, str) and prev_root != str(plugin_root()):
+            vm = plugin_root() / "bin" / "vmodel"
+            raise SetupError(f"this project was installed by validator {prev.get('validator_version')} from {prev_root}. "
+                             f"To upgrade, run '\"{vm}\" lock --accept-current' in a terminal: it re-pins the "
+                             "validator and moves the DevKit permission rules to this release without a gap")
         raise SetupError("already installed (.vmodel/install-record.json exists); run 'vmodel uninstall' first")
     settings_path = root / ".claude" / "settings.json"
     settings: dict[str, Any] = {}
@@ -279,6 +290,214 @@ def install_claude(root: Path, *, claude_md_import: bool = False, enable_plugin:
     }
     write_json(record_path, record)
     return {**record, "register_commands": register_commands(enable_plugin)}
+
+
+# ---------------------------------------------------------------- upgrade (0.1.5, DECISIONS D38)
+# The permission rules that install writes name the release directory (deny on the plugin root, allow for its
+# bin/vmodel). Re-pinning a new release moves the DevKit-owned rules -- exactly the strings listed in the install
+# record (added_deny / added_allow) -- to the new release: new rules are added first, the lock is re-pinned, and only
+# then are the previous release's rules removed, so the deny layer never lacks a rule for the pinned release.
+RULE_KINDS = ("deny", "allow")
+
+
+def _read_settings(path: Path) -> tuple[dict, bytes | None]:
+    """The project settings as a dict (empty if missing). Refuses anything it would have to guess about."""
+    if not path.exists():
+        return {}, None
+    raw = path.read_bytes()
+    try:
+        doc = load_json(path, ".claude/settings.json")
+    except ArtifactError as exc:
+        raise SetupError(f"existing .claude/settings.json is not valid JSON; not touching it: {exc}") from None
+    if not isinstance(doc, dict):
+        raise SetupError(".claude/settings.json is not a JSON object; not touching it")
+    perms = doc.get("permissions", {})
+    if not isinstance(perms, dict):
+        raise SetupError("settings.permissions is not an object; not touching it")
+    for kind in RULE_KINDS:
+        if not isinstance(perms.get(kind, []), list):
+            raise SetupError(f"settings.permissions.{kind} is not a list; not touching it")
+    return doc, raw
+
+
+def _read_record(path: Path) -> tuple[dict, bytes]:
+    raw = path.read_bytes()
+    try:
+        rec = load_json(path, "install-record.json")
+    except ArtifactError as exc:
+        raise SetupError(f".vmodel/install-record.json is not valid JSON; not touching anything: {exc}") from None
+    if not isinstance(rec, dict):
+        raise SetupError(".vmodel/install-record.json is not a JSON object; not touching anything")
+    for kind in RULE_KINDS:
+        owned = rec.get(f"added_{kind}") or []
+        if not isinstance(owned, list) or not all(isinstance(r, str) for r in owned):
+            raise SetupError(f".vmodel/install-record.json added_{kind} is not a list of rules; not touching anything")
+    return rec, raw
+
+
+def _digest(raw: bytes | None) -> str | None:
+    return None if raw is None else sha256_bytes(raw)
+
+
+def plan_settings_sync(root: Path) -> dict | None:
+    """What a re-pin by this release changes in .claude/settings.json and the install record (read-only).
+
+    None when the project was never installed (init only): settings are then left alone.
+    """
+    root = root.resolve()
+    vdir = root / VMODEL_DIR
+    record_path = vdir / "install-record.json"
+    if not record_path.exists():
+        return None
+    record, rec_raw = _read_record(record_path)
+    settings_path = root / ".claude" / "settings.json"
+    settings, raw = _read_settings(settings_path)
+    perms = settings.get("permissions", {})
+    generated = {"deny": protected_deny_rules(root), "allow": validator_allow_rules()}
+    plan: dict[str, Any] = {
+        "settings_path": str(settings_path), "settings_sha256": _digest(raw), "record_sha256": _digest(rec_raw),
+        "from_plugin_root": record.get("plugin_root"), "from_version": record.get("validator_version"),
+        "to_plugin_root": str(plugin_root()), "to_version": VERSION,
+    }
+    for kind in RULE_KINDS:
+        current = perms.get(kind, [])
+        owned = record.get(f"added_{kind}") or []
+        add = [r for r in generated[kind] if r not in current]
+        plan[f"add_{kind}"] = add
+        plan[f"remove_{kind}"] = [r for r in dict.fromkeys(owned) if r not in generated[kind] and r in current]
+        plan[f"owned_{kind}"] = [r for r in generated[kind] if r in add or (r in owned and r in current)]
+    plan["settings_change"] = any(plan[f"{op}_{kind}"] for op in ("add", "remove") for kind in RULE_KINDS)
+    plan["record_change"] = bool(
+        plan["settings_change"] or "upgrade_pending" in record
+        or any(plan[f"owned_{kind}"] != (record.get(f"added_{kind}") or []) for kind in RULE_KINDS)
+        or record.get("plugin_root") != plan["to_plugin_root"] or record.get("validator_version") != VERSION)
+    return plan
+
+
+def _plan_identity(plan: dict | None) -> Any:
+    if plan is None:
+        return None
+    return {k: v for k, v in plan.items() if k != "settings_path"}
+
+
+def _remove_once(rules: list, drop: list[str]) -> list:
+    """Remove one occurrence of each dropped rule (a user's own copy of the same string, if any, stays)."""
+    out = list(rules)
+    for r in drop:
+        if r in out:
+            out.remove(r)
+    return out
+
+
+def _restore(snapshot: dict[Path, bytes | None]) -> list[str]:
+    problems = []
+    for path, data in snapshot.items():
+        try:
+            current = path.read_bytes() if path.exists() else None
+            if current == data:
+                continue
+            if data is None:
+                path.unlink()
+            else:
+                write_bytes(path, data)
+        except OSError as exc:
+            problems.append(f"{path}: {exc}")
+    return problems
+
+
+def upgrade_project(project: Project, reason: str, plan: dict | None = None) -> dict:
+    """Re-pin this release and move the DevKit permission rules to it (USER ONLY; the CLI asks on a TTY first).
+
+    Order: checks (no writes) -> back up -> add the new rules -> re-pin -> remove the previous release's rules.
+    A failure before the re-pin is recorded restores settings, install record and lock byte for byte. A failure
+    while removing the old rules leaves old + new rules (a safe superset); running the command again finishes it.
+    """
+    root = project.root.resolve()
+    integ = check_self()
+    if not integ.ok:
+        raise SetupError("validator integrity check failed: " + "; ".join(integ.problems))
+    Ledger(project).entries()  # signing key, signatures, chain, head and anchor -- before anything is written
+    current = plan_settings_sync(root)
+    if plan is not None and _plan_identity(current) != _plan_identity(plan):
+        raise SetupError(".claude/settings.json or the install record changed after the plan was shown; nothing was "
+                         "changed. Run the command again")
+    plan = current
+    settings_path = root / ".claude" / "settings.json"
+    record_path = project.vdir / "install-record.json"
+    snapshot = {p: (p.read_bytes() if p.exists() else None) for p in (settings_path, record_path, project.lock_path)}
+    writes = bool(plan and plan["record_change"])
+    backup: Path | None = None
+    step = "backup"
+    try:
+        if plan is not None and writes:
+            base = project.vdir / "install" / "backup"
+            stamp = utc_now().replace(":", "").replace(".", "").replace("-", "")
+            backup = base / f"upgrade-{stamp}"
+            n = 1
+            while backup.exists():
+                n += 1
+                backup = base / f"upgrade-{stamp}-{n}"
+            backup.mkdir(parents=True)
+            for path, name in ((settings_path, "settings.json"), (record_path, "install-record.json"),
+                               (project.lock_path, "devkit.lock.json")):
+                data = snapshot[path]
+                if data is not None:
+                    write_bytes(backup / name, data)
+            # ownership first: if the process dies between the two writes, a re-run still knows the new rules are
+            # the DevKit's (a rule recorded but not yet in settings is simply added again)
+            step = "install record"
+            record, _ = _read_record(record_path)
+            for kind in RULE_KINDS:  # until the old rules are gone, the DevKit owns old + new
+                owned = record.get(f"added_{kind}") or []
+                record[f"added_{kind}"] = owned + [r for r in plan[f"add_{kind}"] if r not in owned]
+            record["upgrade_pending"] = {"from_plugin_root": plan["from_plugin_root"],
+                                         "to_plugin_root": plan["to_plugin_root"], "started_at": utc_now(),
+                                         "backup": str(backup)}
+            write_json(record_path, record)
+            step = "settings"
+            if plan["add_deny"] or plan["add_allow"]:
+                settings, _ = _read_settings(settings_path)
+                perms = settings.setdefault("permissions", {})
+                for kind in RULE_KINDS:
+                    perms.setdefault(kind, []).extend(plan[f"add_{kind}"])
+                write_json(settings_path, settings)
+        step = "re-pin"
+        lock = repin_lock(project, reason)
+    except Exception as exc:
+        problems = _restore(snapshot)
+        msg = f"upgrade failed at the {step} step: {exc.__class__.__name__}: {exc}. "
+        if problems:
+            msg += f"Could not restore {'; '.join(problems)}; copies of the previous files are in {backup}"
+        else:
+            msg += "Rolled back: .claude/settings.json, the install record and the lock are as before"
+        raise SetupError(msg) from exc
+    result: dict[str, Any] = {"lock": lock, "plan": plan, "backup": str(backup) if backup else None,
+                              "complete": True, "error": None}
+    if plan is not None and writes:
+        try:
+            if plan["remove_deny"] or plan["remove_allow"]:
+                settings, _ = _read_settings(settings_path)
+                perms = settings.setdefault("permissions", {})
+                for kind in RULE_KINDS:
+                    if plan[f"remove_{kind}"]:
+                        perms[kind] = _remove_once(perms.get(kind, []), plan[f"remove_{kind}"])
+                write_json(settings_path, settings)
+            record, _ = _read_record(record_path)
+            record.pop("upgrade_pending", None)
+            history = list(record["upgrades"]) if isinstance(record.get("upgrades"), list) else []
+            history.append({"at": utc_now(), "from_version": plan["from_version"],
+                            "from_plugin_root": plan["from_plugin_root"], "to_version": VERSION,
+                            "to_plugin_root": plan["to_plugin_root"], "backup": str(backup),
+                            **{f"{op}_{kind}": plan[f"{op}_{kind}"] for op in ("add", "remove") for kind in RULE_KINDS}})
+            record.update({"validator_version": VERSION, "plugin_root": plan["to_plugin_root"],
+                           "added_deny": plan["owned_deny"], "added_allow": plan["owned_allow"], "upgrades": history})
+            write_json(record_path, record)
+        except Exception as exc:
+            result["complete"] = False
+            result["error"] = (f"the validator was re-pinned, but removing the previous release's DevKit rules failed "
+                               f"({exc.__class__.__name__}: {exc}). .claude/settings.json keeps the old and the new "
+                               "rules (no protection gap); run 'vmodel lock --accept-current' again to finish")
+    return result
 
 
 def register_commands(marketplace_dir: Path | None) -> list[str]:
