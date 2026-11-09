@@ -1,0 +1,26 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/43cdb556-8cbb-4e88-9bf3-ce8c6609a0de/scratchpad/red-e8a5a7e/plugins/vmodel",
+    "release_manifest": null
+  },
+  "git_head": "e8a5a7e",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "marker": "RED-TARGET",
+  "tests": 5,
+  "expectations_met": 5,
+  "violations": 0,
+  "seconds": 25.6
+}
+
+OK  expect=FAIL got=FAIL    test_g6_review6.R6AnchorRed.test_M2_decorator_defined_in_the_test_file
+      AssertionError: 'BLOCKED' != 'PASSED'
+OK  expect=FAIL got=FAIL    test_g6_review6.R6ClassCtorHelperRed.test_M1_constructor_helper_counts_while_parse_is_mocked
+      AssertionError: 'PASSED' != 'BLOCKED'
+OK  expect=FAIL got=FAIL    test_g6_review6.R6ClockRed.test_monotonic_clock_decides_when_the_wall_clock_ties
+      AssertionError: Lists differ: [('main', 'detached')] != [('main', 'call')]
+OK  expect=FAIL got=FAIL    test_g6_review6.R6PluginRed.test_M4_nested_pytest_with_its_own_pythonpath_breaks_under_g6
+      AssertionError: 'FAILED' != 'PASSED'
+OK  expect=FAIL got=FAIL    test_g6_review6.R6RequestedFixtureRed.test_M7_requested_fixture_runs_the_connection_body_mocks_it
+      AssertionError: 'PASSED' != 'BLOCKED'

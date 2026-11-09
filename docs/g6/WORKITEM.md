@@ -239,6 +239,21 @@ REQ-G6-01~26은 설계 문서 §2가 정본이다. 아래는 바뀐 것과 새�
 
 검토자가 맞다고 확인한 것: G1~G5 manifest가 0.1.5와 같음, G6은 자기 실행만 씀, trace 판독의 비정규·심볼릭·대형 파일 처리, 계측 없음·잘림 → BLOCKED, 경로 B 선언의 리뷰·파일 해시 검사, 다른 프로세스·호출 단계 조건, 스레드 detached, N/A 조건.
 
+### 7.5 5회차 (`464d01b`)
+4회차 12건 중 닫힘 10, 부분 1(H3), 판단 변경 1(S10: 처리기가 `summarize`를 부르면 IF-002 심볼 `main`이 아니므로 BLOCKED가 맞음, 검토자도 동의). 새 지적 HIGH 3, MEDIUM 4, 내부 오류 0. 검토자 재현 파일을 바탕으로 `tests/test_g6_review5.py`로 직접 재현(RED 대상 `git archive 464d01b plugins/vmodel`, 10/10, `4d4060c`) 후 수정 `e8a5a7e`.
+
+| 지적 | 처리 |
+|---|---|
+| N7 HIGH: conftest autouse fixture가 setup에서 consumer→provider를 부르면 몸체가 목인 테스트가 Test-level(검토 3회차 R1과 같은 모양) | 연결·provider 실행 기록에 앵커(호출 스택의 가장 바깥 테스트 파일·conftest 함수, 스레드·풀 작업은 시작·제출 스택에서 상속). 테스트 함수 자신이나 그 테스트가 요청한 fixture·setUp일 때만 인정(정적 분석이 요청 fixture 함수 이름을 제공), 아니면 Suite-level |
+| N1/N1b HIGH: 테스트 call에서 시작한 자식 프로세스가 teardown·감시 안 되는 다른 테스트 동안 한 일까지 call로 귀속(H3 부분) | Validator 소유 pytest 플러그인(`tracer/vmodel_trace_plugin.py`, `PYTEST_PLUGINS`)이 모든 테스트의 setup/call/teardown 시작과 끝을 기록. 자식 줄은 그 테스트의 call 구간 안일 때만 call. 경계가 없으면 귀속 안 함 |
+| N3 HIGH: 클래스 시그니처 IF에서 `__init__` 실행이 provider 실행으로 셈 | 생성자·객체 프로토콜 메서드 제외 |
+| N2 MEDIUM(회귀): `def parse(self, …)` 시그니처가 G4는 통과, G6은 `Parser.parse`와 안 맞아 거짓 BLOCKED | 메서드 이름 시그니처는 provider 파일의 그 이름 메서드와 맞춤 |
+| N4/N5 MEDIUM(회귀): `asyncio.gather` 작업, consumer가 넘긴 provider 제너레이터는 연결이 스택에 안 보여 거짓 BLOCKED | 고치지 않음. 보수적 BLOCKED로 문서화(특성 테스트 `R5AsyncGenChar`), implementer 지침에 직접 호출·await 사용 안내 |
+| N8 MEDIUM: 거친 시계(Windows CPython 3.12 이하)에서 같은 시각값이 단계를 정함 | 경계와 같은 시각은 credit 없음(call 시작과 같으면 setup, 끝과 같으면 detached). 사용자 Windows는 Python 3.13(정밀 시계) |
+| 회귀에서 내가 발견: 계측 기록이 없는 테스트에서 `prov_runs` KeyError 내부 오류(`e8a5a7e` 이전 작업 트리) | 수정 후 커밋 |
+
+검토자가 맞다고 확인한 것: trace 판독 퍼즈 300회 무크래시, spawned 프로세스의 경계 줄 무시, 스냅샷 단일 판독·해시, `parse`/`parse_all` 구분, 스레드 풀 패치의 동작 보존(결과·예외·run_in_executor, 20만 회 제출 1.7배 부하), `_test_windows` 8000 테스트 1.4초, forkserver·재사용 fork 풀은 이제 보수적(detached).
+
 ## 8. 실전 E2E 계획 (D8, 실행은 별도 승인)
 - 예산: sonnet 최대 2회, 회당 `--max-budget-usd 2`, 합계 $4 상한. `--permission-mode auto`, `--setting-sources project,local`, `--plugin-dir dist/vmodel-0.2.0`, `--dangerously-skip-permissions` 금지. 실행 전 모델 호출 없는 준비(setup)와 기대 판정 확인을 먼저 한다.
 - 시나리오 A (Provider/Consumer, G6 실패 → 결함 → 수정 → 재검증): 기존 코드가 있는 프로젝트(점수 파서 모듈과 그 통합 테스트가 이미 `tests/integration/`에 있어 `init`이 실제 경로를 등록 — D3 규칙을 그대로 지킴)에 "파서 결과를 소비하는 요약 보고 CLI를 추가해줘"를 요청한다. 파서의 오류 계약(형식 오류 줄 번호)과 소비 측 처리 사이의 불일치를 하나 미리 심어(D26 블라인드 시딩, 세션 프롬프트에 알리지 않음) 단위 테스트는 통과하고 IF 통합 테스트에서 드러나게 한다. 기대: G1~G5 PASSED → G6 FAILED(TEST_MAPPING·RESULTS) → DEFECT(gate G6, IF·TEST 연결) → 수정 → G4 재리뷰 → G5 → G6 PASSED, 결함 CLOSED. 관찰: placeholder·import-only 테스트를 쓰는지, 통합 테스트가 경로 A인지, verifier가 `interfaces` 항목을 쓰는지, guard 우회 0.
