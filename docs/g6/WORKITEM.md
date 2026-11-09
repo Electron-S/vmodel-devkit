@@ -216,6 +216,29 @@ REQ-G6-01~26은 설계 문서 §2가 정본이다. 아래는 바뀐 것과 새�
 
 문서화로 남긴 것(검토자도 문서화가 맞다고 본 것): forkserver·이전 테스트가 만든 fork 풀의 귀속, 세션·모듈 범위 fixture 서버의 경로 B(BLOCKED, 보수적), 데이터 전용 IF(BLOCKED), "provider가 돎 = 파일의 어떤 함수든", 절단·삭제는 PASS가 아니라 BLOCKED, 의도적 위조(F5), lambda 추적 범위(N5d)의 선택. **3회차 수정(`14b34af`) 자체는 독립 재검토를 받지 않았다**(미검증, §8 이후 남은 위험).
 
+### 7.4 최종 검증: 사용자 Case A~F와 4회차 (`c83df4b` = 코드 `14b34af`)
+사용자 최종 검증 지시의 Case A~F를 먼저 테스트로 고정했다(`tests/test_g6_evidence.py`, RED 대상 `git archive 14b34af plugins/vmodel`, 10/10 목표 assertion 실패, 커밋 `cdd95dd`). D43 규칙에서 Case B·C(목만 쓴 테스트가 다른 테스트의 provider 실행으로 통과)와 Case D(연결 없는 동시 실행이 경고 없이 통과)가 재현됐다. 이를 D44(테스트 수준 증거만 셈)로 고쳤다(`57492d3`).
+같은 시점에 별도 컨텍스트의 4회차 검토자가 `c83df4b`를 읽기 전용으로 검토했다(HIGH 4, MEDIUM 6, LOW 4). 지적 12개 시나리오를 검토자의 재현 파일을 참고해 다시 쓰고 직접 재현했다(`tests/test_g6_review4.py`, RED 대상 `14b34af`, 12/12, `e7c82c5`). 수정 `464d01b`, 보수 규칙 추가 `8130ee5`.
+
+| 지적 | 처리 |
+|---|---|
+| H1 목 테스트가 다른 IF 테스트의 실행으로 인정(Case B·C) | D44: 테스트 수준 증거만 셈 |
+| H2 import 시점 도우미 함수가 "provider가 돎"으로 셈 | D44: provider는 IF 심볼만, import 시점은 테스트 증거 아님 |
+| H3 장수 자식 프로세스가 태어난 테스트에 귀속 | 계측 줄에 시각, 자식 머리에 `spawned_in`, pytest 프로세스의 테스트 경계로 다시 읽음(끝난 뒤 detached) |
+| H4 provider·consumer 연결 미검증(무관한 consumer 함수, 경로 B 자식의 무관한 provider 함수) | 호출 스택 연결 기록(`e` 줄) + IF 심볼 단위 판정 |
+| M1 함수 범위 fixture가 띄운 서버 프로세스가 setup 단계로 기록돼 BLOCKED | 시간 창으로 호출 단계 중 줄은 call |
+| M2 suite-level 증거를 검증으로 표시 | D44 표시(Test-level / Suite-level / Insufficient) |
+| M3 경로의 `[`로 거짓 FAILED(R12 수정의 회귀) | 파일 부분 뒤에서만 매개변수 자름 |
+| M4 읽을 수 없는 최상위 디렉터리로 내부 오류(R6 수정의 회귀) | OSError 무시 |
+| M5 남은 자식이 서명 뒤 trace를 바꿔 audit 실패 | `trace-live/` → 실행 직후 `trace/` 스냅샷으로 판정·서명 |
+| M6 `mocker.patch`·내장 `setattr`·대입 목을 patch로 못 봄 | 셋 다 provider patch 경고 |
+| L1 `pytest.ini` 등의 pythonpath 무시 | 읽음 |
+| L2 if 분기의 단순 값이 이전 import를 지움 | 묶지 않은 분기는 이전 바인딩 유지 |
+| L3 setprofile 경로에서 `sys.setprofile(None)`·쓰기 오류 시 줄이 표지 없이 사라짐 | 고치지 않음(문서화). Python 3.12+는 sys.monitoring이라 `setprofile(None)` 영향 없음 |
+| L4 손자 프로세스가 파이프를 잡으면 실행이 시간 초과로 보고(0.1.x부터, G5 포함) | 고치지 않음(문서화) |
+
+검토자가 맞다고 확인한 것: G1~G5 manifest가 0.1.5와 같음, G6은 자기 실행만 씀, trace 판독의 비정규·심볼릭·대형 파일 처리, 계측 없음·잘림 → BLOCKED, 경로 B 선언의 리뷰·파일 해시 검사, 다른 프로세스·호출 단계 조건, 스레드 detached, N/A 조건.
+
 ## 8. 실전 E2E 계획 (D8, 실행은 별도 승인)
 - 예산: sonnet 최대 2회, 회당 `--max-budget-usd 2`, 합계 $4 상한. `--permission-mode auto`, `--setting-sources project,local`, `--plugin-dir dist/vmodel-0.2.0`, `--dangerously-skip-permissions` 금지. 실행 전 모델 호출 없는 준비(setup)와 기대 판정 확인을 먼저 한다.
 - 시나리오 A (Provider/Consumer, G6 실패 → 결함 → 수정 → 재검증): 기존 코드가 있는 프로젝트(점수 파서 모듈과 그 통합 테스트가 이미 `tests/integration/`에 있어 `init`이 실제 경로를 등록 — D3 규칙을 그대로 지킴)에 "파서 결과를 소비하는 요약 보고 CLI를 추가해줘"를 요청한다. 파서의 오류 계약(형식 오류 줄 번호)과 소비 측 처리 사이의 불일치를 하나 미리 심어(D26 블라인드 시딩, 세션 프롬프트에 알리지 않음) 단위 테스트는 통과하고 IF 통합 테스트에서 드러나게 한다. 기대: G1~G5 PASSED → G6 FAILED(TEST_MAPPING·RESULTS) → DEFECT(gate G6, IF·TEST 연결) → 수정 → G4 재리뷰 → G5 → G6 PASSED, 결함 CLOSED. 관찰: placeholder·import-only 테스트를 쓰는지, 통합 테스트가 경로 A인지, verifier가 `interfaces` 항목을 쓰는지, guard 우회 0.

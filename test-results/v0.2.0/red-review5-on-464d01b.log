@@ -1,0 +1,32 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/43cdb556-8cbb-4e88-9bf3-ce8c6609a0de/scratchpad/red-464d01b/plugins/vmodel",
+    "release_manifest": null
+  },
+  "git_head": "8130ee5",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "marker": "RED-TARGET",
+  "tests": 10,
+  "expectations_met": 10,
+  "violations": 0,
+  "seconds": 35.7
+}
+
+OK  expect=ok   got=ok      test_g6_review5.R5AsyncGenChar.test_N4_asyncio_gather_consumer
+OK  expect=ok   got=ok      test_g6_review5.R5AsyncGenChar.test_N5_consumer_returning_a_provider_generator
+OK  expect=FAIL got=FAIL    test_g6_review5.R5ClassSignatureRed.test_N3_constructor_call_is_taken_as_the_interface_while_parse_is_mocked
+      AssertionError: 'PASSED' != 'BLOCKED'
+OK  expect=FAIL got=FAIL    test_g6_review5.R5FixtureRed.test_N7_autouse_fixture_connection_makes_mocked_tests_test_level
+      AssertionError: 'PASSED' != 'BLOCKED'
+OK  expect=FAIL got=FAIL    test_g6_review5.R5MethodSignatureRed.test_N2_method_signature_accepted_by_g4_never_matches_at_g6
+      AssertionError: 'BLOCKED' != 'PASSED'
+OK  expect=ok   got=ok      test_g6_review5.R5PerfChar.test_N6_test_windows_is_quadratic
+OK  expect=ok   got=ok      test_g6_review5.R5PerfChar.test_N8_equal_timestamps_with_a_coarse_clock
+OK  expect=FAIL got=FAIL    test_g6_review5.R5UnitRed.test_N8_equal_timestamps_with_a_coarse_clock
+      AssertionError: Lists differ: [('warm_up', 'call'), ('main', 'detached')] != [('warm_up', 'setup'), ('main', 'detached')]
+OK  expect=FAIL got=FAIL    test_g6_review5.R5WindowRed.test_N1_child_work_in_the_spawning_tests_teardown_counts_as_call
+      AssertionError: True is not false : RED-TARGET teardown work credited as TEST-010's call
+OK  expect=FAIL got=FAIL    test_g6_review5.R5WindowRed.test_N1b_unwatched_test_between_extends_the_window
+      AssertionError: True is not false : RED-TARGET another test's work credited to TEST-010 (ping only)
