@@ -64,10 +64,16 @@ def render_gate(res: dict) -> str:
     return "\n".join(lines)
 
 
-def _require_tty(action: str) -> bool:
+def _has_tty(action: str) -> bool:
     if not (sys.stdin is not None and sys.stdin.isatty() and sys.stdout.isatty()):
         out(f"'{action}' is a user-only action and needs an interactive terminal (TTY). "
             "Run it yourself in a terminal; an agent cannot perform it.")
+        return False
+    return True
+
+
+def _require_tty(action: str) -> bool:
+    if not _has_tty(action):
         return False
     try:
         ans = input(f"Type 'yes' to {action}: ")
@@ -374,8 +380,10 @@ def cmd_lock(args) -> int:
     if not args.accept_current:
         _json(p.lock())
         return 0
-    plan = plan_settings_sync(p.root)  # read-only; refuses settings it cannot parse before anything is asked
     action = "re-pin the validator core hash (all previous PASS results become STALE)"
+    if not _has_tty(action):  # user-only: refuse before reading anything (exit 3 like every user-only refusal)
+        return 3
+    plan = plan_settings_sync(p.root)  # read-only; refuses settings it cannot read or parse before asking
     if plan is not None and plan["settings_change"]:
         out("The DevKit permission rules in .claude/settings.json will follow this release:")
         out(f"  validator {plan['from_version']} at {plan['from_plugin_root']}")
@@ -384,10 +392,14 @@ def cmd_lock(args) -> int:
             for kind in ("deny", "allow"):
                 for rule in plan[f"{op}_{kind}"]:
                     out(f"  {label} {kind}: {rule}")
+        for rule in plan["keep_removed_allow"]:
+            out(f"  not added (you removed the previous release's rule): allow: {rule}")
         out("  New rules are added before the old ones are removed. Rules you added yourself are kept as they are.")
         action += " and update the DevKit permission rules listed above"
     if not _require_tty(action):
         return 3
+    if (p.state_dir / ".ledger.lock").exists():
+        out("another vmodel process holds the ledger lock; waiting up to 30 s (Ctrl-C rolls everything back)")
     res = upgrade_project(p, args.reason or "user re-pinned validator", plan)
     lock = res["lock"]
     out(f"re-pinned core {short(lock['core_hash'])} (validator {lock['validator_version']})")
@@ -448,7 +460,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     def add(name, fn, help_):
-        sp = sub.add_parser(name, help=help_)
+        sp = sub.add_parser(name, help=help_, allow_abbrev=False)  # '--accept' must not mean '--accept-current'
         sp.add_argument("--project", help="project root (default: search upwards from cwd)")
         sp.set_defaults(fn=fn)
         return sp

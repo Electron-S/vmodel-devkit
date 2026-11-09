@@ -39,10 +39,11 @@ RED 대상은 불변 릴리스 `dist/vmodel-0.1.4`(core `5dd1d010…`, `releases
 - REQ-U2 사용자 정의 설정은 보존한다. 설치 기록에 없는 규칙(이전 릴리스 경로를 언급하는 사용자 규칙 포함), 순서, hooks·env 등 다른 키는 그대로다.
   - AC-U2a 업그레이드 전후 사용자 규칙 목록과 다른 키가 같다.
   - AC-U2b 업그레이드 뒤 `uninstall`이 설치 전 사용자 settings를 정확히 복원한다(새 코드·이전 코드 어느 쪽 uninstall로도).
-- REQ-U3 DevKit 규칙은 설치 기록(`added_deny`, `added_allow`)으로만 식별한다. 경로 패턴으로 추정하지 않는다. 설치 전부터 있던 같은 문자열 규칙은 사용자 소유로 남는다.
+- REQ-U3 DevKit 규칙은 설치 기록(`added_deny`, `added_allow`)으로만 식별한다. deny 규칙은 보호 하한이라 사용자가 지웠어도 다시 넣고(확인 전에 표시), allow 규칙은 이전 릴리스의 같은 자리 규칙을 사용자가 지웠으면 새 릴리스 것을 다시 허용하지 않는다(검토 지적 5). 경로 패턴으로 추정하지 않는다. 설치 전부터 있던 같은 문자열 규칙은 사용자 소유로 남는다.
   - AC-U3a 설치 전에 사용자가 넣어 둔 DevKit과 같은 문자열 규칙은 업그레이드·제거 후에도 남는다.
 - REQ-U4 이전 규칙을 지울 때 보호 공백이 없다. 새 규칙을 먼저 더하고(이전+새 상위 집합), 재고정이 성공한 뒤에만 이전 규칙을 지운다. 파일은 매번 원자적으로 바꾼다.
-  - AC-U4a 재고정 단계가 실패하면 settings·install-record·lock이 업그레이드 전 바이트로 돌아가고, 원장에 기록이 늘지 않는다.
+  - AC-U4a 원장에 재고정 기록이 생기기 전에 실패하거나 중단(Ctrl-C)되면 settings·install-record·lock이 업그레이드 전 바이트로 돌아가고 원장은 그대로다. 원장 기록이 생긴 뒤(또는 원장을 읽을 수 없는 상태)의 실패는 되돌리지 않고, 이전+새 규칙 상위 집합으로 남긴 채 "Rolled back"이라고 하지 않는다(검토 지적 4).
+  - AC-U4c lock은 서명된 원장 기록 없이 바뀌지 않는다(재고정은 원장 기록 → lock 순서, 검토 지적 1).
   - AC-U4b 이전·새 규칙이 함께 있는 상위 집합 상태(중단된 업그레이드)에서 다시 실행하면 이전 DevKit 규칙만 지워지고 사용자 규칙은 남는다.
 - REQ-U5 설치·업그레이드·제거는 멱등이다.
   - AC-U5a 같은 릴리스로 업그레이드를 두 번 하면 두 번째는 settings·install-record를 바꾸지 않는다(바이트 동일, 백업도 만들지 않는다).
@@ -53,7 +54,8 @@ RED 대상은 불변 릴리스 `dist/vmodel-0.1.4`(core `5dd1d010…`, `releases
   - AC-U6b 설정을 바꾸는 업그레이드는 업그레이드 전 settings·install-record·lock 사본을 `.vmodel/install/backup/upgrade-<시각>/`에 남기고 출력에 경로를 보인다.
   - AC-U6c 재고정 성공 후 이전 규칙 제거만 실패하면 안전한 상위 집합으로 남기고, 다시 실행하면 마무리된다는 안내와 함께 비 0으로 끝난다(코드 검토로 확인, AC-U4b가 같은 상태의 재실행을 검사).
 - REQ-U7 사용자 승인 없이 설정을 바꾸지 않는다. 설정 변경은 사용자 전용 TTY 명령에서만, 바뀔 규칙을 먼저 보여 준 뒤 'yes'를 받아야 일어난다. 에이전트는 guard가 막는다(기존 USER_ONLY 그대로).
-  - AC-U7a TTY 없이 실행하면 거부(종료 코드 3)하고 아무것도 바꾸지 않는다.
+  - AC-U7a TTY 없이 실행하면 settings를 읽기 전에 거부(종료 코드 3)하고 아무것도 바꾸지 않는다. 옵션 축약(`--accept`)은 받지 않는다(guard의 사용자 전용 문자열 검사를 피해 가지 못하게, 검토 지적 11).
+  - AC-U7d 확인 전에 보여 준 계획(계획 없음 포함)과 확인 시점의 파일이 다르면 적용하지 않는다(검토 지적 2).
   - AC-U7b 'yes'가 아니면 아무것도 바꾸지 않는다.
   - AC-U7c 확인 전에 추가·삭제될 규칙과 이전·새 root를 출력한다.
 - REQ-U8 Guard 보호 수준을 낮추지 않는다. `hook.py`는 바꾸지 않는다. 업그레이드 뒤 새 Core는 guard와 deny 규칙 양쪽으로 보호된다.
@@ -91,15 +93,15 @@ DevKit 규칙 = install-record의 `added_deny`·`added_allow`(설치가 그 시�
 1. 시작 전 검사: Validator 무결성(`check_self`), 원장 읽기(`Ledger.entries()` — 서명 키·서명·체인·head·앵커), 계획 재계산 후 해시 대조. 실패하면 SetupError/LedgerError, 아무것도 쓰지 않는다.
 2. 메모리 스냅샷(settings·install-record·lock 바이트, settings가 없었으면 없음)과 디스크 백업 `.vmodel/install/backup/upgrade-<시각>/`(설정 변경이 있을 때만).
 3. 1단계(추가): settings = 기존 + 추가 규칙. install-record 소유 목록 = 기존 소유 + 추가, `upgrade_pending`(이전·새 root, 백업 경로). 둘 다 원자적 교체(`write_json`).
-4. 2단계(재고정): `repin_lock`(lock 쓰기 + 원장 lock 기록).
-5. 1~2단계 중 예외 → 스냅샷으로 settings·install-record·lock 복원(settings가 없었으면 삭제), "rolled back" 오류(종료 코드 2). 원장은 append 전 실패면 그대로다.
+4. 2단계(재고정): `repin_lock`(원장 lock 기록 → lock 쓰기. 검토 후 순서를 바꿨다: lock은 서명 기록 없이 바뀌지 않는다).
+5. 1~2단계 중 예외·중단(BaseException) → 원장 길이를 다시 읽는다. 그대로면 스냅샷으로 lock → settings → install-record 순서로 복원(settings 복원이 실패하면 기록은 상위 집합 소유로 둔다), "Rolled back" 오류(종료 코드 2). 원장이 늘었거나 읽을 수 없으면 되돌리지 않고 상위 집합으로 남긴 채 사실대로 알린다.
 6. 3단계(삭제): settings에서 삭제 규칙 제거, install-record 확정(`plugin_root`·`validator_version` 갱신, 소유 목록 확정, `upgrade_pending` 제거, `upgrades` 이력 추가). 여기서 예외가 나면 롤백하지 않는다(재고정은 이미 원장에 기록됨). 상위 집합으로 남은 상태를 알리고 같은 명령을 다시 실행하라고 안내한다(종료 코드 2). 재실행은 기록상 소유 목록으로 같은 계획을 다시 만든다.
 7. 바꿀 것이 없으면(같은 릴리스 재고정) settings·install-record에 쓰지 않는다.
 
-설치 기록이 없는 프로젝트(`init`만 한 경우)도 같은 트랜잭션을 지나므로 원장 기록이 실패하면 lock이 복원된다(§1의 lock 선기록 문제 해소).
+설치 기록이 없는 프로젝트(`init`만 한 경우)도 같은 트랜잭션을 지난다. 재고정 순서를 원장 → lock으로 바꿔 §1의 lock 선기록 문제를 없앴다.
 
 ### 4.4 CLI
-`vmodel lock --accept-current [--reason]` (USER ONLY, TTY): 계획을 계산해 출력(이전·새 root, 추가·삭제 규칙, "user rules are not changed") → `_require_tty`의 확인 문구에 설정 갱신을 포함 → 트랜잭션 → `re-pinned core <hash> (validator <ver>)`, 설정 변경 요약, 백업 경로. 메시지는 ASCII 영어(D16).
+`vmodel lock --accept-current [--reason]` (USER ONLY, TTY): TTY가 없으면 settings를 읽기 전에 거부(3). 계획을 계산해 출력(이전·새 root, 추가·삭제 규칙, "user rules are not changed") → `_require_tty`의 확인 문구에 설정 갱신을 포함 → 트랜잭션 → `re-pinned core <hash> (validator <ver>)`, 설정 변경 요약, 백업 경로. 메시지는 ASCII 영어(D16).
 
 ### 4.5 install 재실행
 기록이 있으면 지금처럼 거부한다(종료 코드 2, 변경 없음). 기록의 `plugin_root`가 지금 릴리스와 다르면 "this project was installed by validator <ver> from <root>; to upgrade, run '<이 릴리스>/bin/vmodel lock --accept-current' in a terminal …"로 안내한다.
@@ -139,7 +141,26 @@ DevKit 규칙 = install-record의 `added_deny`·`added_allow`(설치가 그 시�
 U-10~U-13은 0.1.4에서도 통과해야 하는 특성 테스트다(지금 동작 중 지켜야 할 것). U-15는 0.1.4에서 "변경 없음"이 공허하게 참이므로 GREEN 전용으로 둔다. U-4는 0.1.4에서 lock만 바뀌어 실패한다(§1의 lock 선기록).
 
 ## 6. 결과
-(구현 후 기록)
+TEST_RESULTS §12에 기록한다.
 
 ## 7. 독립 검토
-(구현 후 기록)
+
+1차 검토(별도 컨텍스트, 읽기 전용, 첫 수정본 `0e691d0`, 실험은 검토자 자신의 임시 폴더): 정상 경로에서 보호 공백 없음, guard·원장·Gate 회귀 없음, 0.1.4 uninstall 교차 버전 복원 확인. 지적 12건과 코드 읽기 의심 3건. 재현한 지적은 `tests/test_upgrade_review.py`에 고정했고, `0e691d0` 사본(`git archive`, 검토 worktree와 diff 동일)에서 Red 10건 assertion 실패·특성 2건 통과를 확인한 뒤 고쳤다(`test-results/v0.1.5/red-review-0e691d0.log`).
+
+| # | 지적 | 처리 |
+|---|---|---|
+| 1 | 원장 잠금 대기 중 Ctrl-C면 롤백 없이 lock만 재고정, 원장 기록 없음 | 고침: 재고정은 원장 기록 → lock 순서, 롤백은 BaseException까지. 대기 중 안내 출력. 테스트 `test_ctrl_c_while_waiting_for_the_ledger_rolls_everything_back` |
+| 2 | 표시 시점 계획이 없으면(init만) 확인 사이의 install 변경이 보이지 않고 적용됨 | 고침: 계획 없음도 비교(센티널). `test_plan_check_covers_a_project_installed_while_the_prompt_was_open`, 정상 경로 특성 테스트 추가 |
+| 3 | 복원 순서(settings → 기록 → lock): 이중 실패 시 소유권 상실·deny 공백 | 고침: lock → settings → 기록, settings 복원 실패 시 기록은 상위 집합 소유로 유지. `test_failed_settings_restore_keeps_devkit_ownership`(프로세스 내 주입) |
+| 4 | 앵커 쓰기 실패로 원장 기록이 남았는데 "Rolled back" | 고침: 실패 후 원장 길이를 다시 읽어 늘었거나 읽을 수 없으면 되돌리지 않고 상위 집합 유지, 사실대로 안내. `test_failure_after_the_ledger_record_is_not_reported_as_rolled_back` |
+| 5 | 사용자가 지운 DevKit allow 규칙을 다시 허용 | 고침(REQ-U3 보강): allow는 이전 릴리스 같은 자리 규칙이 없으면 추가하지 않고 표시. deny는 보호 하한이라 다시 넣는다. `test_devkit_allow_rules_the_user_removed_stay_removed` |
+| 6 | 같은 경로·구버전 기록에서 install이 uninstall을 권함 | 고침: 경로나 버전이 다르면 재고정 안내. `test_install_over_an_older_version_at_the_same_path_points_to_the_upgrade` |
+| 7 | 읽을 수 없는 settings.json → internal error | 고침: SetupError(종료 코드 2, "cannot read"). `test_unreadable_settings_is_reported_not_a_crash` |
+| 8 | 업그레이드 백업 폴더를 에이전트가 쓸 수 있음 | 고침: 생성 deny 규칙에 `Edit(/.vmodel/install/**)` 추가(Bash 쓰기는 guard의 `.vmodel` 규칙이 이미 막음, hook.py 무변경). `test_upgrade_backups_are_covered_by_a_deny_rule` |
+| 9 | TTY 없이 깨진 settings → 종료 코드 2 | 고침: TTY 확인을 settings 읽기 전에. `test_no_tty_is_refused_before_settings_are_read` |
+| 10 | 같은 문자열이 둘이면 첫 번째를 지움 | 유지: 설치는 DevKit 규칙을 목록 끝에 붙이고, 그 뒤 사용자가 같은 문자열을 넣는 흔한 방식은 끝에 추가라서 첫 번째가 DevKit 사본일 가능성이 높다. 문자열은 같으므로 내용은 같고 순서만 다를 수 있다(D38 한계) |
+| 11 | `--accept` 축약이 guard 문자열 검사를 피함(기존 문제) | 고침: 하위 명령 파서 `allow_abbrev=False`(cli.py만, guard 무변경). `test_abbreviated_accept_option_is_rejected` |
+| 12 | 0.1.5 업그레이드 뒤 이전 CLI로 재고정하면 deny 공백 | 기록만: 0.1.4 이하 다운그레이드는 문서화한 수동 절차(SPEC §11, D38 한계) |
+| 의심 | 설치 기록 `added_*`에 `{}`·`0` 같은 비목록 값을 빈 목록으로 받음 | 고침: 없을 때만 빈 목록, 그 밖의 비목록은 오류 |
+| 의심 | 심볼릭 링크인 settings.json은 원자적 교체로 일반 파일이 됨 | 기록만(install부터 있던 동작) |
+| 테스트 품질 | 계획 대조·제거 단계 실패·복원 실패·중단 테스트 없음 | 추가(위 테스트 + `test_removal_step_failure_leaves_a_superset_and_a_rerun_finishes`) |
