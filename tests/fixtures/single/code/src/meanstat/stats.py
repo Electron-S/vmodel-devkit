@@ -1,0 +1,7 @@
+"""Mean of a list of numbers (DESIGN-001)."""
+
+
+def mean(values: list[float]) -> float:
+    if not values:
+        raise ValueError("values must not be empty")
+    return sum(values) / len(values)

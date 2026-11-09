@@ -1,0 +1,9 @@
+[project]
+name = "pipeline"
+version = "0.0.1"
+description = "VModel DevKit G6 fixture: two components joined by interfaces (Python + pytest)"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

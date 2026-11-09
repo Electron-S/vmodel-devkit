@@ -1,0 +1,52 @@
+{
+  "work_item": "WI-001",
+  "tests": [
+    {
+      "id": "TEST-001",
+      "level": "unit",
+      "title": "평균",
+      "category": "normal",
+      "verifies": [
+        "DESIGN-001"
+      ],
+      "procedure": "평균 절차",
+      "expected": "평균 기대 결과"
+    },
+    {
+      "id": "TEST-002",
+      "level": "unit",
+      "title": "빈 목록 거부",
+      "category": "abnormal",
+      "verifies": [
+        "DESIGN-001"
+      ],
+      "procedure": "빈 목록 거부 절차",
+      "expected": "빈 목록 거부 기대 결과"
+    },
+    {
+      "id": "TEST-003",
+      "level": "unit",
+      "title": "원소 1개",
+      "category": "boundary",
+      "verifies": [
+        "DESIGN-001"
+      ],
+      "procedure": "원소 1개 절차",
+      "expected": "원소 1개 기대 결과"
+    },
+    {
+      "id": "TEST-004",
+      "level": "system",
+      "title": "평균 수용",
+      "category": "normal",
+      "verifies": [
+        "REQ-001"
+      ],
+      "procedure": "평균 수용 절차",
+      "expected": "평균 수용 기대 결과",
+      "acceptance_criteria": [
+        "AC-001-1"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "work_item": "WI-001",
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "type": "functional",
+      "title": "평균 계산",
+      "priority": "must",
+      "status": "active",
+      "description": "숫자 목록의 산술 평균을 돌려준다. 빈 목록은 ValueError로 거부한다.",
+      "acceptance_criteria": [
+        {
+          "id": "AC-001-1",
+          "criterion": "[1, 2, 3]의 평균은 2이고 빈 목록은 ValueError"
+        }
+      ]
+    }
+  ],
+  "conflict_analysis": {
+    "performed": true,
+    "method": "단일 요구사항",
+    "conflicts": []
+  },
+  "open_issues": []
+}

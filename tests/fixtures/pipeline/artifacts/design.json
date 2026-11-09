@@ -1,0 +1,82 @@
+{
+  "work_item": "WI-001",
+  "units": [
+    {
+      "id": "DESIGN-001",
+      "component": "ARCH-001",
+      "module": "src/pipeline/parser.py",
+      "name": "parse",
+      "kind": "function",
+      "signature": "def parse(text: str) -> list[dict]",
+      "description": "줄 단위로 이름과 정수 점수를 분리",
+      "requirements": [
+        "REQ-001"
+      ],
+      "contract": {
+        "preconditions": [
+          "입력은 str 또는 None"
+        ],
+        "postconditions": [
+          "설명된 값을 반환"
+        ]
+      },
+      "errors": [
+        {
+          "exception": "ValueError",
+          "condition": "'이름,점수' 형식이 아니거나 점수가 정수가 아닌 줄"
+        }
+      ],
+      "boundary_conditions": [
+        "빈 문자열 -> []"
+      ]
+    },
+    {
+      "id": "DESIGN-002",
+      "component": "ARCH-002",
+      "module": "src/pipeline/report.py",
+      "name": "summarize",
+      "kind": "function",
+      "signature": "def summarize(text: str) -> dict",
+      "description": "parse 결과로 개수·합계·최고 점수 이름 계산",
+      "requirements": [
+        "REQ-002"
+      ],
+      "contract": {
+        "preconditions": [
+          "입력은 str 또는 None"
+        ],
+        "postconditions": [
+          "설명된 값을 반환"
+        ]
+      },
+      "errors": [],
+      "boundary_conditions": [
+        "레코드 0개 -> count 0, top None"
+      ]
+    },
+    {
+      "id": "DESIGN-003",
+      "component": "ARCH-002",
+      "module": "src/pipeline/report.py",
+      "name": "main",
+      "kind": "function",
+      "signature": "def main(argv: list[str] | None = None) -> int",
+      "description": "파일 또는 표준 입력을 읽어 JSON 요약 출력",
+      "requirements": [
+        "REQ-002"
+      ],
+      "contract": {
+        "preconditions": [
+          "입력은 str 또는 None"
+        ],
+        "postconditions": [
+          "설명된 값을 반환"
+        ]
+      },
+      "errors": [],
+      "boundary_conditions": [
+        "빈 파일 -> count 0"
+      ]
+    }
+  ]
+}

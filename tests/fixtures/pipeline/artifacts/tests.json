@@ -1,0 +1,143 @@
+{
+  "work_item": "WI-001",
+  "tests": [
+    {
+      "id": "TEST-001",
+      "level": "unit",
+      "title": "레코드 파싱",
+      "category": "normal",
+      "verifies": [
+        "DESIGN-001"
+      ],
+      "procedure": "레코드 파싱 절차",
+      "expected": "레코드 파싱 기대 결과"
+    },
+    {
+      "id": "TEST-002",
+      "level": "unit",
+      "title": "형식 오류 거부",
+      "category": "abnormal",
+      "verifies": [
+        "DESIGN-001"
+      ],
+      "procedure": "형식 오류 거부 절차",
+      "expected": "형식 오류 거부 기대 결과"
+    },
+    {
+      "id": "TEST-003",
+      "level": "unit",
+      "title": "빈 입력",
+      "category": "boundary",
+      "verifies": [
+        "DESIGN-001"
+      ],
+      "procedure": "빈 입력 절차",
+      "expected": "빈 입력 기대 결과"
+    },
+    {
+      "id": "TEST-004",
+      "level": "unit",
+      "title": "요약 계산",
+      "category": "normal",
+      "verifies": [
+        "DESIGN-002"
+      ],
+      "procedure": "요약 계산 절차",
+      "expected": "요약 계산 기대 결과"
+    },
+    {
+      "id": "TEST-005",
+      "level": "unit",
+      "title": "빈 요약",
+      "category": "boundary",
+      "verifies": [
+        "DESIGN-002"
+      ],
+      "procedure": "빈 요약 절차",
+      "expected": "빈 요약 기대 결과"
+    },
+    {
+      "id": "TEST-006",
+      "level": "unit",
+      "title": "CLI 출력",
+      "category": "normal",
+      "verifies": [
+        "DESIGN-003"
+      ],
+      "procedure": "CLI 출력 절차",
+      "expected": "CLI 출력 기대 결과"
+    },
+    {
+      "id": "TEST-007",
+      "level": "unit",
+      "title": "CLI 빈 파일",
+      "category": "boundary",
+      "verifies": [
+        "DESIGN-003"
+      ],
+      "procedure": "CLI 빈 파일 절차",
+      "expected": "CLI 빈 파일 기대 결과"
+    },
+    {
+      "id": "TEST-010",
+      "level": "integration",
+      "title": "report가 실제 parser 사용",
+      "category": "normal",
+      "verifies": [
+        "IF-001"
+      ],
+      "procedure": "report가 실제 parser 사용 절차",
+      "expected": "report가 실제 parser 사용 기대 결과"
+    },
+    {
+      "id": "TEST-011",
+      "level": "integration",
+      "title": "parser 오류가 report까지 전달",
+      "category": "abnormal",
+      "verifies": [
+        "IF-001"
+      ],
+      "procedure": "parser 오류가 report까지 전달 절차",
+      "expected": "parser 오류가 report까지 전달 기대 결과"
+    },
+    {
+      "id": "TEST-012",
+      "level": "integration",
+      "title": "CLI 진입점 요약 출력",
+      "category": "normal",
+      "verifies": [
+        "IF-002"
+      ],
+      "procedure": "CLI 진입점 요약 출력 절차",
+      "expected": "CLI 진입점 요약 출력 기대 결과"
+    },
+    {
+      "id": "TEST-020",
+      "level": "system",
+      "title": "파싱 수용",
+      "category": "normal",
+      "verifies": [
+        "REQ-001"
+      ],
+      "procedure": "파싱 수용 절차",
+      "expected": "파싱 수용 기대 결과",
+      "acceptance_criteria": [
+        "AC-001-1"
+      ]
+    },
+    {
+      "id": "TEST-021",
+      "level": "system",
+      "title": "요약 수용",
+      "category": "normal",
+      "verifies": [
+        "REQ-002"
+      ],
+      "procedure": "요약 수용 절차",
+      "expected": "요약 수용 기대 결과",
+      "acceptance_criteria": [
+        "AC-002-1"
+      ]
+    }
+  ]
+}

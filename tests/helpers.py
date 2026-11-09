@@ -23,6 +23,8 @@ PLUGIN = Path(os.environ["VMODEL_TEST_PLUGIN"]).resolve() if os.environ.get("VMO
 SOURCE_PLUGIN = REPO / "plugins" / "vmodel"
 SAMPLE = REPO / "samples" / "textstats"
 FIXTURE = REPO / "tests" / "fixtures" / "wordfreq"
+PIPELINE = REPO / "tests" / "fixtures" / "pipeline"  # G6: two components joined by IF-001/IF-002 (0.2.0)
+SINGLE = REPO / "tests" / "fixtures" / "single"  # G6: one component, no interface (N/A path, 0.2.0)
 GATES = ["G1", "G2", "G3", "G4", "G5"]
 GATE_ARTIFACTS = {"G1": ["requirements.json"], "G2": ["architecture.json"], "G3": ["design.json", "tests.json"]}
 KEEP = os.environ.get("VMODEL_TEST_KEEP") == "1"
@@ -33,7 +35,11 @@ def has_pytest() -> bool:
 
 
 class Sandbox:
-    def __init__(self, korean: bool = True, plugin: Path | None = None, sample: Path = SAMPLE):
+    def __init__(self, korean: bool = True, plugin: Path | None = None, sample: Path = SAMPLE,
+                 fixture: Path = FIXTURE):
+        self.fixture = fixture
+        if sample is SAMPLE and fixture is not FIXTURE:  # G6 fixtures carry their own project skeleton
+            sample = fixture / "base"
         self.tmp = Path(tempfile.mkdtemp(prefix="vmodel-test-"))
         base = self.tmp / ("한글 경로 sandbox" if korean else "sandbox")
         self.home = self.tmp / "vmodel home"
@@ -85,10 +91,10 @@ class Sandbox:
         return self.root / ".vmodel" / "work-items" / self.wi
 
     def put_artifact(self, name: str, wi: str | None = None) -> None:
-        shutil.copy(FIXTURE / "artifacts" / name, self.root / ".vmodel" / "work-items" / (wi or self.wi) / name)
+        shutil.copy(self.fixture / "artifacts" / name, self.root / ".vmodel" / "work-items" / (wi or self.wi) / name)
 
     def put_code(self) -> None:
-        shutil.copytree(FIXTURE / "code", self.root, dirs_exist_ok=True)
+        shutil.copytree(self.fixture / "code", self.root, dirs_exist_ok=True)
 
     def load(self, name: str) -> dict:
         return json.loads((self.wi_dir / name).read_text(encoding="utf-8"))
@@ -97,7 +103,8 @@ class Sandbox:
         (self.wi_dir / name).write_text(json.dumps(obj, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
     def review(self, gate: str, verdict: str = "approve", findings: list | None = None,
-               reviewer: str = "vmodel:verifier", target_hash: str | None = None, submit: bool = True) -> None:
+               reviewer: str = "vmodel:verifier", target_hash: str | None = None, submit: bool = True,
+               extra: dict | None = None, interfaces: list | None = None) -> None:
         if target_hash is None:
             code, out = self.vm("hash", self.wi, gate)
             assert code == 0, out
@@ -105,11 +112,60 @@ class Sandbox:
         doc = {"gate": gate, "work_item": self.wi, "reviewer": reviewer, "target_hash": target_hash,
                "reviewed_at": "2026-11-08T00:00:00Z", "verdict": verdict, "summary": f"harness review of {gate}",
                "checklist": [{"item": "harness", "result": "ok"}], "findings": findings or []}
+        # 0.2.0 (REQ-G6-12): a G4 review of a work item with interfaces carries one entry per IF. Releases up to 0.1.5
+        # ignore the extra key, so harness runs against them are unchanged.
+        if gate == "G4":
+            entries = self.interface_review_entries() if interfaces is None else interfaces
+            if entries:
+                doc["interfaces"] = entries
+        doc.update(extra or {})
         (self.wi_dir / "reviews").mkdir(exist_ok=True)
         (self.wi_dir / "reviews" / f"{gate}.json").write_text(json.dumps(doc, indent=2), encoding="utf-8")
         if submit:  # the harness plays the verifier, so it also registers the review
             code, out = self.vm("review-submit", self.wi, gate)
             assert code == 0, out
+
+    def interface_review_entries(self) -> list[dict]:
+        """The harness verifier's per-IF G4 review entries: result ok, provider symbol from the IF signature."""
+        import re
+        path = self.wi_dir / "architecture.json"
+        if not path.is_file():
+            return []
+        arch = json.loads(path.read_text(encoding="utf-8"))
+        design = self.wi_dir / "design.json"
+        units = json.loads(design.read_text(encoding="utf-8"))["units"] if design.is_file() else []
+        out = []
+        for i in arch.get("interfaces") or []:
+            m = re.search(r"\b(?:def|class)\s+([A-Za-z_][A-Za-z0-9_]*)", i.get("signature") or "")
+            sym = m.group(1) if m else next((u["name"] for u in units if u["component"] == i["provider"]), "?")
+            out.append({"id": i["id"], "result": "ok", "provider_symbols": [sym], "note": "harness review"})
+        return out
+
+    def config(self) -> dict:
+        return json.loads((self.root / ".vmodel" / "config.json").read_text(encoding="utf-8"))
+
+    def set_config(self, cfg: dict) -> None:
+        """The harness plays the user here: .vmodel/config.json is user-owned."""
+        (self.root / ".vmodel" / "config.json").write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
+
+    def split_tests(self, integration: str = "tests/integration", timeout_s: int = 300) -> None:
+        """Separate unit and integration commands as the user would (REQ-G6-27/28 form)."""
+        cfg = self.config()
+        cfg["unit_test"]["argv"] = ["{python}", "-m", "pytest", "-q", "-p", "no:cacheprovider",
+                                    f"--ignore={integration}", "--junitxml={junit}"]
+        cfg["integration_test"] = {"argv": ["{python}", "-m", "pytest", "-q", "-p", "no:cacheprovider", integration,
+                                            "--junitxml={junit}"], "timeout_s": timeout_s}
+        self.set_config(cfg)
+
+    def snapshot(self) -> None:
+        """Keep a byte copy of the whole sandbox (project, VMODEL_HOME, anchors) at the same absolute paths."""
+        self._snap = self.tmp.with_name(self.tmp.name + "-snap")
+        shutil.rmtree(self._snap, ignore_errors=True)
+        shutil.copytree(self.tmp, self._snap, symlinks=True)
+
+    def restore(self) -> None:
+        shutil.rmtree(self.tmp)
+        shutil.copytree(self._snap, self.tmp, symlinks=True)
 
     def gate(self, gate: str) -> tuple[int, dict]:
         return self.vm_json("gate", self.wi, gate)
@@ -184,6 +240,8 @@ class Sandbox:
     def cleanup(self) -> None:
         if not KEEP:
             shutil.rmtree(self.tmp, ignore_errors=True)
+            if getattr(self, "_snap", None):
+                shutil.rmtree(self._snap, ignore_errors=True)
 
 
 def copy_plugin(dest_parent: Path) -> Path:

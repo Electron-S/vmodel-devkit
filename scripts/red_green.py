@@ -9,6 +9,9 @@ Expectations come from the test class name, so they are fixed before any code ch
   ...Invariant  invariant that the fix must not change: must pass in both modes.
   ...Accept     acceptance test that only makes sense on the new core: GREEN mode only (not run in RED mode).
 Other TestCase classes in the module are not evaluated. Exit code 0 only if every expectation holds.
+
+--marker TEXT (0.2.0): in RED mode a Red FAIL counts only if TEXT appears in its assertion traceback, so a failure in a
+helper or in setUp (which carries no marker) is reported as a violation instead of a clean RED.
 """
 from __future__ import annotations
 
@@ -39,6 +42,7 @@ class Collect(unittest.TextTestResult):
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
         self.outcomes: dict[str, tuple[str, str]] = {}
+        self.tracebacks: dict[str, str] = {}
 
     def addSuccess(self, test):
         super().addSuccess(test)
@@ -46,7 +50,9 @@ class Collect(unittest.TextTestResult):
 
     def addFailure(self, test, err):
         super().addFailure(test, err)
-        self.outcomes[test.id()] = ("FAIL", _first_line(self._exc_info_to_string(err, test)))
+        tb = self._exc_info_to_string(err, test)
+        self.tracebacks[test.id()] = tb
+        self.outcomes[test.id()] = ("FAIL", _first_line(tb))
 
     def addError(self, test, err):
         super().addError(test, err)
@@ -70,6 +76,7 @@ def main() -> int:
     ap.add_argument("--mode", choices=("red", "green"), required=True)
     ap.add_argument("--plugin", help="plugin directory under test (default: the source plugins/vmodel)")
     ap.add_argument("--log", required=True)
+    ap.add_argument("--marker", help="RED mode: a Red FAIL must carry this text in its assertion traceback")
     ap.add_argument("modules", nargs="+")
     args = ap.parse_args()
     log = Path(args.log).resolve()  # before the chdir below
@@ -117,10 +124,13 @@ def main() -> int:
     for tid, want in expected.items():
         got, msg = result.outcomes.get(tid, ("missing", ""))
         ok = got == want
+        if ok and got == "FAIL" and args.marker and args.marker not in result.tracebacks.get(tid, ""):
+            ok = False
+            msg = f"(no {args.marker} marker: not the targeted assertion) {msg}"
         bad += not ok
         rows.append(f"{'OK ' if ok else 'BAD'} expect={want:<4} got={got:<7} {tid}" + (f"\n      {msg}" if msg else ""))
     summary = {"mode": args.mode, "plugin": plugin_desc, "git_head": head.stdout.strip(),
-               "worktree_dirty": bool(dirty.stdout.strip()), "python": sys.version.split()[0],
+               "worktree_dirty": bool(dirty.stdout.strip()), "python": sys.version.split()[0], "marker": args.marker,
                "tests": len(expected), "expectations_met": len(expected) - bad, "violations": bad,
                "seconds": round(took, 1)}
     text = "\n".join([json.dumps(summary, indent=2), "", *rows, ""])

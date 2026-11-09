@@ -1,0 +1,84 @@
+{
+  "work_item": "WI-001",
+  "components": [
+    {
+      "id": "ARCH-001",
+      "name": "parser",
+      "responsibility": "텍스트를 점수 레코드로 변환",
+      "requirements": [
+        "REQ-001"
+      ],
+      "location": "src/pipeline/parser.py"
+    },
+    {
+      "id": "ARCH-002",
+      "name": "report",
+      "responsibility": "레코드 요약과 CLI 출력",
+      "requirements": [
+        "REQ-002"
+      ],
+      "location": "src/pipeline/report.py"
+    }
+  ],
+  "interfaces": [
+    {
+      "id": "IF-001",
+      "name": "parse",
+      "provider": "ARCH-001",
+      "consumers": [
+        "ARCH-002"
+      ],
+      "description": "parse(text) -> list[dict]; 형식 오류는 ValueError로 전달",
+      "signature": "def parse(text: str) -> list[dict]"
+    },
+    {
+      "id": "IF-002",
+      "name": "report CLI",
+      "provider": "ARCH-002",
+      "consumers": [
+        "EXTERNAL"
+      ],
+      "description": "파일 경로 인자 또는 표준 입력을 읽어 JSON 요약을 표준 출력에 쓴다",
+      "signature": "def main(argv: list[str] | None = None) -> int"
+    }
+  ],
+  "data_flows": [
+    {
+      "from": "사용자 입력 파일",
+      "to": "ARCH-002",
+      "data": "점수 텍스트",
+      "via": "IF-002"
+    },
+    {
+      "from": "ARCH-001",
+      "to": "ARCH-002",
+      "data": "list[dict] 레코드",
+      "via": "IF-001"
+    },
+    {
+      "from": "ARCH-002",
+      "to": "사용자 터미널",
+      "data": "JSON 요약",
+      "via": "IF-002"
+    }
+  ],
+  "nfr_mapping": [],
+  "tradeoffs": [
+    {
+      "topic": "입력 형식",
+      "options": [
+        "CSV 모듈",
+        "직접 분할"
+      ],
+      "decision": "직접 분할",
+      "rationale": "필드가 두 개뿐이고 오류 메시지에 줄 번호를 넣기 쉽다"
+    }
+  ],
+  "integration_test_strategy": {
+    "approach": "report가 실제 parser를 거쳐 정상·오류 입력을 처리하는지, CLI 진입점이 요약을 출력하는지 확인",
+    "interfaces_covered": [
+      "IF-001",
+      "IF-002"
+    ]
+  }
+}

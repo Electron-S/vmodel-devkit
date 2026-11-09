@@ -1,0 +1,44 @@
+{
+  "work_item": "WI-001",
+  "components": [
+    {
+      "id": "ARCH-001",
+      "name": "stats",
+      "responsibility": "평균 계산",
+      "requirements": [
+        "REQ-001"
+      ],
+      "location": "src/meanstat/stats.py"
+    }
+  ],
+  "interfaces": [],
+  "data_flows": [
+    {
+      "from": "사용자 입력",
+      "to": "ARCH-001",
+      "data": "숫자 목록"
+    },
+    {
+      "from": "ARCH-001",
+      "to": "결과 출력",
+      "data": "평균값"
+    }
+  ],
+  "nfr_mapping": [],
+  "tradeoffs": [
+    {
+      "topic": "계산 방식",
+      "options": [
+        "statistics.mean",
+        "sum/len"
+      ],
+      "decision": "sum/len",
+      "rationale": "예외 종류를 직접 정한다"
+    }
+  ],
+  "integration_test_strategy": {
+    "approach": "단일 컴포넌트라 통합 대상 인터페이스가 없다",
+    "interfaces_covered": [],
+    "na_reason": "컴포넌트 1개, 다른 ARCH와 주고받는 데이터 없음"
+  }
+}

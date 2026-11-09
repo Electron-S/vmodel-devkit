@@ -1,0 +1,39 @@
+{
+  "work_item": "WI-001",
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "type": "functional",
+      "title": "점수 레코드 파싱",
+      "priority": "must",
+      "status": "active",
+      "description": "'이름,점수' 형식의 줄을 이름과 정수 점수를 가진 레코드 목록으로 바꾼다. 형식이 틀린 줄은 줄 번호와 함께 ValueError로 거부한다.",
+      "acceptance_criteria": [
+        {
+          "id": "AC-001-1",
+          "criterion": "'kim,90' 두 줄을 넣으면 레코드 2개가 나오고, 'kim;90'은 ValueError가 난다"
+        }
+      ]
+    },
+    {
+      "id": "REQ-002",
+      "type": "functional",
+      "title": "점수 요약 보고",
+      "priority": "must",
+      "status": "active",
+      "description": "레코드 수, 점수 합계, 최고 점수 이름을 JSON으로 출력한다. 입력은 파일 경로 인자 또는 표준 입력이다.",
+      "acceptance_criteria": [
+        {
+          "id": "AC-002-1",
+          "criterion": "'a,1' 'b,2' 파일을 주면 {count: 2, total: 3, top: b}를 출력하고 종료 코드 0"
+        }
+      ]
+    }
+  ],
+  "conflict_analysis": {
+    "performed": true,
+    "method": "요구사항 쌍별 검토",
+    "conflicts": []
+  },
+  "open_issues": []
+}
