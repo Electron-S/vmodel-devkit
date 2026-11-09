@@ -233,3 +233,32 @@ F1 종료 상태 (status.py)
 독립 검토: 첫 수정본(`73d158e`)을 별도 컨텍스트의 검토자가 읽기 전용으로 보고 부 지적 4건을 냈다(교차 Gate 실패가 FIX_APPLIED, REVIEW_REQUIRED가 실패를 지움, 무결성 BLOCKED에서 unblock 안내, 보류 PASS를 과거 성공으로 표시). 모두 `73d158e`에서 실패하는 테스트로 재현한 뒤 `c4e4da5`에서 고쳤다. Gate 단위 판단은 보수적이라 유지했다. `c4e4da5` 재검토: 주요 0, 지적 1~4 해결 확인. 새 지적 중 "상위 Gate 재통과가 하위 실패를 가려 같은 원장에서 결함끼리 표시가 엇갈림"(nit 2건)은 재현 후 Gate별 판단으로 고쳤고, `closure_action` 표기를 `reverify`로 통일했다. 교차 Gate 증상 동시 인용(부)과 보류 PASS의 JSON 표시(nit)는 위 한계로 남겼다.
 
 검증: RED는 첫 0.1.4 빌드를 해시 대조 후 보존한 사본 대상(`scripts/red_green.py`), GREEN·전체 회귀·실제 세션은 TEST_RESULTS §11. Core가 바뀌었으므로 공개 전 같은 버전으로 재빌드했다(`release.py --force`, 중간 `144428fb…`(`73d158e`)·`f837a465…`(`c4e4da5`), 최종 `sha256:5dd1d010…`(`e0358a5`)).
+
+## D38. 업그레이드 때 DevKit 권한 규칙을 새 릴리스로 옮긴다: 재고정 한 번, 추가 → 재고정 → 제거 (2026-11-09, 사용자 지시, v0.1.5 후보)
+배경: `install`은 `.claude/settings.json`에 릴리스 절대경로가 든 규칙(Core deny `Edit(//<root>/**)`, CLI allow 2개)을 쓴다. SPEC §11의 업그레이드(새 릴리스로 `lock --accept-current`)는 lock과 원장만 바꿔서, 규칙이 이전 릴리스를 가리킨 채 남았다(새 Core는 guard만 보호, 새 CLI allow 없음). README의 다른 절차(옛 `uninstall` → 새 `install`)는 두 명령 사이에 DevKit deny 규칙이 하나도 없다. 새 릴리스로 `install`을 하면 uninstall을 권해서 그 절차로 유도했다. 0.1.3 → 0.1.4 실제 릴리스 사본으로 세 가지를 모두 재현했다(`test-results/v0.1.5/repro-0.1.3-to-0.1.4.json`). 덧붙여 `repin_lock`이 lock을 먼저 쓰고 원장에 기록하므로, 원장 기록이 실패하면 lock만 바뀐 채 남는다(테스트로 재현).
+
+결정
+1. 업그레이드 명령은 새로 만들지 않고 기존 사용자 전용 단계 `lock --accept-current`(TTY)가 규칙 이동까지 한다. 절차가 두 단계가 되면 하나를 빠뜨려 같은 문제가 다시 생긴다. guard의 USER_ONLY(`accept-current`)가 이미 에이전트를 막는다.
+2. DevKit 규칙은 설치 기록의 `added_deny`·`added_allow` 문자열로만 식별한다. 경로 패턴으로 추정하지 않는다. 그래서 이전 릴리스 경로를 언급하는 사용자 규칙, 설치 전부터 있던 DevKit과 같은 문자열은 사용자 소유로 남는다. 제거는 문자열마다 한 번만 한다(첫 번째 것. 설치가 DevKit 규칙을 끝에 붙이고 사용자의 같은 문자열은 보통 그 뒤에 추가되므로). deny 규칙은 보호 하한이라 사용자가 지웠어도 다시 넣고 확인 전에 보여 준다. allow 규칙은 권한 부여라서, DevKit이 추가했던 이전 릴리스의 같은 자리 규칙(`validator_allow_rules`의 순서)을 사용자가 지웠으면 새 릴리스 것을 다시 허용하지 않고(`keep_removed_allow`, 검토 지적 5), 그 결정을 설치 기록 `declined_allow`로 다음 업그레이드에 이어 간다(이전 자리 규칙이 지금도 없을 때만. 사용자가 다시 넣었으면 새로 허용한다). DevKit이 소유한 적이 없는 자리(0.1.0·0.1.1 기록처럼 `added_allow`가 없는 경우)는 추가한다(재검토). 설치 기록의 `added_*` 순서는 설치 때처럼 settings에 놓인 순서를 따른다.
+3. 순서: TTY 확인(설정을 읽기 전, 없으면 종료 코드 3) → 쓰기 없는 검사(settings·설치 기록을 읽을 수 있는지와 형식, Validator 무결성, 서명 키·원장 전체 검증, 보여 준 계획(계획 없음 포함)과 지금 파일이 같은지) → 백업(`.vmodel/install/backup/upgrade-<시각>/`, 생성 deny 규칙 `Edit(/.vmodel/install/**)`로 보호) → 설치 기록에 새 규칙 소유권 → settings에 새 규칙 추가 → 재고정(서명된 원장 lock 기록 → lock 파일) → 이전 규칙 제거와 설치 기록 확정. 모든 파일은 원자적 교체(`write_json`)로 쓴다. 어느 시점에 멈춰도 settings에는 이전 규칙이나 새 규칙 중 적어도 하나가 있다. 소유권을 settings보다 먼저 적는 이유는, 그 사이에 프로세스가 죽어도 재실행이 새 규칙을 DevKit 것으로 알기 때문이다.
+4. `repin_lock`은 원장 기록을 먼저, lock 파일을 나중에 쓴다(lock은 서명 기록 없이 바뀌지 않는다. 0.1.4는 반대 순서라 원장 기록이 실패하면 lock만 바뀌었다). 실패나 중단(Ctrl-C 포함 BaseException)이 나면 원장을 다시 읽는다. 원장이 그대로면 메모리 스냅샷으로 lock → settings → 설치 기록 순서로 바이트 그대로 복원한다. settings 복원이 실패하면 설치 기록은 상위 집합 소유로 남겨 settings에 남은 DevKit 규칙이 사용자 소유로 둔갑하지 않게 한다. 원장이 늘었거나 읽을 수 없으면(예: 원장 기록은 서명됐는데 앵커 쓰기가 실패) 되돌리지 않고 이전+새 규칙 상위 집합으로 남긴 채 그 사실을 알린다. 재고정 뒤 제거 단계 실패도 되돌리지 않는다. 두 경우 모두 종료 코드 2이고 같은 명령을 다시 실행하면 마무리된다.
+5. 멱등: 바꿀 것이 없으면 settings·설치 기록을 쓰지 않고 백업도 만들지 않는다(재고정 자체는 지금처럼 원장에 lock 기록을 하나 더한다). 같은 릴리스로 `install`을 다시 하면 지금처럼 거부한다. 다른 릴리스가 설치한 프로젝트면 uninstall 대신 이 재고정을 안내한다.
+6. settings를 해석할 수 없으면(JSON 오류, 객체가 아님, `permissions`·`deny`·`allow` 형식 오류) 재고정도 하지 않는다. 0.1.4는 이 경우에도 재고정을 했지만, 그러면 규칙이 다시 이전 릴리스에 남는다. 설치 기록이 없는 프로젝트(`init`만)는 settings를 건드리지 않고 지금처럼 재고정만 한다.
+7. 확인 문구 전에 이전·새 릴리스, 추가·제거할 규칙, 다시 허용하지 않는 allow 규칙, "직접 추가한 규칙은 그대로"를 출력한다. 출력 후 확인을 기다리는 사이 settings나 설치 기록이 바뀌면(설치 기록이 새로 생긴 경우 포함) 적용하지 않는다. 원장 잠금을 다른 프로세스가 잡고 있으면 최대 30초 기다린다는 안내를 출력한다. 하위 명령 옵션의 축약(`--accept`)은 받지 않는다(guard의 사용자 전용 문자열 검사 `accept-current`를 피하지 못하게, cli.py만 변경).
+8. 바꾸지 않은 것: `hook.py`(guard), Gate 판정, 원장 기록 형식, manifest 계산, `uninstall`. `install`은 병합 방식이 같고 생성 deny 규칙이 하나(`Edit(/.vmodel/install/**)`) 늘었으며, 다른 경로나 다른 버전이 설치한 프로젝트에서는 uninstall 대신 재고정을 안내한다. 0.1.4의 `uninstall`도 0.1.5가 갱신한 설치 기록을 그대로 읽어 원래 사용자 settings를 복원한다(교차 버전 테스트).
+
+기각한 대안: (a) 별도 `vmodel upgrade` 명령 — 재고정과 따로 실행하면 빠뜨리기 쉽다. (b) 경로 패턴으로 이전 릴리스 규칙을 찾아 바꾸기 — 사용자 규칙을 지울 수 있다. (c) 이전 규칙을 먼저 지우고 새 규칙 추가(uninstall → install) — 보호 공백. (d) 이전 규칙을 남겨 두기 — 쓰지 않는 CLI에 대한 allow가 남고, 설치 기록이 실제 settings와 어긋난다.
+
+한계: 0.1.4 이하로 내리는 다운그레이드는 그 릴리스에 설정 갱신이 없어 자동화하지 못한다(SPEC §11 수동 절차, 그 사이 규칙 공백). 마켓플레이스로 등록해 Claude Code가 플러그인을 다른 경로(캐시)에서 실행하면 규칙이 가리킬 경로는 미검증이다(TEST_RESULTS §6과 같은 미검증 항목). Windows에서 Claude Code가 settings.json을 연 채로 있으면 원자적 교체가 실패할 수 있다(그 경우 재고정 전 실패로 복원된다, 미실측). `.claude/settings.json`은 G4/G5 manifest에 포함되므로 업그레이드로 settings가 바뀌면 G4/G5가 STALE이 되는데, Core 해시 변경으로 어차피 모든 PASS가 STALE이라 추가 비용은 없다.
+
+독립 검토: 첫 수정본(`0e691d0`)에서 지적 12건을 받아 재현 테스트(`tests/test_upgrade_review.py`)로 고정한 뒤 고쳤다. 재검토(`c57f7c5`)는 지적 5의 수정이 0.1.2 이전 기록을 오판하는 부 지적 1건과 nit 3건을 냈고, 같은 방식(`tests/test_upgrade_review2.py`)으로 고쳤다. 처리표는 `docs/v0.1.5/WORKITEM.md` §7. 원장 증가 판단은 개수가 아니라 우리 lock 기록(사유·새 core 해시) 유무로 하고, 롤백 중에는 SIGINT를 무시한다. 세 번째 확인(`be372f4`)의 부 지적 1건(사용자가 다시 넣은 규칙을 남은 `declined_allow`가 보류)과 nit 1건도 같은 방식(`tests/test_upgrade_review3.py`)으로 고쳤다. 반영하지 않은 것: 같은 문자열 중 첫 번째 제거(위 2), 0.1.5 업그레이드 뒤 이전 CLI로 재고정할 때의 deny 공백(다운그레이드 수동 절차의 한계).
+
+검증: `docs/v0.1.5/WORKITEM.md`, TEST_RESULTS §12.
+
+## D39. G6 Integration Verification 설계 결정안 (2026-11-09, 검토만, 사용자 결정 대기, 구현 안 함)
+PLAN M5의 "먼저 결정하고 DECISIONS에 남길 것" 네 가지에 대한 결정안이다. 상세(대안별 장단점, G1~G5 호환, 구현·테스트 영향, 체크 초안)는 `docs/g6/G6-DESIGN-PROPOSAL.md`.
+1. 실행 명령: 권장 E. config `integration_test`(argv에 `{junit}`, timeout_s)를 선택 키로 두고, 없으면 G6이 `unit_test` 명령을 직접 다시 실행해 integration ID만 판정한다. 증거에 어느 명령인지 남긴다. 새 `init`은 분리 기본값을 쓴다. G5 판정은 바꾸지 않는다. 기각 후보: G5 증거 재사용(자기 실행 증거 원칙 위반), Validator의 `-k` 선택(언어 중립 위반).
+2. 테스트 코드 확인 위치: 권장 A. G4.TEST_CODE를 integration ID까지 넓히고 G4 리뷰 체크리스트에 통합 적합성(실제 provider·consumer 연결, 검증 대상 IF 목 대체 금지)을 넣는다. G6은 AI 리뷰 없는 기계 판정이며 `gates.json`의 G6 reviewer 표기(`vmodel:verifier`)를 고친다. D12와 같은 구조.
+3. IF 0개: 권장 A+B. IF 0개이고 integration 명세도 0개일 때만 N/A. 기록 상태는 PASSED, `applicability: not_applicable`과 사유(`na_reason`, 없으면 G2에서 리뷰된 `integration_test_strategy.approach`)를 남기고 실행 체크는 skip. 표시는 `PASSED (N/A: no interfaces)`. integration 명세가 있으면 실행한다. `na_reason` 필수화는 하지 않는다(기존 WI의 G2 재리뷰 비용). 대안 D(새 상태 NOT_APPLICABLE)는 상태 머신 변경이 넓어 권하지 않는다.
+4. 업그레이드 영향: 권장 A. G6 구현 버전에서 기존 PARTIALLY_VERIFIED WI가 G6 평가 전까지 IN_PROGRESS로 보이는 것을 의도된 동작으로 문서화한다. 업그레이드는 Core 해시 변경으로 어차피 G1~G5 재검증이 필요하고, IF 0개 WI는 G6이 N/A로 끝난다. grandfather·자동 평가·프로파일 버전은 권하지 않는다.
+버전은 0.2.0(PLAN 제안). 결정되면 이 항목을 확정본으로 바꾸고 M5에 착수한다.

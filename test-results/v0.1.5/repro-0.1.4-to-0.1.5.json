@@ -1,0 +1,148 @@
+{
+  "old": "<repo>/dist/vmodel-0.1.4",
+  "new": "<repo>/dist/vmodel-0.1.5",
+  "python": "3.12.3",
+  "A_user_settings": {
+    "permissions": {
+      "allow": [
+        "Bash(npm test)",
+        "Read(/<repo>/dist/vmodel-0.1.4/README.md)"
+      ],
+      "deny": [
+        "Read(./.env)"
+      ]
+    },
+    "env": {
+      "FOO": "bar"
+    }
+  },
+  "A_install_old": {
+    "exit": 0,
+    "rules": {
+      "deny": {
+        "total": 9,
+        "old_release": [
+          "Edit(/<repo>/dist/vmodel-0.1.4/**)"
+        ],
+        "new_release": []
+      },
+      "allow": {
+        "total": 5,
+        "old_release": [
+          "Read(/<repo>/dist/vmodel-0.1.4/README.md)",
+          "Bash(<repo>/dist/vmodel-0.1.4/bin/vmodel *)",
+          "Bash(\"<repo>/dist/vmodel-0.1.4/bin/vmodel\" *)"
+        ],
+        "new_release": []
+      }
+    }
+  },
+  "A_install_record_old": {
+    "validator_version": "0.1.4",
+    "plugin_root": "<repo>/dist/vmodel-0.1.4",
+    "added_deny": [
+      "Edit(/.vmodel/state/**)",
+      "Edit(/.vmodel/evidence/**)",
+      "Edit(/.vmodel/config.json)",
+      "Edit(/.vmodel/devkit.lock.json)",
+      "Edit(/.vmodel/install-record.json)",
+      "Read(/<tmp>/vmodel home/keys/**)",
+      "Edit(/<tmp>/vmodel home/**)",
+      "Edit(/<repo>/dist/vmodel-0.1.4/**)"
+    ],
+    "added_allow": [
+      "Bash(vmodel *)",
+      "Bash(<repo>/dist/vmodel-0.1.4/bin/vmodel *)",
+      "Bash(\"<repo>/dist/vmodel-0.1.4/bin/vmodel\" *)"
+    ]
+  },
+  "A_status_before_repin_validator_ok": false,
+  "A_repin_new_tty": "yes\r\nThe DevKit permission rules in .claude/settings.json will follow this release:\r\n  validator 0.1.4 at <repo>/dist/vmodel-0.1.4\r\n  -> validator 0.1.5 at <repo>/dist/vmodel-0.1.5\r\n  add deny: Edit(/.vmodel/install/**)\r\n  add deny: Edit(/<repo>/dist/vmodel-0.1.5/**)\r\n  add allow: Bash(<repo>/dist/vmodel-0.1.5/bin/vmodel *)\r\n  add allow: Bash(\"<repo>/dist/vmodel-0.1.5/bin/vmodel\" *)\r\n  remove deny: Edit(/<repo>/dist/vmodel-0.1.4/**)\r\n  remove allow: Bash(<repo>/dist/vmodel-0.1.4/bin/vmodel *)\r\n  remove allow: Bash(\"<repo>/dist/vmodel-0.1.4/bin/vmodel\" *)\r\n  New rules are added before the old ones are removed. Rules you added yourself are kept as they are.\r\nType 'yes' to re-pin the validator core hash (all previous PASS results become STALE) and update the DevKit permission rules listed above: re-pinned core 37071459bd44 (validator 0.1.5)\r\n  .claude/settings.json: 4 DevKit rule(s) added, 3 removed; your own rules unchanged\r\n  previous settings, install record and lock saved in: <tmp>/한글 경로 repro/A/.vmodel/install/backup/upgrade-20261109T024023745Z\r\n",
+  "A_after": {
+    "lock_plugin_root": "<repo>/dist/vmodel-0.1.5",
+    "lock_version": "0.1.5",
+    "settings_bytes_unchanged": false,
+    "rules": {
+      "deny": {
+        "total": 10,
+        "old_release": [],
+        "new_release": [
+          "Edit(/<repo>/dist/vmodel-0.1.5/**)"
+        ]
+      },
+      "allow": {
+        "total": 5,
+        "old_release": [
+          "Read(/<repo>/dist/vmodel-0.1.4/README.md)"
+        ],
+        "new_release": [
+          "Bash(<repo>/dist/vmodel-0.1.5/bin/vmodel *)",
+          "Bash(\"<repo>/dist/vmodel-0.1.5/bin/vmodel\" *)"
+        ]
+      }
+    },
+    "install_record_plugin_root": "<repo>/dist/vmodel-0.1.5",
+    "guard_edit_new_core": "deny",
+    "status_validator_ok": true
+  },
+  "A_uninstall_new": {
+    "exit": 0,
+    "out": "removed VModel entries from .claude/settings.json",
+    "rules": {
+      "exists": true,
+      "deny": [
+        "Read(./.env)"
+      ],
+      "allow": [
+        "Bash(npm test)",
+        "Read(/<repo>/dist/vmodel-0.1.4/README.md)"
+      ]
+    },
+    "equals_user_settings": true
+  },
+  "B_between_uninstall_and_install": {
+    "rules": {
+      "deny": {
+        "total": 1,
+        "old_release": [],
+        "new_release": []
+      },
+      "allow": {
+        "total": 2,
+        "old_release": [
+          "Read(/<repo>/dist/vmodel-0.1.4/README.md)"
+        ],
+        "new_release": []
+      }
+    },
+    "devkit_deny_present": false
+  },
+  "B_install_new": {
+    "exit": 0,
+    "rules": {
+      "deny": {
+        "total": 10,
+        "old_release": [],
+        "new_release": [
+          "Edit(/<repo>/dist/vmodel-0.1.5/**)"
+        ]
+      },
+      "allow": {
+        "total": 5,
+        "old_release": [
+          "Read(/<repo>/dist/vmodel-0.1.4/README.md)"
+        ],
+        "new_release": [
+          "Bash(<repo>/dist/vmodel-0.1.5/bin/vmodel *)",
+          "Bash(\"<repo>/dist/vmodel-0.1.5/bin/vmodel\" *)"
+        ]
+      }
+    }
+  },
+  "B_repin_new_tty": "yes\r\nType 'yes' to re-pin the validator core hash (all previous PASS results become STALE): re-pinned core 37071459bd44 (validator 0.1.5)\r\n",
+  "C_install_new_over_old": {
+    "exit": 2,
+    "out": "vmodel: error: this project was installed by validator 0.1.4 from <repo>/dist/vmodel-0.1.4. To upgrade, run '\"<repo>/dist/vmodel-0.1.5/bin/vmodel\" lock --accept-current' in a terminal: it re-pins the validator and moves the DevKit permission rules to this release without a gap",
+    "settings_unchanged": true
+  }
+}

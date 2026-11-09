@@ -1,6 +1,6 @@
 # TEST_RESULTS
 
-마지막 갱신: 2026-11-09(5차). 현재 버전: VModel DevKit **0.1.4** (core `sha256:5dd1d010…`, `releases/vmodel-0.1.4.json`) — 하네스(WSL·Windows), 첫 0.1.4 빌드 대상 RED, 독립 검토 2회, **실제 Claude Code 세션 1회**(sonnet, $0.15, §11)로 검증. §10은 첫 0.1.4 빌드(core `b1fee43f…`) 기준 기록으로 보존한다. 이전 버전 **0.1.3** (core `sha256:0208c798…`, `releases/vmodel-0.1.3.json`) — 하네스와 **실제 Claude 재작업 세션 1회**(§9, drill-3)로 검증. 기준 버전 **0.1.2** (core `sha256:a0555e32…`, 태그 `v0.1.2` → 커밋 `bbd6a3d`)는 §3의 E2E-3과 §8의 실전 재작업 드릴에서 실제 세션으로 검증. 0.1.0·0.1.1은 E2E-1·2에서 쓴 이전 릴리스.
+마지막 갱신: 2026-11-09(6차, §12 v0.1.5 후보: 업그레이드 시 권한 규칙 이동, 브랜치 `v0.1.5-dev`, 태그 없음). 확정 버전: VModel DevKit **0.1.4** (core `sha256:5dd1d010…`, `releases/vmodel-0.1.4.json`) — 하네스(WSL·Windows), 첫 0.1.4 빌드 대상 RED, 독립 검토 2회, **실제 Claude Code 세션 1회**(sonnet, $0.15, §11)로 검증. §10은 첫 0.1.4 빌드(core `b1fee43f…`) 기준 기록으로 보존한다. 이전 버전 **0.1.3** (core `sha256:0208c798…`, `releases/vmodel-0.1.3.json`) — 하네스와 **실제 Claude 재작업 세션 1회**(§9, drill-3)로 검증. 기준 버전 **0.1.2** (core `sha256:a0555e32…`, 태그 `v0.1.2` → 커밋 `bbd6a3d`)는 §3의 E2E-3과 §8의 실전 재작업 드릴에서 실제 세션으로 검증. 0.1.0·0.1.1은 E2E-1·2에서 쓴 이전 릴리스.
 
 "실측"은 이 PC에서 실제로 실행한 결과, "미검증"은 실행하지 않은 것입니다. 추정은 따로 표시합니다.
 
@@ -482,4 +482,64 @@ Windows skip은 이전 5건(ruff 미설치 1, pty 2, 심볼릭 링크 권한 1, 
 - 의도적으로 실제 세션에서 다시 시험하지 않은 것: 문자열 난독화(`.vmodel`을 변수로 조립 등), heredoc·python 하위 프로세스 쓰기. guard는 문자열 기반 최선 노력 보호이고 서명·앵커·audit이 최종 탐지 장치다(D25, D36의 두 버전 공통 미탐). 이 한계는 이번 릴리스에서 바뀌지 않았다.
 - 표시 상태의 알려진 한계(D37): 교차 Gate 증상을 함께 인용하면 수정 시도 없이도 VERIFICATION_FAILED로 보인다. Gate 단위 판단이라 다른 결함 소유의 실패도 반영된다. 둘 다 완료로 보이지 않는 쪽이다. `verification_history`에는 보류된 PASS가 표시 없이 들어 있다.
 - 업그레이드 시 프로젝트 `.claude/settings.json`의 allow·deny 규칙은 이전 릴리스 경로(예: `dist/vmodel-0.1.3`)를 가리킨 채 남는다. Core 보호는 guard의 Core 경로 검사가 맡지만, 설정 갱신 절차는 SPEC §11에 없다(관찰, 이번 범위 밖).
+- Python 3.11 미검증(§6).
+
+
+## 12. v0.1.5 후보: 업그레이드 시 권한 규칙 이동 (2026-11-09, 브랜치 `v0.1.5-dev`, 실제 Claude 세션 없음)
+
+범위(사용자 지시): 업그레이드 뒤 프로젝트 `.claude/settings.json`의 allow·deny 규칙이 이전 릴리스 절대경로를 가리키는 문제의 재현과 수정(DECISIONS D38, `docs/v0.1.5/WORKITEM.md`). 모델 호출이 드는 헤드리스 실행은 하지 않았다(비용 0). main 병합·태그·원격 푸시는 하지 않았다. G6은 설계 결정안만(D39).
+
+### 12.1 재현 (모델 호출 없음, 실제 릴리스 사본)
+`python3 -I test-results/v0.1.5/upgrade_repro.py <old> <new> <out>`. 한글·공백 경로의 임시 프로젝트, 임시 VMODEL_HOME, 사용자 settings(사용자 allow 2개 중 하나는 이전 릴리스 경로 언급, deny 1개, env) 위에 설치. 사용자 TTY는 pty로 대신했다.
+- 0.1.3 → 0.1.4(수정 전 코드, `repro-0.1.3-to-0.1.4.json`): SPEC §11 절차(새 릴리스로 재고정) 뒤 lock은 0.1.4인데 settings.json은 바이트 그대로였다. deny `Edit(//…/dist/vmodel-0.1.3/**)`와 0.1.3 CLI allow 2개가 남고 0.1.4 경로 규칙은 0개, 설치 기록 `plugin_root`도 0.1.3. 새 Core는 guard만 막았다(guard 직접 호출 deny). README 절차(옛 uninstall → 새 install) 사이에는 DevKit deny 규칙이 0개였다. 새 릴리스로 install하면 "run 'vmodel uninstall' first"로 그 절차를 안내했다.
+- 0.1.4 → 0.1.5(수정본 릴리스 사본, `repro-0.1.4-to-0.1.5.json`): 재고정 출력 `re-pinned core 37071459bd44 (validator 0.1.5)`, `4 DevKit rule(s) added, 3 removed; your own rules unchanged`, 백업 경로. 이전 릴리스 deny·CLI allow 0개, 새 릴리스 Core deny 1개·CLI allow 2개, 0.1.4 경로를 언급하는 사용자 규칙은 남음, 설치 기록 `plugin_root` 0.1.5, 새 Core에 대한 guard deny, status 무결성 OK, 이어서 uninstall하면 원래 사용자 settings와 같다. 새 릴리스로 install하면 재고정을 안내하고 settings는 그대로다. (README의 옛 uninstall → install 절차 자체의 공백은 그대로라 문서에서 그 절차를 뺐다.)
+
+### 12.2 RED → GREEN (`scripts/red_green.py`, 깨끗한 `aae9a99` worktree, 로그 `test-results/v0.1.5/`)
+| 모듈 | RED 대상 | RED 결과 | GREEN |
+|---|---|---|---|
+| `test_upgrade_settings` (요구사항 U1~U9) | 불변 릴리스 `dist/vmodel-0.1.4`(core `5dd1d010…`) | 15/15 기대 충족: Red 10 FAIL(전부 assertion), Char·Invariant 5 통과 (`red-upgrade-settings-final.log`) | 통과 |
+| `test_upgrade_review` (1차 검토 지적) | 첫 수정본 `0e691d0` 사본(`git archive`, 검토 worktree와 diff 동일) | 12/12: Red 10 FAIL, Char 2 통과 (`red-review-0e691d0-final.log`) | 통과 |
+| `test_upgrade_review2` (재검토 지적) | `c57f7c5` 사본 | 5/5: Red 2 FAIL, Char 3 통과 (`red-review2-c57f7c5-final.log`) | 통과 |
+| `test_upgrade_review3` (세 번째 확인 지적) | `be372f4` 사본 | 3/3: Red 2 FAIL, Char 1 통과 (`red-review3-be372f4-final.log`) | 통과 |
+| 위 4개 모듈, 대상 = 빌드한 릴리스 사본 `dist/vmodel-0.1.5`(core `37071459…`) | — | — | 39/39 (`green-upgrade-release-0.1.5.log`) |
+| 0.1.4 모듈 5개 + 위 4개, 대상 = 소스 | — | — | 122/122, 위반 0, skip 0, 537초 (`green-all-final.log`) |
+
+Accept 클래스(프로세스 내 API 직접 호출, 0.1.4 → 0.1.5 교차 버전 uninstall, 두 번째 업그레이드 무변경, 업그레이드 뒤 G1~G5 재검증·audit)는 RED 대조에서 빠지고 GREEN에서만 확인했다. 수정 전 빌드마다 RED를 먼저 확인한 로그(작업 중 생성)도 같은 폴더에 남겼다(`red-upgrade-settings.log`, `red-review-0e691d0.log`, `red-review2-c57f7c5.log`, `red-review3-be372f4.log`).
+
+### 12.3 회귀
+| 환경 | 커밋 | 결과 |
+|---|---|---|
+| WSL2 Ubuntu 24.04, Python 3.12.3, pytest, ruff (깨끗한 worktree) | `aae9a99` 최종 | **225/225 통과**, skip 0, 747초 (`wsl-harness-0.1.5-final.log`) |
+| 같은 환경 | `be372f4` 중간 | 222/222, skip 0, 727초 (`wsl-harness-0.1.5-be372f4.log`) |
+| 같은 환경 | `c57f7c5` 중간 | 217/217, skip 0, 674초 (`wsl-harness-0.1.5-c57f7c5.log`) |
+| 같은 환경 | `0e691d0` 첫 수정본 | 205/205, skip 0, 671초 (`wsl-harness-0.1.5-0e691d0.log`) |
+| Windows 11, Python 3.13.14 venv, cp949, `%TEMP%\vmodel 한글 테스트\devkit-0.1.5-aae9a99`(`git archive` + 불변 `dist/vmodel-0.1.3`·`0.1.4`) | `aae9a99` 최종 | **225 실행, 실패 0, 오류 0, skip 40** (실측, 1641초, `windows-t18-harness-0.1.5-final.log`) |
+
+Windows skip 40 = 이전과 같은 6건(ruff 미설치 1, pty 4, 심볼릭 링크 권한 1) + pty가 필요한 신규 34건(`test_upgrade_settings` 17, `test_upgrade_review` 10, `test_upgrade_review2` 4, `test_upgrade_review3` 3). 이 34건은 Windows에서 **미검증**이고 WSL에서는 통과했다. Windows에서 실제로 돈 신규 5건(`UpgradeSettingsInProcessAccept`, `UpgradeSettingsInvariant`, `UpgradeReviewInProcessRed`·`Char`, `UpgradeReview2InProcessRed`)은 `//c/...` 규칙으로 통과했다.
+
+기존 0.1.4 하네스 186개는 기대값을 바꾸지 않았다. 신규는 `test_upgrade_settings` 19, `test_upgrade_review` 12, `test_upgrade_review2` 5, `test_upgrade_review3` 3. pty가 필요한 클래스는 Windows에서 skip이고, Windows에서는 프로세스 내 API 테스트(`UpgradeSettingsInProcessAccept`, `UpgradeReviewInProcessRed/Char`, `UpgradeReview2InProcessRed`)와 guard 불변식이 드라이브 경로(`//c/...`)로 돈다.
+
+### 12.4 보호 정책 유지
+- `hook.py`는 0.1.4 릴리스와 바이트 동일하다(`UpgradeSettingsInvariant`가 확인). `gates.py`·`ledger.py`·`runner.py`·`status.py`·`integrity.py`·`data/`(gates.json, 스키마)·`hooks/`·`bin/`도 `991af67` 대비 변경 없음(`git diff`). 변경은 `setup_project.py`·`cli.py`·버전 두 곳뿐이다.
+- 업그레이드 뒤에도 guard가 에이전트의 `lock --accept-current`·`install`·`uninstall`(`--purge` 포함)을 막고, 실행 중 Core·hooks·설치 기록·lock·원장 쓰기를 막는다(불변식 테스트).
+- deny 규칙은 줄지 않았다. 생성 deny 규칙에 업그레이드 백업 폴더 `Edit(/.vmodel/install/**)`가 추가됐다(검토 지적 8). 업그레이드는 deny를 먼저 추가하고 이전 것을 나중에 지우며, 사용자가 지운 DevKit deny 규칙도 다시 넣는다.
+- 하위 명령 옵션 축약을 막아 `lock --accept`처럼 guard의 사용자 전용 문자열(`accept-current`)을 피하는 호출이 argparse 오류가 된다(`allow_abbrev=False`, 기존부터 있던 빈틈, TTY 확인이 마지막 방어선이었다).
+- Gate 판정·원장 기록 형식·manifest 계산은 그대로다(`test_version_compat` GREEN, `GateDecisionInvariant` 포함). 재고정은 원장 기록 → lock 순서로 바뀌었지만 기록 내용은 같고, `type: lock` 기록을 읽는 판정 코드는 없다(재검토 확인).
+
+### 12.5 릴리스·증거 보존
+- `dist/vmodel-0.1.0`~`0.1.4` 사본은 각 기록과 43개 파일씩 일치, `releases/vmodel-0.1.0~0.1.4.json` git 변경 없음. 태그 `v0.1.2`→`bbd6a3d`, `v0.1.3`→`0df13b7`, `v0.1.4`→`991af67` 그대로, `main`=`991af67` 그대로. 서명된 이전 원장·증거를 다시 쓰는 경로는 추가하지 않았다(업그레이드 뒤 audit OK, 기존 원장 앞부분 바이트 유지: `test_gates_still_pass_after_upgrade`).
+- 0.1.5 후보: `python3 scripts/release.py` → `dist/vmodel-0.1.5/`(43개 파일, core `sha256:37071459bd44…`), `releases/vmodel-0.1.5.json`, 마켓플레이스 항목 0.1.5(`dist/`는 git 제외). 태그는 만들지 않았다. 공개 전이므로 확정 전에 바뀌면 `--force`로 다시 빌드한다.
+- `claude plugin validate --strict`: `plugins/vmodel`, `dist/vmodel-0.1.5` 통과.
+
+### 12.6 독립 검토
+별도 컨텍스트의 검토자(읽기 전용, 자기 임시 폴더에서 실험)를 세 번 돌렸다. 1차(`0e691d0`) 지적 12건 + 의심 3건, 재검토(`c57f7c5`) 부 1건 + nit 3건, 세 번째(`be372f4`) 부 1건 + nit 1건. 재현한 것은 모두 그 빌드에서 실패하는 테스트로 먼저 고정한 뒤 고쳤다. 반영하지 않은 것 2건(같은 문자열 중 첫 번째 제거, 이전 CLI로 재고정할 때의 deny 공백)은 근거와 함께 D38·WORKITEM §7에 남겼다. 이 세션에서 직접 찾은 것도 둘이다: 1단계 쓰기 순서(소유권을 settings보다 먼저), 보류 결정이 다음 재고정에서 사라지는 문제(`declined_allow`).
+
+### 12.7 미검증·남은 위험
+- 실제 Claude Code 세션에서 업그레이드한 프로젝트를 쓰는 것은 확인하지 않았다(비용 승인 필요). 특히 새 CLI allow 규칙이 신뢰된 작업 공간에서 실제로 권한 확인을 없애는지는 §11.7과 같이 미검증이다.
+- 마켓플레이스로 등록해 Claude Code가 플러그인을 다른 경로(캐시 등)에서 실행하면 규칙이 가리켜야 할 경로가 달라질 수 있다. 미검증(§6과 같은 항목).
+- Windows의 업그레이드 경로 중 pty가 필요한 것(TTY 확인, Ctrl-C, 계획 대조)은 Windows에서 돌리지 않았다. 설정 재작성·복원 로직은 프로세스 내 테스트로 Windows 경로에서 확인했다. Claude Code가 settings.json을 연 채로 있을 때 Windows `os.replace` 동작은 미실측이다(검토자는 libuv가 FILE_SHARE_DELETE로 연다고 판단했다. 실패해도 재고정 전이면 복원된다).
+- 0.1.4 이하로 내리는 다운그레이드는 자동화하지 못했다(수동 절차, uninstall과 install 사이 규칙 공백). 0.1.5 업그레이드 뒤 이전 CLI로 재고정하면 그 동안 deny 규칙이 고정된 릴리스를 가리키지 않는다(D38 한계).
+- 원장 기록 뒤 실패(앵커 쓰기 실패 등)는 되돌리지 않고 이전+새 규칙으로 남긴다. 이때 원장에는 효력이 없는 lock 기록이 남을 수 있다(사실대로 안내, 재실행으로 마무리). SIGKILL 같은 강제 종료 시점별 상태는 코드 검토와 상태 구성 테스트로만 확인했다.
+- 롤백 중 두 번째 Ctrl-C 무시는 결정적 테스트가 없다(코드 검토).
+- 심볼릭 링크인 settings.json은 원자적 교체로 일반 파일이 된다(install부터 있던 동작).
 - Python 3.11 미검증(§6).

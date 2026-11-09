@@ -1,6 +1,6 @@
 # PLAN
 
-현재 목표: v0.1.4 확정(2026-11-09). 결함 표시 상태 6종(D37), 실제 Claude Code 세션 1회, 최종 회귀를 마치고 사용자 조건부 승인에 따라 main fast-forward와 annotated 태그 `v0.1.4`를 이 문서가 들어 있는 최종 검증 커밋에 붙인다(TEST_RESULTS §11). **원격 푸시는 승인되지 않았다.** 다음은 사용자가 결정하면 Extension M5(G6)·M6(G7)이다. Extension에는 자동 진입하지 않는다.
+현재 목표: v0.1.5 릴리스 후보(2026-11-09, 브랜치 `v0.1.5-dev`). 업그레이드 때 프로젝트 `.claude/settings.json`의 DevKit 권한 규칙이 이전 릴리스 경로에 남던 문제를 고쳤다(D38, TEST_RESULTS §12). main 병합·태그·원격 푸시는 하지 않았다(사용자 지시). G6은 착수 전 결정 네 가지의 결정안만 정리했다(D39, `docs/g6/G6-DESIGN-PROPOSAL.md`). **G6 구현은 사용자 결정 전에 시작하지 않는다.** v0.1.4는 2026-11-09 확정(태그 `v0.1.4`, main), 원격 푸시는 승인되지 않았다.
 
 | 마일스톤 | 내용 | 완료 기준 (테스트) | 상태 |
 |---|---|---|---|
@@ -11,7 +11,8 @@
 | M4 | 샘플 프로젝트 E2E | 스크립트 E2E(T01~T18 하네스), Windows 실행(T18), 실제 Claude 세션 3회(sonnet, 회당 $4 상한), 새 세션 상태 복원(T14) | 완료 (TEST_RESULTS §3) |
 | R0.1.3 | 재작업 결함 F1~F4 수정, 실제 재작업 세션 검증 | 하네스 103/103(WSL), Windows 실패 0, drill-3 실제 세션 1회, audit OK | 완료, 태그 `v0.1.3` |
 | R0.1.4 | 결함 검증 상태 표시, guard 읽기 오탐, 실패 TEST 추적·증거 참조 (아래 §v0.1.4), 표시 상태 6종(D37), 실제 세션 1회 | 재현 테스트 RED 확인 후 수정, 기존 하네스 포함 전체 통과, Gate 판정 불변, 새 릴리스, 실제 세션에서 guard 우회 0 | 완료(2026-11-09, TEST_RESULTS §10·§11, DECISIONS D36·D37), 태그 `v0.1.4`, main fast-forward. 푸시는 미승인 |
-| M5 | G6 Integration Verification (아래 §확장) | 하네스 + 새 샘플(IF 있는 2컴포넌트) | 계획 (사용자 결정 전 착수 금지) |
+| R0.1.5 | 업그레이드 시 DevKit 권한 규칙 이동(D38) | 0.1.4 릴리스 대상 RED, GREEN, 전체 회귀, 독립 검토, 실제 릴리스 사본 0.1.4 → 0.1.5 재현 | 후보(`v0.1.5-dev`), 병합·태그 안 함 |
+| M5 | G6 Integration Verification (아래 §확장) | 하네스 + 새 샘플(IF 있는 2컴포넌트) | 결정안 정리됨(D39), 사용자 결정 대기. 착수 금지 |
 | M6 | G7 System Verification, STANDARD WI의 COMPLETED | 하네스 + 새 샘플 | 계획 (사용자 결정 전 착수 금지) |
 | M7 | Extension 실제 세션 E2E | 실제 Claude 세션(비용 승인 후) | 계획 |
 
@@ -28,7 +29,9 @@
 - 전부 임시 샌드박스에서만, `--setting-sources project,local`로 사용자 전역 설정 격리
 
 ## 현재 작업
-0.1.4 확정(2026-11-09): 사용자 지시로 결함 표시 상태를 6종으로 바꾸고(D37, VERIFIED 폐지), 승인된 실제 Claude Code 세션 1회(sonnet, $0.15)로 guard·워크플로우를 확인했다. 필수 검증 통과 후 최종 검증 커밋에 annotated 태그 `v0.1.4`, `main` fast-forward(로컬). 원격 푸시는 미승인이다(푸시 전 점검 항목은 HANDOFF). 남은 미검증은 TEST_RESULTS §6, §9.13, §11.7. G6/G7(M5·M6)과 WorkMind 적용은 사용자 결정 전에 시작하지 않는다.
+v0.1.5 후보(2026-11-09): 재고정(`lock --accept-current`)이 설치 기록의 DevKit 규칙만 새 릴리스 경로로 옮긴다. 새 규칙 추가 → 재고정 → 이전 규칙 제거 순서, 재고정 전 실패는 복원, 멱등(D38, `docs/v0.1.5/WORKITEM.md`). 실제 Claude 헤드리스 실행은 하지 않았다(비용 0). G6은 네 가지 결정안만 정리했고(D39) 구현하지 않았다. 다음 단계는 사용자가 정한다: 0.1.5 확정(병합·태그), G6 결정, 원격 푸시.
+
+이전: 0.1.4 확정(2026-11-09). 남은 미검증은 TEST_RESULTS §6, §9.13, §11.7, §12.
 
 ## 헤드리스 실행 예산 (실전 재작업 드릴, 사용자 승인 2026-11-08)
 - 승인 3회만: haiku 권한 프로브 1회($0.3 상한) + sonnet S1·S2 각 1회($4 상한). 사용: $0.0025 + $0.70 + $0.33. 추가 실행은 다시 승인.
@@ -135,6 +138,8 @@ D35에 따라 바꿀 것(Gate 판정은 바꾸지 않는다)
 - IF가 있는 실제 산출물. 지금까지 실제 세션이 textstats·scorestats 샘플로 만든 아키텍처는 모두 컴포넌트 1개, IF 0개였다(E2E-3, drill S1). 이대로면 G6은 공허하게 통과한다.
 
 ### M5. G6 Integration Verification (제안 버전 0.2.0)
+2026-11-09: 아래 1~4의 결정안(대안·장단점·G1~G5 호환·권장안·구현 영향)을 `docs/g6/G6-DESIGN-PROPOSAL.md`와 DECISIONS D39에 정리했다. 권장: 1은 선택 `integration_test` + 없으면 unit 명령으로 G6 직접 재실행, 2는 G4.TEST_CODE 확장·G6 기계 판정, 3은 IF 0·통합 명세 0일 때만 N/A(기록 PASSED + applicability), 4는 IN_PROGRESS 복귀를 의도된 동작으로 문서화. 사용자 결정 대기.
+
 먼저 결정하고 DECISIONS에 남길 것
 1. 실행 명령: config에 `integration_test`(argv, timeout) 항목을 따로 두는 안을 권장한다. JUnit 기반이라 언어 중립(D13)을 유지한다. 대안은 unit 명령을 재사용하고 수준별로 선택하는 것.
 2. 테스트 코드 확인 위치: G4.TEST_CODE/TEST_INTEGRITY를 integration 수준까지 넓혀 G4 리뷰가 함께 보게 하는 안을 권장한다. G5를 순수 기계 판정으로 둔 D12와 같은 구조다. 대안은 G6에서 따로 확인하는 것.
@@ -162,6 +167,7 @@ D35에 따라 바꿀 것(Gate 판정은 바꾸지 않는다)
 새 샘플로 `/vmodel:start`부터 G7 COMPLETED까지 1회, G6 실패에서 시작하는 재작업 1회. 실제 Claude 실행이라 횟수와 상한을 정해 사용자 승인을 받은 뒤에만 한다.
 
 ## 버전 이력
+- 0.1.5 (후보, 브랜치 `v0.1.5-dev`, 태그 없음): 업그레이드 시 DevKit 권한 규칙 이동(D38). Gate 판정·원장 형식·manifest·guard 불변. 검증은 TEST_RESULTS §12.
 - 0.1.0 (releases/vmodel-0.1.0.json): 최초 고정 릴리스. E2E-1에서 사용.
 - 0.1.1 (releases/vmodel-0.1.1.json): 스킬/에이전트가 프로젝트 밖 플러그인 파일을 Read하지 않도록 `vmodel guide <topic>` 추가. E2E-2에서 사용.
 - 0.1.2 (releases/vmodel-0.1.2.json, 태그 `v0.1.2` → `bbd6a3d`): 단일 명령 규칙(스킬·에이전트), verifier 포기 금지, 설치 시 validator CLI allow 규칙. E2E-3에서 G1~G5 완주, 실전 재작업 드릴(TEST_RESULTS §8)의 기준 버전.
