@@ -313,7 +313,8 @@ class TracerBase(unittest.TestCase):
         spec.write_text(json.dumps({"out": str(self.out), "watch": {str(self.tmp / "prov.py"): "prov",
                                                                    str(self.tmp / "cons.py"): "cons",
                                                                    str(self.tmp / "consimport.py"): "consimport"},
-                                    "edges": {"prov": ["cons", "consimport"]}, "force_setprofile": setprofile,
+                                    "providers": {"prov": ["cons", "consimport"]}, "tests": [],
+                                    "force_setprofile": setprofile,
                                     **extra}),
                         encoding="utf-8")
         env = {k: v for k, v in os.environ.items() if not k.startswith(("PYTHON", "PYTEST", "VMODEL"))}

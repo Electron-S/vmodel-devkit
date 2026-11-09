@@ -437,6 +437,7 @@ class Analysis:
     mechanisms: list[dict] = field(default_factory=list)
     patches: list[dict] = field(default_factory=list)
     injections: set[tuple[str, str]] = field(default_factory=set)  # (callee rel, injected source rel)
+    fixture_funcs: set[str] = field(default_factory=set)  # requested fixtures and setUp methods run with the test
 
 
 @dataclass
@@ -664,10 +665,12 @@ def analyze(ix: Index, mod: Module, fn: ast.AST, depth: int = 0, seen: set | Non
                         t = node.targets[0]
                         if isinstance(t, ast.Attribute) and isinstance(t.value, ast.Name) and t.value.id == "self":
                             sc.self_aliases[t.attr] = (node.value, ssc)
+                out.fixture_funcs.add(f"{cls}.{sm}")
                 analyze(ix, mod, setup, depth + 1, seen, out, cls=cls)
         for p in sorted(sc.fixtures):  # requested fixtures run as part of the test
             if p in fixtures and fixtures[p][1] is not fn:
                 fm, ff = fixtures[p]
+                out.fixture_funcs.add(getattr(ff, "name", p))
                 analyze(ix, fm, ff, depth + 1, seen, out)
     for node, _parent in _walk_own(roots):
         if isinstance(node, ast.Assign):  # `module.symbol = fake` replaces a source symbol (review 4 M6)
@@ -814,6 +817,7 @@ def interface_wiring(ix: Index, graph, test_rels: list[str]) -> dict:
                 a = Analysis(calls=1)
             analyses[(m.rel, name)] = a
             tests_view.setdefault(tid, []).append({"function": f"{m.rel}::{name}", "file": m.rel, "name": name,
+                                                   "anchors": sorted({name} | a.fixture_funcs),
                                                    "placeholder": a.calls == 0,
                                                    "mechanisms": sorted({x["kind"] for x in a.mechanisms}),
                                                    "calls_source": sorted(a.source_calls)})
@@ -828,7 +832,8 @@ def interface_wiring(ix: Index, graph, test_rels: list[str]) -> dict:
             views = []
             for m, name in funcs.get(tid, []):
                 c = classify(ix, analyses[(m.rel, name)], prov, cons, syms)
-                views.append({"function": f"{m.rel}::{name}", "file": m.rel, "name": name, **c})
+                views.append({"function": f"{m.rel}::{name}", "file": m.rel, "name": name,
+                              "anchors": sorted({name} | analyses[(m.rel, name)].fixture_funcs), **c})
             best = min(views, key=lambda v: RANK[v["path"]]) if views else None
             worst = max(views, key=lambda v: RANK[v["path"]]) if views else None
             tests[tid] = {"functions": views, "path": best["path"] if best else "missing",

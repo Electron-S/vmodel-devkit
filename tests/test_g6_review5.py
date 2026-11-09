@@ -347,5 +347,76 @@ class R5PerfChar(R5UnitRed):
         self.assertLess(out[8000], 5.0, out)
 
 
+class R5TracerAccept(unittest.TestCase):
+    """The tracer's anchors and the pytest plugin's boundaries on their own (new core only)."""
+
+    def setUp(self):
+        import tempfile
+        from pathlib import Path
+        from helpers import PLUGIN
+        self.tracer = PLUGIN / "validator" / "vmodel_validator" / "tracer"
+        self.tmp = Path(tempfile.mkdtemp(prefix="vmodel-anchor-")) / "앵커 추적"
+        self.tmp.mkdir()
+        (self.tmp / "prov.py").write_text("def f(x=1):\n    return x\n", encoding="utf-8")
+        (self.tmp / "cons.py").write_text("import threading\n\nimport prov\n\n\ndef use():\n    return prov.f()\n\n\n"
+                                          "def spawn():\n    t = threading.Thread(target=use)\n    t.start()\n    t.join()\n",
+                                          encoding="utf-8")
+        (self.tmp / "test_file.py").write_text(
+            "import cons\n\n\ndef warm_up():\n    cons.use()\n\n\ndef test_TEST_001_a():\n    cons.use()\n\n\n"
+            "def test_TEST_002_b():\n    cons.spawn()\n", encoding="utf-8")
+        self.out = self.tmp / "trace"
+        self.out.mkdir()
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.tmp.parent, ignore_errors=True)
+
+    def run_py(self, argv: list[str], test_id: str | None, plugins: bool = False):
+        import os
+        import subprocess
+        import sys
+        spec = self.tmp / "spec.json"
+        spec.write_text(json.dumps({"out": str(self.out), "watch": {str(self.tmp / n): n for n in
+                                                                   ("prov.py", "cons.py", "test_file.py")},
+                                    "providers": {"prov.py": ["cons.py"]}, "tests": ["test_file.py"]}),
+                        encoding="utf-8")
+        env = {k: v for k, v in os.environ.items() if not k.startswith(("PYTHON", "PYTEST", "VMODEL"))}
+        env.update({"PYTHONPATH": os.pathsep.join([str(self.tracer), str(self.tmp)]), "VMODEL_TRACE_SPEC": str(spec)})
+        if test_id:
+            env["PYTEST_CURRENT_TEST"] = test_id
+        if plugins:
+            env.update({"PYTEST_PLUGINS": "vmodel_trace_plugin", "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"})
+        return subprocess.run([sys.executable, *argv], cwd=str(self.tmp), env=env, capture_output=True, text=True,
+                              timeout=120)
+
+    def lines(self) -> list[dict]:
+        out = []
+        for f in sorted(self.out.glob("*.jsonl")):
+            out += [json.loads(x) for x in f.read_text(encoding="utf-8").splitlines()[1:]]
+        for r in out:
+            r.pop("ts", None)
+        return out
+
+    def test_anchor_is_the_outermost_test_file_function(self):
+        res = self.run_py(["-c", "import os, test_file\ntest_file.warm_up()\ntest_file.test_TEST_001_a()\n"
+                                 "os.environ['PYTEST_CURRENT_TEST'] = 'test_file.py::test_TEST_002_b (call)'\n"
+                                 "test_file.test_TEST_002_b()\n"], "test_file.py::test_TEST_001_a (call)")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        edges = sorted((r["a"], r["c"]) for r in self.lines() if "c" in r)
+        # the thread started inside test_TEST_002_b inherits that anchor (its own stack has no test-file frame)
+        self.assertEqual(edges, [("test_TEST_001_a", "cons.py"), ("test_TEST_002_b", "cons.py"),
+                                 ("warm_up", "cons.py")], RED)
+
+    def test_pytest_plugin_writes_phase_boundaries(self):
+        res = self.run_py(["-m", "pytest", "-q", "-p", "no:cacheprovider", "test_file.py"], None, plugins=True)
+        self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
+        b = [(r["b"].split("::")[-1], r["p"]) for r in self.lines() if "b" in r]
+        self.assertEqual(b, [(t, p) for t in ("test_TEST_001_a", "test_TEST_002_b")
+                             for p in ("setup", "call", "teardown", "end")], RED)
+        # inside pytest the anchor is the test function itself
+        self.assertIn(("test_file.py::test_TEST_001_a", "call", "test_TEST_001_a"),
+                      [(r["t"], r["p"], r["a"]) for r in self.lines() if "c" in r])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1819,30 +1819,72 @@ def _ts(v) -> float | None:
     return float(v) if type(v) in (int, float) else None
 
 
-def _test_windows(boundaries: dict[str, list[tuple[float, str, str]]]) -> dict[str, tuple]:
-    """test id -> (first boundary, call start, end) from the pytest process(es): the end is the first boundary of
-    another test after this test's last one (None while no other test followed)."""
-    out: dict[str, list] = {}
+NOT_INTERFACE_METHODS = {"__init__", "__new__", "__post_init__", "__init_subclass__", "__set_name__", "__del__",
+                         "__repr__", "__str__", "__format__", "__hash__", "__eq__", "__ne__", "__sizeof__",
+                         "__reduce__", "__reduce_ex__", "__getstate__", "__setstate__", "__copy__", "__deepcopy__",
+                         "__class_getitem__"}
+
+
+def _is_symbol_function(func: str, sym: str) -> bool:
+    """Whether a traced function (co_qualname) is the interface symbol `sym`: the function itself, a method of a class
+    symbol (not its constructor or object protocol: review 5 N3), or, for a method-named signature, that method of any
+    class in the provider file (review 5 N2)."""
+    if func == sym:
+        return True
+    if func.startswith(sym + "."):
+        return func[len(sym) + 1:].split(".", 1)[0] not in NOT_INTERFACE_METHODS
+    return func.endswith("." + sym) and "<locals>" not in func
+
+
+def _test_windows(boundaries: dict[str, list[tuple[float, str, str]]]) -> dict[str, list[dict]]:
+    """test id -> its runs, each {setup, call, teardown, end} (wall clock), from the boundary lines the validator's
+    pytest plugin writes in the pytest process(es). A run without an end ends at the next boundary of its file."""
+    out: dict[str, list[dict]] = {}
     for seq in boundaries.values():
-        seq = sorted(seq)
-        last: dict[str, float] = {}
-        for ts, t, ph in seq:
-            w = out.setdefault(t, [ts, None, None])
-            w[0] = min(w[0], ts)
-            if ph == "call" and (w[1] is None or ts < w[1]):
-                w[1] = ts
-            last[t] = ts
-        for t, lt in last.items():
-            nxt = next((ts for ts, u, _p in seq if u != t and ts > lt), None)
-            if nxt is not None and (out[t][2] is None or nxt < out[t][2]):
-                out[t][2] = nxt
-    return {t: tuple(w) for t, w in out.items()}
+        open_runs: dict[str, dict] = {}
+        runs: list[dict] = []
+        for ts, t, ph in seq:  # file order is time order
+            if ph == "setup" or t not in open_runs:
+                run = {"test": t, "setup": None, "call": None, "teardown": None, "end": None, "last": ts}
+                open_runs[t] = run
+                runs.append(run)
+                out.setdefault(t, []).append(run)
+            run = open_runs[t]
+            if ph in ("setup", "call", "teardown", "end") and run[ph] is None:
+                run[ph] = ts
+            run["last"] = ts
+            if ph == "end":
+                del open_runs[t]
+        times = [ts for ts, _t, _p in seq]
+        for run in runs:
+            if run["end"] is None:  # never finished (crash, timeout, older format): until the next boundary
+                run["end"] = next((x for x in times if x > run["last"]), float("inf"))
+            if run["setup"] is None:
+                run["setup"] = run["call"] if run["call"] is not None else run["last"]
+    return out
+
+
+def _phase_in(runs: list[dict], ts: float) -> str:
+    """The phase of `ts` inside one of the test's runs; a time on a boundary is never credited (review 5 N8: equal
+    clock ticks): on the call start -> setup, on the teardown start -> teardown, on the setup start or end -> detached."""
+    for r in runs:
+        lo, hi = r["setup"], r["end"]
+        if not lo < ts < hi:
+            continue
+        call, td = r["call"], r["teardown"]
+        call_end = td if td is not None else hi
+        if call is not None and call < ts < call_end:
+            return "call"
+        if td is not None and ts >= td:
+            return "teardown"
+        return "setup"
+    return "detached"
 
 
 def read_runtime_trace(trace_dir: Path, prior_errors: list[str] | None = None, prior_oversized: int = 0) -> dict:
     """The tracer files (written inside the processes under test, hashed into the signed evidence). In memory:
     `_events` (pytest node id, phase, process file, watched file, function), `_edges` (node id, phase, provider file,
-    provider function, consumer file), `_ran` (watched file, function) run anywhere. A process started during a test
+    provider function, consumer file or None, anchor), `_ran` (watched file, function) run anywhere. A process started during a test
     keeps that test id for its whole life, so its lines are re-read against the pytest process's test boundaries:
     after the test ended -> "detached", during its call -> "call" (review 4 H3/M1). `truncated`: some process hit the
     record limit, so the absence of a record is not evidence that something did not run."""
@@ -1890,9 +1932,10 @@ def read_runtime_trace(trace_dir: Path, prior_errors: list[str] | None = None, p
             elif r.get("edge_scan_capped") is True:
                 if isinstance(t, str):
                     capped.add(t)
-            elif isinstance(r.get("e"), str) and isinstance(r.get("c"), str):
-                if isinstance(t, str):
-                    raw_edges.append((t, str(r.get("p") or ""), r["e"], str(r.get("f") or ""), r["c"], ts, spawned))
+            elif isinstance(r.get("e"), str):  # a provider function ran (c absent) or a consumer called it (c)
+                c, anchor = r.get("c"), r.get("a")
+                if isinstance(t, str) and (c is None or isinstance(c, str)) and (anchor is None or isinstance(anchor, str)):
+                    raw_edges.append((t, str(r.get("p") or ""), r["e"], str(r.get("f") or ""), c, anchor, ts, spawned))
             elif isinstance(r.get("m"), str):
                 ran_files.add(r["m"])
                 ran.add((r["m"], str(r.get("f"))))
@@ -1900,27 +1943,22 @@ def read_runtime_trace(trace_dir: Path, prior_errors: list[str] | None = None, p
                     tests.setdefault(t, set()).add(r["m"])
                     raw_events.append((t, str(r.get("p") or ""), f.name, r["m"], str(r.get("f")), ts, spawned))
     windows = _test_windows(boundaries)
-    if spawned_files and spawned_files == procs - oversized:
-        windows_complete = False  # no pytest-process file to take test boundaries from
-    moved = {"detached": 0, "call": 0}
+    if spawned_files and (spawned_files == procs - oversized or not boundaries):
+        windows_complete = False  # no pytest-process boundaries (plugin not loaded, not pytest): not attributable
+    moved: dict[str, int] = {}
 
     def phase_of(t: str, ph: str, ts: float | None, spawned: bool) -> str:
-        if spawned and not windows_complete:  # boundaries may be missing: a child's line is not attributable
-            moved["detached"] += ph != "detached"
-            return "detached"
-        w = windows.get(t)
-        if not spawned or ts is None or w is None:
+        """A line of a process started during a test is re-read against that test's runs (review 4 H3, review 5 N1):
+        its inherited phase says only when the process started."""
+        if not spawned:
             return ph
-        if w[2] is not None and ts >= w[2]:
-            moved["detached"] += ph != "detached"
-            return "detached"
-        if w[1] is not None and ts >= w[1] and ph == "setup":
-            moved["call"] += 1
-            return "call"
-        return ph
+        new = _phase_in(windows.get(t) or [], ts) if windows_complete and ts is not None else "detached"
+        if new != ph:
+            moved[new] = moved.get(new, 0) + 1
+        return new
 
     events = [(t, phase_of(t, ph, ts, sp), fn, m, func) for t, ph, fn, m, func, ts, sp in raw_events]
-    edges = [(t, phase_of(t, ph, ts, sp), e, func, c) for t, ph, e, func, c, ts, sp in raw_edges]
+    edges = [(t, phase_of(t, ph, ts, sp), e, func, c, a) for t, ph, e, func, c, a, ts, sp in raw_edges]
     return {"active": procs > 0, "processes": procs, "spawned_processes": spawned_files, "methods": sorted(methods),
             "truncated": truncated, "ran_files": sorted(ran_files),
             "tests": {t: sorted(v) for t, v in sorted(tests.items())}, "edges": len(edges),
@@ -1940,15 +1978,17 @@ def test_function_of(nodeid: str) -> str:
 def trace_by_test(rt: dict) -> dict[str, dict]:
     """TEST id -> what ran during the pytest tests named with exactly that id: `functions` (file::qualname, any
     phase) with the processes they ran in, `ran` ((file, function) in any phase of the test's own execution), `call`
-    ((file, function) -> processes, call phase) and `edges` ((provider file, provider function, consumer file)). The
-    tracer attributes another thread to the test that started it and a pool work item to the test that submitted it."""
+    ((file, function) -> processes, call phase), `edges` ((provider file, provider function, consumer file, anchor))
+    and `prov_runs` ((provider file, provider function, anchor)). The tracer attributes another thread to the test
+    that started it and a pool work item to the test that submitted it."""
     out: dict[str, dict] = {}
 
     def entry(nodeid: str) -> dict | None:
         ids = test_ids_in_text(test_function_of(nodeid))
         if len(ids) != 1:
             return None
-        return out.setdefault(next(iter(ids)), {"functions": {}, "call": {}, "ran": set(), "edges": set()})
+        return out.setdefault(next(iter(ids)), {"functions": {}, "call": {}, "ran": set(), "edges": set(),
+                                                "prov_runs": set()})
 
     for nodeid, phase, proc, label, func in rt.get("_events") or []:
         d = entry(nodeid)
@@ -1959,10 +1999,14 @@ def trace_by_test(rt: dict) -> dict[str, dict]:
             d["ran"].add((label, func))
         if phase == "call":
             d["call"].setdefault((label, func), set()).add(proc)
-    for nodeid, phase, provider, func, consumer in rt.get("_edges") or []:
+    for nodeid, phase, provider, func, consumer, anchor in rt.get("_edges") or []:
         d = entry(nodeid)
-        if d is not None and phase != "detached":
-            d["edges"].add((provider, func, consumer))
+        if d is None or phase == "detached":
+            continue
+        if consumer is None:
+            d["prov_runs"].add((provider, func, anchor))
+        else:
+            d["edges"].add((provider, func, consumer, anchor))
     return out
 
 
@@ -2069,7 +2113,11 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
     units = list(g.units.values())
     watch_rels = {u["module"].replace("\\", "/") for u in units if isinstance(u.get("module"), str)}
     watch_rels &= {p.rel(f) for f in p.source_files()}
-    watch_rels |= {v["file"] for views in wd["tests"].values() for v in views}
+    test_labels = {v["file"] for views in wd["tests"].values() for v in views}
+    # conftest.py files under the test roots: their fixtures can be anchors (review 5 N7: never counted unless the test
+    # requested them, but they must be seen so an autouse fixture is not mistaken for the test body)
+    test_labels |= {p.rel(f) for f in p.test_files() if f.name == "conftest.py"}
+    watch_rels |= test_labels
 
     run_dir = runner.new_run_dir(p.evidence_dir, ctx.wi, "G6", "integration")
     junit = run_dir / "junit.xml"
@@ -2077,15 +2125,15 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
     live_dir = run_dir / "trace-live"  # where the processes under test write
     live_dir.mkdir()
     spec_path = run_dir / "trace-spec.json"
-    edge_map: dict[str, set[str]] = {}  # D44: provider file -> consumer files whose call into it is recorded
+    prov_map: dict[str, set[str]] = {}  # D44: provider file -> consumer files whose call into it is recorded
     for iv in wd["interfaces"].values():
-        if iv["consumer_modules"]:
-            for prov in iv["provider_modules"]:
-                if prov in watch_rels:
-                    edge_map.setdefault(prov, set()).update(c for c in iv["consumer_modules"]
-                                                            if c in watch_rels and c != prov)
+        for prov in iv["provider_modules"]:
+            if prov in watch_rels:
+                prov_map.setdefault(prov, set()).update(c for c in iv["consumer_modules"] or []
+                                                        if c in watch_rels and c != prov)
     write_json(spec_path, {"out": str(live_dir), "watch": {str((p.root / r).resolve()): r for r in sorted(watch_rels)},
-                           "edges": {k: sorted(v) for k, v in sorted(edge_map.items()) if v}})
+                           "providers": {k: sorted(v) for k, v in sorted(prov_map.items())},
+                           "tests": sorted(test_labels & watch_rels)})
     argv = _substitute(cfg["argv"], {"{python}": p.python_exe(), "{junit}": str(junit)})
     exe = runner.executable_info(argv[0])
     if exe["resolved"]:
@@ -2096,11 +2144,13 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
             env.pop("PYTEST_DISABLE_PLUGIN_AUTOLOAD", None)
         env["PYTHONPATH"] = str(TRACER_DIR)  # validator-owned: the agent's PYTHONPATH was dropped above
         env["VMODEL_TRACE_SPEC"] = str(spec_path)
+        env["PYTEST_PLUGINS"] = "vmodel_trace_plugin"  # exact test phase boundaries (review 5); the agent's was dropped
         run = runner.run_command(argv, p.root, timeout_s=int(cfg["timeout_s"]), env=env)
     live_errors, live_oversized = snapshot_trace(live_dir, trace_dir)
     rt = read_runtime_trace(trace_dir, live_errors, live_oversized)
     env_info = {"scrubbed": dropped, "set": {"PYTHONDONTWRITEBYTECODE": "1", "PYTHONPYCACHEPREFIX": "<validator temp>",
                                              "PYTEST_DISABLE_PLUGIN_AUTOLOAD": env.get("PYTEST_DISABLE_PLUGIN_AUTOLOAD"),
+                                             "PYTEST_PLUGINS": "vmodel_trace_plugin",
                                              "PYTHONPATH": "<validator tracer>", "VMODEL_TRACE_SPEC": "trace-spec.json"},
                 "distributions": _distributions(argv[0])}
     junit_summary, junit_error = None, None
@@ -2194,7 +2244,7 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
         blocks.append("no runtime trace was written although the validator injected its tracer (Python started with "
                       "-I/-E/-S, PYTHONPATH replaced, or the trace removed): which test functions ran and whether the "
                       "providers ran cannot be shown")
-    empty = {"functions": {}, "call": {}, "ran": set(), "edges": set()}
+    empty = {"functions": {}, "call": {}, "ran": set(), "edges": set(), "prov_runs": set()}
     for iid, iv in sorted(wd["interfaces"].items()):
         prov_rels = set(iv["provider_modules"])
         # review 4 H4: the provider is the interface's own symbols (the signature's def/class and the accepted G4
@@ -2205,7 +2255,7 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
                 syms |= {x for x in e["provider_symbols"] if isinstance(x, str) and x}
 
         def is_prov(label: str, func: str, _p=prov_rels, _s=frozenset(syms)) -> bool:
-            return label in _p and (not _s or any(func == x or func.startswith(x + ".") for x in _s))
+            return label in _p and (not _s or any(_is_symbol_function(func, x) for x in _s))
 
         sym_text = f" ({', '.join(sorted(syms))})" if syms else " (any function: the provider symbol is unknown)"
         cons_rels = set(iv["consumer_modules"] or [])  # empty: EXTERNAL consumers only
@@ -2223,8 +2273,15 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
             call_files = seen["call"]
             prov_here = any(is_prov(lab, fn) for lab, fn in seen["ran"])
             cons_here = (not cons_rels) or any(lab in cons_rels for lab, _fn in seen["ran"])
-            connected = any(is_prov(e, fn) and c in cons_rels for e, fn, c in seen["edges"]) if needs_edge \
-                else (prov_here and cons_here)
+            # review 5 N7: only what the test itself ran counts: the anchor (outermost test-file function on the stack)
+            # must be the test function or a fixture / setUp it requested, never an autouse or unrequested fixture
+            anchors = {a for fv in tv["functions"] for a in (fv.get("anchors") or [fv["name"]])}
+            if needs_edge:
+                linked = {a for e, fn, c, a in seen["edges"] if is_prov(e, fn) and c in cons_rels}
+            else:
+                linked = {a for e, fn, a in seen["prov_runs"] if is_prov(e, fn)} if cons_here else set()
+            connected = bool(linked & anchors)
+            foreign = sorted(str(a) for a in linked - anchors)
             cons_call = (not cons_rels) or any(lab in cons_rels for lab, _fn in call_files)
             pick, fviews = None, []  # (level, reason, path, function view) of the best credited function
             for fv in tv["functions"]:
@@ -2237,6 +2294,10 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
                     # path A: the static call path of a function that ran, and in this test's own execution the
                     # consumer called the provider (EXTERNAL consumer: the provider ran in it)
                     cand = ("test_level", None) if connected else \
+                        ("suite_level", f"the provider{sym_text} ran {'from its consumer ' if needs_edge else ''}in this "
+                                        f"test only from code the test did not request ({', '.join(foreign)}: an "
+                                        "autouse or unrequested fixture), not from the test function or a fixture it "
+                                        "requested") if foreign else \
                         ("insufficient", f"the provider{sym_text} ran in this test but was not called from the consumer (no "
                                          "consumer function on its call stack, the stack that started its thread or "
                                          "submitted its pool work item): running both is not a connection")\

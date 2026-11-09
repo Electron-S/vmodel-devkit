@@ -16,7 +16,10 @@ Checklist
   that test (for an `EXTERNAL` consumer call the provider's public entry); no placeholder, import-only or
   provider-mocking tests, and no test that calls the provider and hands its result to the consumer (that is not a
   connection). Work the consumer does in a thread it starts or a thread pool it submits to counts; a server or process
-  started by a session/module-scoped fixture does not count for later tests. A subprocess/IPC/API test must keep the inherited `PYTHONPATH` (no `-I`/`-E`)
+  started by a session/module-scoped fixture does not count for later tests, an autouse fixture never counts, and a
+  helper process counts only for what it does during the test's call. The consumer must call the provider directly or
+  through `await` (a provider run as a separate asyncio task, or a provider generator the test iterates, is not seen
+  as a call). A subprocess/IPC/API test must keep the inherited `PYTHONPATH` (no `-I`/`-E`)
   so the validator's runtime trace can see the provider run; the verifier declares such runtime paths at G4.
 - Do not weaken, skip or delete tests. If a spec is wrong, fix the spec (P3) through rework.
 - Keep the code clean for the static analyser (unused imports, undefined names).

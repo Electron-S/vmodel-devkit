@@ -9,16 +9,19 @@ submitted it, in that test's live phase ("detached" once another test runs). One
 function); a forked child writes its own file; past the record limit a {"truncated": true} line is written. Module
 and class bodies are not counted, so importing a module is not execution.
 
-Connections (D44): for a provider file named in the spec's "edges", each time one of its functions starts the tracer
-looks for a consumer function of that provider on the call stack (and on the stack that started the thread or submitted
-the pool work item it runs in) and writes one {"e": provider, "f": function, "c": consumer} line per (test, phase,
-provider function, consumer). Stack scans per (test, phase, provider function) are capped ({"edge_scan_capped": ...} is
-written, so absence is not proof).
+Connections (D44, review 5): for a provider file named in the spec's "providers", each time one of its functions
+starts the tracer walks the call stack (and takes what was inherited from the stack that started the thread or
+submitted the pool work item it runs in): the consumer functions of that provider on it, and the anchor, the outermost
+function of an integration test file or conftest.py ("tests" in the spec). It writes {"e": provider file, "f":
+function, "a": anchor} (the provider ran) and {"e", "f", "c": consumer file, "a"} (a consumer called it), one line per
+(test, phase, file, function, consumer, anchor). The validator counts these only when the anchor is the test function
+itself or a fixture/setUp it requested, never an autouse fixture. Stack scans per (test, phase, function) stop once the
+test's own anchor has been seen with every consumer, or at the cap ({"edge_scan_capped": ...}: absence is not proof).
 
-Time (review 4): every line carries "ts" (wall clock). A process started during a test (it inherits
+Time (review 4/5): every line carries "ts" (wall clock). A process started during a test (it inherits
 PYTEST_CURRENT_TEST, header "spawned_in") keeps that test id for its whole life, so the validator re-reads its lines
-against the test boundaries ({"b": test, "p": phase, "ts"}) the pytest process writes whenever its main thread is seen
-in a new test or phase: a line written after that test ended is "detached", one written during its call is "call".
+against exact test phase boundaries written by the validator's pytest plugin (vmodel_trace_plugin.py, loaded through
+PYTEST_PLUGINS): a line outside that test's phases is "detached", one inside its call is "call".
 
 Trust: this runs inside the processes under test, like the test runner itself (SPEC 5.7); the validator hashes the
 files after the run and records them in the signed evidence. Any problem here is swallowed: the traced program must
@@ -44,8 +47,9 @@ def _vmodel_trace_install():
         return os.path.normcase(os.path.realpath(p))
 
     watch = {norm(k): v for k, v in spec["watch"].items()}
-    edges = {k: frozenset(v) for k, v in (spec.get("edges") or {}).items() if isinstance(v, list)}
-    consumers = frozenset(c for v in edges.values() for c in v)
+    providers = {k: frozenset(v) for k, v in (spec.get("providers") or {}).items() if isinstance(v, list)}
+    consumers = frozenset(c for v in providers.values() for c in v)
+    test_labels = frozenset(x for x in spec.get("tests") or [] if isinstance(x, str))
     limit = int(spec.get("limit", 100000))
     byte_limit = int(spec.get("byte_limit", 24 * 1024 * 1024))  # below the validator's per-file reading limit
     scan_limit = int(spec.get("edge_scan_limit", 2000))
@@ -76,7 +80,6 @@ def _vmodel_trace_install():
         state["bytes"] = 0
         state["found"] = {}
         state["scans"] = {}
-        state["last"] = None
         born = env_context()
         state["spawned"] = born[0] is not None
         state["out"].write(json.dumps({"v": 2, "pid": os.getpid(), "ppid": os.getppid(),
@@ -138,30 +141,38 @@ def _vmodel_trace_install():
             return lab
 
     def inherited():
-        """Consumer labels on the stack that started this thread or submitted the pool work item it runs."""
+        """(consumer labels, anchor) from the stack that started this thread or submitted the pool work item it runs."""
         if threading.get_ident() == threading.main_thread().ident:
-            return frozenset()
+            return frozenset(), None
         via = getattr(local, "via", unset)
         if via is unset:
             th = this_thread()
             via = getattr(th, "_vmodel_via", None) if th is not None else None
-        return via or frozenset()
+        return via or (frozenset(), None)
 
-    def stack_consumers(frame):
-        found = set()
-        n = 0
+    def stack_info(frame):
+        """Consumer labels of the functions on the stack and the outermost test-file function (the anchor)."""
+        found, anchor, n = set(), None, 0
         while frame is not None and n < stack_depth:
             code = frame.f_code
-            if code.co_flags & 0x1:  # a consumer *function* (a module body importing is not a call, as in record())
+            if code.co_flags & 0x1:  # functions only: a module body importing is not a call, as in record()
                 lab = label_of(code.co_filename)
                 if lab in consumers:
                     found.add(lab)
+                elif lab in test_labels:
+                    anchor = getattr(code, "co_qualname", code.co_name)  # keeps the outermost one
             frame = frame.f_back
             n += 1
-        return found
+        return found, anchor
 
     def via_here(frame):
-        return frozenset(stack_consumers(frame)) | inherited() if consumers else frozenset()
+        """What a thread started / a work item submitted from here inherits: the consumers on this stack and the
+        anchor (the starter's own inheritance first: a thread's root is where it was started from)."""
+        if not providers:
+            return frozenset(), None
+        found, anchor = stack_info(frame)
+        inh_c, inh_a = inherited()
+        return frozenset(found) | inh_c, (inh_a if inh_a is not None else anchor)
 
     def write(key, obj):
         """One line per new key; past the limits one truncation line (the validator must not read absence as proof)."""
@@ -180,21 +191,34 @@ def _vmodel_trace_install():
             state["bytes"] += len(line)
             state["out"].write(line)
 
-    def note_edges(test, phase, lab, func, frame):
-        want = edges[lab]
+    def own_anchor(test):
+        """The test function's qualname from its node id (file.py::Class::test -> Class.test)."""
+        i = test.find(".py::") if test else -1
+        return test[i + 5:].replace("::", ".") if i >= 0 else None
+
+    def note_provider(test, phase, lab, func, frame):
+        want = providers[lab]
         k = (test, phase, lab, func)
-        found = state["found"].setdefault(k, set())
-        if found >= want:
+        own = own_anchor(test)
+        done = state["found"].setdefault(k, set())
+        if "ran" in done and done >= want:
             return
         n = state["scans"].get(k, 0)
         if n >= scan_limit:
             return
         state["scans"][k] = n + 1
-        for c in (stack_consumers(frame.f_back if frame is not None else None) | inherited()) & want:
-            if c not in found:
-                found.add(c)
-                write(("e", test, phase, lab, func, c), {"t": test, "p": phase, "e": lab, "f": func, "c": c})
-        if n + 1 == scan_limit and not found >= want:
+        found, anchor = stack_info(frame.f_back if frame is not None else None)
+        inh_c, inh_a = inherited()
+        anchor = inh_a if inh_a is not None else anchor
+        write(("r", test, phase, lab, func, anchor), {"t": test, "p": phase, "e": lab, "f": func, "a": anchor})
+        for c in (frozenset(found) | inh_c) & want:
+            write(("e", test, phase, lab, func, c, anchor), {"t": test, "p": phase, "e": lab, "f": func, "c": c,
+                                                             "a": anchor})
+            if anchor == own:
+                done.add(c)
+        if anchor == own:
+            done.add("ran")
+        if n + 1 == scan_limit and not ("ran" in done and done >= want):
             write(("cap", test, phase, lab, func), {"edge_scan_capped": True, "t": test, "p": phase, "e": lab,
                                                     "f": func})
 
@@ -206,15 +230,20 @@ def _vmodel_trace_install():
         if not code.co_flags & 0x1:  # CO_OPTIMIZED: functions only, not module or class bodies (import time)
             return True
         test, phase = context()
-        if not state["spawned"] and test is not None and threading.get_ident() == threading.main_thread().ident \
-                and state["last"] != (test, phase):
-            state["last"] = (test, phase)  # a test boundary of the pytest process (child lines are judged by these)
-            write(("b", test, phase), {"b": test, "p": phase})
         func = getattr(code, "co_qualname", code.co_name)
         write((test, phase, lab, func), {"t": test, "p": phase, "m": lab, "f": func})
-        if lab in edges:
-            note_edges(test, phase, lab, func, frame)
+        if lab in providers:
+            note_provider(test, phase, lab, func, frame)
         return True
+
+    def boundary(nodeid, phase):
+        """Called by the validator's pytest plugin at the start of each phase and at the end of a test."""
+        state["n"] = state.get("n", 0) + 1
+        i = nodeid.find(".py::")
+        cut = nodeid.find("[", i + 5 if i >= 0 else 0)
+        write(("b", state["n"]), {"b": nodeid if cut < 0 else nodeid[:cut], "p": phase})
+
+    globals()["_vmodel_boundary"] = boundary
 
     pool = {"patched": False}
 
