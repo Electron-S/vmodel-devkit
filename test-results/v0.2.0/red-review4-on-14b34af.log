@@ -1,0 +1,40 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/43cdb556-8cbb-4e88-9bf3-ce8c6609a0de/scratchpad/red-14b34af/plugins/vmodel",
+    "release_manifest": null
+  },
+  "git_head": "cdd95dd",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "marker": "RED-TARGET",
+  "tests": 12,
+  "expectations_met": 12,
+  "violations": 0,
+  "seconds": 40.8
+}
+
+OK  expect=FAIL got=FAIL    test_g6_review4.R4AttributionRed.test_S1_H1_mocked_tests_are_not_credited_by_another_interfaces_test
+      AssertionError: 'PASSED' != 'BLOCKED'
+OK  expect=FAIL got=FAIL    test_g6_review4.R4AttributionRed.test_S2_H4_provider_and_an_unrelated_consumer_function_are_not_a_connection
+      AssertionError: 'PASSED' != 'BLOCKED'
+OK  expect=FAIL got=FAIL    test_g6_review4.R4AttributionRed.test_S3_H2_import_time_helper_is_not_provider_evidence
+      AssertionError: 'PASSED' != 'BLOCKED'
+OK  expect=FAIL got=FAIL    test_g6_review4.R4AttributionRed.test_S7_H4_unrelated_provider_function_in_a_child_is_not_the_interface
+      AssertionError: 'PASSED' != 'BLOCKED'
+OK  expect=FAIL got=FAIL    test_g6_review4.R4EvidenceRed.test_S11_M4_unreadable_top_level_directory_is_not_a_crash
+      AssertionError: False is not true : RED-TARGET internal error: {('wiring', 'WI-001'): 2, ('gate', 'WI-001', 'G4'): 2, ('gate', 'WI-001', 'G6'): 2}
+OK  expect=FAIL got=FAIL    test_g6_review4.R4EvidenceRed.test_S12_M3_bracket_in_the_test_directory_name
+      AssertionError: 'FAILED' != 'PASSED'
+OK  expect=FAIL got=FAIL    test_g6_review4.R4EvidenceRed.test_S6_M5_leaked_child_cannot_change_the_signed_trace
+      AssertionError: 1 != 0 : RED-TARGET the signed evidence changed after the run:   ! .vmodel/evidence/WI-001/G6/20261109T130652229578Z-integration-b01903/record.json: trace/600555-b0abe9eb.jsonl content differs from its recorded hash
+OK  expect=FAIL got=FAIL    test_g6_review4.R4ProcessRed.test_S10_M1_server_process_started_by_a_function_fixture
+      AssertionError: 'BLOCKED' != 'PASSED'
+OK  expect=FAIL got=FAIL    test_g6_review4.R4ProcessRed.test_S8_H3_long_lived_child_is_not_credited_to_the_test_that_started_it
+      AssertionError: 'TEST-010' unexpectedly found in ['TEST-010'] : RED-TARGET TEST-010 only pinged; the parse ran for TEST-011: {'work_item': 'WI-001', 'gate': 'G6', 'status': 'PASSED', 'recorded': True, 'reasons': [], 'record_id': 'R00014', 'checks': [{'id': 'G6.PREREQ', 'kind': 'mechanical', 'status': 'pass', 'detail': 'G5 PASSED for the current manifest hash'}, {'id': 'G6.APPLICABILITY', 'kind': '
+OK  expect=FAIL got=FAIL    test_g6_review4.R4StaticRed.test_S4_M6_mocker_setattr_and_assignment_are_provider_patches
+      AssertionError: False is not true : RED-TARGET mocking not reported as a provider patch: {'TEST-010': [], 'TEST-011': []}
+OK  expect=FAIL got=FAIL    test_g6_review4.R4StaticRed.test_S5_L1_pytest_ini_pythonpath_with_src_package
+      AssertionError: 'none' != 'static'
+OK  expect=FAIL got=FAIL    test_g6_review4.R4StaticRed.test_S9_L2_plain_value_in_one_if_branch_keeps_the_import
+      AssertionError: 'none' != 'static'
