@@ -39,16 +39,28 @@ captured; conflicts were really analysed; critical decisions (security, data los
 user; assumptions are reasonable and recorded.
 G2 Architecture: every requirement is realised by a component with a clear responsibility; interfaces are precise
 (signatures, data); data flows are consistent; each non-functional requirement has a credible approach; trade-offs are
-justified; the integration test strategy would exercise every interface.
+justified; the integration test strategy would exercise every interface. With no interface, record
+`integration_applicability` (below): `not_required` only if one component really has nothing to integrate with; list
+every external data flow endpoint (user, files, DB, network) in `endpoints_reviewed`. An external system whose contract
+must be verified needs an interface (consumer `EXTERNAL` or its own component): then raise a finding instead.
 G3 Design + test planning: units are implementable as specified; contracts (pre/postconditions, errors, boundaries) are
 precise and complete; unit tests can actually detect contract violations (normal, abnormal, boundary, with concrete
 expected results); integration specs cover interfaces; system specs cover every acceptance criterion; nothing is
-designed that no requirement asks for.
+designed that no requirement asks for. With no integration spec, record `integration_applicability` as for G2.
 G4 Code + test code: code matches the design contracts (signatures, errors raised, boundaries); no unrequested
 behaviour; each unit TEST spec is implemented faithfully by tests named with its `TEST_nnn` token; assertions are
 meaningful (no tautologies, no swallowed exceptions, nothing skipped); conftest/fixtures do not alter collection or
 results; any `test_changes` in defects or change requests is justified (read defects.json and change-requests.json);
 obvious defects, unsafe code or dead code.
+G4 interfaces (when architecture.json has interfaces): for every IF write an `interfaces` entry: `result` ok/issue,
+`provider_symbols` (the provider's def/class names that implement it), `note`. Check that the integration tests really
+connect consumer and provider (no placeholder, no import-only test, the provider under test not mocked), cover the
+interface's error paths, and that the `integration_test` command in `.vmodel/config.json` runs the integration folder
+and not the unit tests. `"<VM path>" wiring <WI>` shows the validator's classification per test. A test with no
+static call path that uses a subprocess / IPC / HTTP API / dynamic import is a runtime path: if, after reading it, you
+are convinced it drives the real provider, add to that IF's entry `runtime_paths: [{"test": "TEST-nnn", "kind":
+"subprocess"|"ipc"|"api"|"dynamic_import", "test_file_sha256": "<from wiring>", "entry": "<how it runs>", "note": "..."}]`.
+Your declaration is not proof: G6 still requires the provider to show up in its runtime trace.
 G4 after a failure (defects.json has entries): check each DEFECT against what actually failed, not against the author's
 explanation. `"<VM path>" status <WI> --json` shows the failed gate's checks and `failing_tests`, and per defect
 `failing_tests` and `unlinked_failing_tests` (taken from the signed ledger). The root cause must explain every failing
@@ -63,7 +75,12 @@ so such an edit invalidates the gate again. `status: "fixed"` belongs to the fix
 {"gate": "G2", "work_item": "WI-001", "reviewer": "vmodel:verifier", "target_hash": "sha256:...",
  "reviewed_at": "<UTC ISO time>", "verdict": "approve", "summary": "<2-4 sentences>",
  "checklist": [{"item": "...", "result": "ok", "note": "..."}],
- "findings": [{"id": "F-1", "severity": "minor", "description": "...", "related": ["ARCH-002"], "status": "open"}]}
+ "findings": [{"id": "F-1", "severity": "minor", "description": "...", "related": ["ARCH-002"], "status": "open"}],
+ "integration_applicability": {"decision": "not_required", "reason": "one component, ...",
+                               "endpoints_reviewed": ["user input", "result file"]}}
 ```
+`integration_applicability` only in G2/G3 reviews of a work item without interfaces / integration specs; G4 reviews
+of a work item with interfaces add `"interfaces": [{"id": "IF-001", "result": "ok", "provider_symbols": ["parse"],
+"note": "..."}]`.
 `reviewer` must be exactly `vmodel:verifier`. The validator only accepts the review if `target_hash` equals the current
 input hash, so any later change to the reviewed files requires a new review.

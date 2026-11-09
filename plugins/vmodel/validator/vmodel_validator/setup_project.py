@@ -5,6 +5,7 @@ CLAUDE.md). Global Claude configuration is never modified (DECISIONS D10).
 """
 from __future__ import annotations
 
+import ast
 import json
 import os
 import shutil
@@ -16,7 +17,7 @@ from typing import Any
 
 from . import VERSION
 from .gates import load_schema
-from .hashing import sha256_bytes, sha256_file
+from .hashing import hash_obj, sha256_bytes, sha256_file
 from .integrity import RELEASE_MANIFEST, check_self, plugin_root
 from .ledger import Ledger, anchor_path, create_key
 from .project import VMODEL_DIR, Project, vmodel_home
@@ -32,6 +33,75 @@ BUILD_CONFIG = ["pyproject.toml", "setup.cfg", "setup.py", "pytest.ini", "tox.in
 
 class SetupError(Exception):
     pass
+
+
+# ---------------------------------------------------------------- test commands (0.2.0, G6, REQ-G6-27/28)
+UNIT_ARGV = ["{python}", "-m", "pytest", "-q", "-p", "no:cacheprovider", "--junitxml={junit}"]
+DEFAULT_INTEGRATION_DIR = "tests/integration"
+INTEGRATION_TIMEOUT_S = 900
+
+
+def integration_argv(rel: str) -> list[str]:
+    return ["{python}", "-m", "pytest", "-q", "-p", "no:cacheprovider", rel, "--junitxml={junit}"]
+
+
+def _glob_roots(globs: list[str]) -> list[str]:
+    roots = []
+    for pat in globs:
+        parts = []
+        for part in pat.replace("\\", "/").split("/"):
+            if any(ch in part for ch in "*?["):
+                break
+            parts.append(part)
+        roots.append("/".join(parts) + "/" if parts else "")
+    return roots
+
+
+def _count_test_functions(files: list[Path]) -> int:
+    n = 0
+    for f in files:
+        try:
+            tree = ast.parse(f.read_bytes(), filename=str(f))
+        except (SyntaxError, ValueError, OSError, RecursionError, MemoryError):
+            continue
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test"):
+                n += 1
+            elif isinstance(node, ast.ClassDef) and node.name.startswith("Test"):
+                n += sum(1 for m in node.body if isinstance(m, (ast.FunctionDef, ast.AsyncFunctionDef))
+                         and m.name.startswith("test"))
+    return n
+
+
+def integration_path_problems(root: Path, given: str, test_globs: list[str]) -> tuple[str, list[str]]:
+    """Check a user-given integration test path: it must exist inside the project under the configured tests paths,
+    hold at least one test function, and not be the unit command's whole scope. Nothing is ever created (D3)."""
+    rel = given.replace("\\", "/").strip().rstrip("/")
+    while rel.startswith("./"):
+        rel = rel[2:]
+    root = root.resolve()
+    if not rel or rel == "." or os.path.isabs(given) or rel == ".." or rel.startswith("../") or "/../" in rel:
+        return rel, [f"integration test path {given!r} must be a relative path inside the project"]
+    path = (root / rel).resolve()
+    try:
+        path.relative_to(root)
+    except ValueError:
+        return rel, [f"integration test path {given!r} is outside the project"]
+    if not path.exists():
+        return rel, [f"integration test path {rel} does not exist (write the integration tests first; the DevKit "
+                     "never creates test paths or tests)"]
+    roots = _glob_roots(test_globs)
+    if any(r in ("", rel + "/") or r.startswith(rel + "/") for r in roots):
+        return rel, [f"integration test path {rel} is the same scope as the unit test command (it would run the unit "
+                     "tests too); use a separate folder such as tests/integration"]
+    if not any(rel.startswith(r) or (rel + "/").startswith(r) for r in roots):
+        return rel, [f"integration test path {rel} is not under the configured tests paths {test_globs} (G4 would not "
+                     "check those files)"]
+    files = [path] if path.is_file() else [f for f in sorted(path.rglob("*.py")) if "__pycache__" not in f.parts]
+    if _count_test_functions(files) == 0:
+        return rel, [f"integration test path {rel} has no test function (def test_...): only existing tests are "
+                     "registered"]
+    return rel, []
 
 
 def _detect_python(root: Path, given: str | None) -> str:
@@ -81,7 +151,8 @@ def detect_lint(root: Path, python: str, choice: str) -> dict | None:
 
 
 def init_project(root: Path, *, python: str | None = None, source: list[str] | None = None,
-                 tests: list[str] | None = None, lint: str = "auto", allow_syntax_only: bool = False) -> dict:
+                 tests: list[str] | None = None, lint: str = "auto", allow_syntax_only: bool = False,
+                 integration_tests: str | None = None) -> dict:
     root = root.resolve()
     vdir = root / VMODEL_DIR
     if (vdir / "config.json").exists():
@@ -95,19 +166,36 @@ def init_project(root: Path, *, python: str | None = None, source: list[str] | N
             source = ["src/**/*.py"]
         else:
             raise SetupError("no src/ directory: pass --source GLOB (e.g. --source 'mypkg/**/*.py')")
+    test_globs = tests or ["tests/**/*.py"]
+    integration, integration_note = None, None
+    if integration_tests is not None:  # the user named it: refuse rather than register something that is not there
+        rel, probs = integration_path_problems(root, integration_tests, test_globs)
+        if probs:
+            raise SetupError("--integration-tests: " + "; ".join(probs))
+        integration = rel
+    elif (root / DEFAULT_INTEGRATION_DIR).is_dir():
+        rel, probs = integration_path_problems(root, DEFAULT_INTEGRATION_DIR, test_globs)
+        if probs:
+            integration_note = f"{DEFAULT_INTEGRATION_DIR} not registered: " + "; ".join(probs)
+        else:
+            integration = rel
     py = _detect_python(root, python)
     lint_cfg = detect_lint(root, py, lint)
+    unit_argv = list(UNIT_ARGV)
+    if integration:
+        unit_argv.insert(len(unit_argv) - 1, f"--ignore={integration}")
     config = {
         "schema": "vmodel.config/1",
         "project_id": uuid.uuid4().hex,
         "default_profile": "STANDARD",
         "language": "python",
         "python": py,
-        "paths": {"source": source, "tests": tests or ["tests/**/*.py"], "build_config": BUILD_CONFIG},
-        "unit_test": {"argv": ["{python}", "-m", "pytest", "-q", "-p", "no:cacheprovider", "--junitxml={junit}"],
-                      "timeout_s": 600},
+        "paths": {"source": source, "tests": test_globs, "build_config": BUILD_CONFIG},
+        "unit_test": {"argv": unit_argv, "timeout_s": 600},
         "static_analysis": {"lint": lint_cfg, "on_missing_lint": "syntax-only" if allow_syntax_only else "block"},
     }
+    if integration:
+        config["integration_test"] = {"argv": integration_argv(integration), "timeout_s": INTEGRATION_TIMEOUT_S}
     errs = validate(config, load_schema("config"))
     if errs:
         raise SetupError("generated config invalid: " + "; ".join(errs))
@@ -135,7 +223,62 @@ def init_project(root: Path, *, python: str | None = None, source: list[str] | N
     Ledger(project).append({"type": "init", "at": utc_now(), "validator": {"version": VERSION,
                             "core_hash": integ.core_hash, "mode": integ.mode},
                             "config_sha256": sha256_file(vdir / "config.json")})
-    return {"project": str(root), "config": config, "lock": lock, "key": str(project.key_path())}
+    return {"project": str(root), "config": config, "lock": lock, "key": str(project.key_path()),
+            "integration_note": integration_note}
+
+
+def _is_pytest(argv: list[str]) -> bool:
+    if not argv:
+        return False
+    if Path(argv[0]).name.lower().split(".")[0] in ("pytest", "py.test"):
+        return True
+    return any(a == "-m" and i + 1 < len(argv) and argv[i + 1] == "pytest" for i, a in enumerate(argv))
+
+
+def plan_configure_tests(project: Project, integration: str, timeout_s: int = INTEGRATION_TIMEOUT_S) -> dict:
+    """REQ-G6-28: the config change that adds integration_test to an existing project (read-only)."""
+    raw = project.config_path.read_bytes()
+    cfg = load_json(project.config_path, ".vmodel/config.json")
+    if not isinstance(cfg, dict):
+        raise SetupError(".vmodel/config.json is not a JSON object")
+    rel, probs = integration_path_problems(project.root, integration, cfg["paths"]["tests"])
+    if probs:
+        raise SetupError("; ".join(probs))
+    if not isinstance(timeout_s, int) or timeout_s <= 0:
+        raise SetupError("--timeout must be a positive number of seconds")
+    unit = cfg.get("unit_test") if isinstance(cfg.get("unit_test"), dict) else {}
+    argv = list(unit.get("argv") or [])
+    if not _is_pytest(argv):
+        raise SetupError("unit_test.argv is not a pytest command; edit .vmodel/config.json by hand so the unit and "
+                         "integration commands run different tests")
+    if rel in argv or any(a.rstrip("/") == rel for a in argv):
+        raise SetupError(f"unit_test.argv names {rel} explicitly; edit .vmodel/config.json by hand")
+    ignore = f"--ignore={rel}"
+    if ignore not in argv:
+        at = next((i for i, a in enumerate(argv) if "{junit}" in a), len(argv))
+        argv.insert(at, ignore)
+    new = {**cfg, "unit_test": {**unit, "argv": argv},
+           "integration_test": {"argv": integration_argv(rel), "timeout_s": timeout_s}}
+    errs = validate(new, load_schema("config"))
+    if errs:
+        raise SetupError("resulting config invalid: " + "; ".join(errs))
+    return {"integration": rel, "old": cfg, "new": new, "old_sha256": sha256_bytes(raw),
+            "unit_argv_before": unit.get("argv"), "unit_argv_after": argv,
+            "integration_test": new["integration_test"], "replaces": cfg.get("integration_test")}
+
+
+def apply_configure_tests(project: Project, plan: dict) -> dict:
+    """Signed ledger record first, then the config file (the config never changes without a record)."""
+    if sha256_file(project.config_path) != plan["old_sha256"]:
+        raise SetupError(".vmodel/config.json changed since the plan was shown; run the command again")
+    data = (json.dumps(plan["new"], indent=2, ensure_ascii=False) + "\n").encode("utf-8")
+    entry = Ledger(project).append({"type": "config", "at": utc_now(), "change": "integration_test",
+                                    "integration_path": plan["integration"], "old_config_sha256": plan["old_sha256"],
+                                    "new_config_sha256": sha256_bytes(data),
+                                    "integration_test_sha256": hash_obj(plan["integration_test"]),
+                                    "by": "user (tty)"})
+    write_bytes(project.config_path, data)
+    return {"record": entry.id, "config_sha256": sha256_bytes(data)}
 
 
 def repin_lock(project: Project, reason: str) -> dict:

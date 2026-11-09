@@ -17,8 +17,9 @@ from .ledger import Ledger, LedgerError
 from .project import Project, ProjectError
 from .runner import check_evidence, utc_now
 from .schema_lite import validate
-from .setup_project import (SetupError, env_summary, init_project, install_claude, new_work_item, next_id,
-                            plan_settings_sync, uninstall, upgrade_project)
+from .setup_project import (INTEGRATION_TIMEOUT_S, SetupError, apply_configure_tests, env_summary, init_project,
+                            install_claude, new_work_item, next_id, plan_configure_tests, plan_settings_sync, uninstall,
+                            upgrade_project)
 from .status import (impact_view, project_status, render_impact, render_problem, render_status, render_trace,
                      report_markdown, trace_view)
 from .textio import ArtifactError, load_json, read_stdin_bytes, read_text, setup_stdio, write_text
@@ -47,6 +48,11 @@ def render_gate(res: dict) -> str:
                 else "  (not recorded: precondition)")]
     for r in res.get("reasons") or []:
         lines.append(f"  ! {r}")
+    if res.get("applicability") == "not_applicable":
+        lines.append("  applicability: N/A (not_applicable): no integration test was executed; recorded as PASSED "
+                     "only so the gate chain continues, never as a verification")
+    elif res.get("applicability"):
+        lines.append(f"  applicability: {res['applicability']}")
     for c in res.get("checks") or []:
         lines.append(f"  [{MARK.get(c['status'], c['status']):<7}] {c['id']:<28} {c['detail']}")
         for it in (c.get("items") or [])[:15]:
@@ -86,10 +92,18 @@ def _require_tty(action: str) -> bool:
 def cmd_init(args) -> int:
     root = Path(args.project or ".")
     res = init_project(root, python=args.python, source=args.source, tests=args.tests, lint=args.lint,
-                       allow_syntax_only=args.allow_syntax_only)
+                       allow_syntax_only=args.allow_syntax_only, integration_tests=args.integration_tests)
     cfg = res["config"]
     out(f"initialised {res['project']}")
     out(f"  python: {cfg['python']}")
+    out(f"  unit_test: {' '.join(cfg['unit_test']['argv'])}")
+    if cfg.get("integration_test"):
+        out(f"  integration_test: {' '.join(cfg['integration_test']['argv'])}")
+    else:
+        out("  integration_test: not configured (G6 needs it for work items with interfaces or integration test "
+            "specs; once the tests exist run 'vmodel configure-tests --integration tests/integration' in a terminal)")
+    if res.get("integration_note"):
+        out(f"  note: {res['integration_note']}")
     lint = cfg["static_analysis"]["lint"]
     out(f"  lint: {lint['name'] if lint else 'none'} (on_missing_lint={cfg['static_analysis']['on_missing_lint']})")
     out(f"  validator {res['lock']['validator_version']} core {short(res['lock']['core_hash'])} pinned")
@@ -414,6 +428,69 @@ def cmd_lock(args) -> int:
     if not res["complete"]:
         out(f"  WARNING: {res['error']}")
         return 2
+    try:
+        if "integration_test" not in p.config():
+            out("  G6 (integration verification): integration_test is not configured. Work items with interfaces need "
+                "it: 'vmodel configure-tests --integration <path>' (in a terminal, after the integration tests exist)")
+    except ArtifactError:
+        pass
+    return 0
+
+
+def cmd_configure_tests(args) -> int:
+    """USER ONLY (TTY): add integration_test to an existing project (0.2.0, REQ-G6-28)."""
+    p = _project(args)
+    action = "change the test commands in .vmodel/config.json"
+    if not _has_tty(action):
+        return 3
+    try:
+        plan = plan_configure_tests(p, args.integration, args.timeout)
+    except SetupError as exc:
+        out(f"vmodel: error: {exc}")
+        return 2
+    out("The test commands in .vmodel/config.json will become:")
+    out(f"  unit_test:        {' '.join(plan['unit_argv_after'])}")
+    out(f"  integration_test: {' '.join(plan['integration_test']['argv'])} (timeout {plan['integration_test']['timeout_s']}s)")
+    if plan["replaces"] is not None:
+        out(f"  (replaces integration_test: {json.dumps(plan['replaces'])})")
+    out("  The config is part of the G4/G5/G6 inputs: G4 needs a new verifier review, then G4, G5 and G6 run again.")
+    if not _require_tty(action):
+        return 3
+    res = apply_configure_tests(p, plan)
+    out(f"configured integration_test ({res['record']}); config {short(res['config_sha256'])}")
+    return 0
+
+
+def cmd_wiring(args) -> int:
+    """Read-only: the static integration analysis G4/G6 judge from (for the verifier's runtime path declarations)."""
+    from .gates import g6_wiring
+
+    p = _project(args)
+    ctx, errs = open_context(p, args.wi)
+    if ctx is None:
+        out("; ".join(errs))
+        return 3
+    wd, _ix = g6_wiring(ctx)
+    for iv in wd["interfaces"].values():
+        for tv in iv["tests"].values():
+            for v in tv["functions"]:
+                v["test_file_sha256"] = sha256_file(p.root / v["file"])
+    if args.json:
+        _json(wd)
+        return 0
+    for iid, iv in wd["interfaces"].items():
+        cons = "EXTERNAL" if iv["consumer_modules"] is None else ", ".join(iv["consumer_modules"])
+        out(f"{iid}: provider {', '.join(iv['provider_modules']) or '-'}; consumer {cons}")
+        for tid, tv in iv["tests"].items():
+            for v in tv["functions"] or [{"function": "(no test function)", "path": "missing"}]:
+                out(f"  {tid} {v['path']:<17} {v['function']}")
+                if v.get("file"):
+                    out(f"      reaches provider: {v['reaches_provider']}, consumer: {v['reaches_consumer']}; "
+                        f"mechanisms: {', '.join(v['mechanisms']) or '-'}; test_file_sha256 {v['test_file_sha256']}")
+    for tid, views in wd["tests"].items():
+        for v in views:
+            if v["placeholder"]:
+                out(f"  ! {tid} placeholder: {v['function']}")
     return 0
 
 
@@ -475,6 +552,9 @@ def build_parser() -> argparse.ArgumentParser:
         s.add_argument("--lint", choices=["auto", "ruff", "pyflakes", "none"], default="auto")
         s.add_argument("--allow-syntax-only", action="store_true",
                        help="user decision: if no linter is available, accept syntax-only static analysis")
+        s.add_argument("--integration-tests", metavar="PATH",
+                       help="existing integration test folder for G6 (default: tests/integration when it holds tests); "
+                            "the unit command then ignores it")
     inst = sub.choices["install"]
     inst.add_argument("--claude-md-import", action="store_true")
     inst.add_argument("--enable-plugin", metavar="MARKETPLACE_DIR")
@@ -500,7 +580,7 @@ def build_parser() -> argparse.ArgumentParser:
         sp.add_argument("wi")
         sp.add_argument("gate", choices=GATE_ORDER)
         sp.add_argument("--json", action="store_true")
-    sp = add("verify", cmd_verify, "fresh re-evaluation of G1..G5 in order (stops at the first non-PASS)")
+    sp = add("verify", cmd_verify, "fresh re-evaluation of G1..G6 in order (stops at the first non-PASS)")
     sp.add_argument("wi")
     sp.add_argument("gate", nargs="?", choices=GATE_ORDER)
     sp.add_argument("--json", action="store_true")
@@ -524,6 +604,13 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("wi")
     sp.add_argument("gate", choices=GATE_ORDER)
     sp.add_argument("--reason", required=True)
+    sp = add("configure-tests", cmd_configure_tests,
+             "USER ONLY (TTY): add the integration_test command for G6 and keep it out of the unit command")
+    sp.add_argument("--integration", required=True, metavar="PATH", help="existing integration test folder or file")
+    sp.add_argument("--timeout", type=int, default=INTEGRATION_TIMEOUT_S)
+    sp = add("wiring", cmd_wiring, "static integration analysis per interface and integration test (read-only)")
+    sp.add_argument("wi")
+    sp.add_argument("--json", action="store_true")
     sp = add("lock", cmd_lock, "show the lock; --accept-current re-pins (USER ONLY, TTY)")
     sp.add_argument("--accept-current", action="store_true")
     sp.add_argument("--reason")

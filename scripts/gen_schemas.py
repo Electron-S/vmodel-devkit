@@ -267,6 +267,15 @@ schemas = {
                     "status": {"enum": ["open", "resolved"]},
                 },
             }},
+            # 0.2.0 (G6). Shapes are checked by the gates that use them, not here, so a malformed entry makes G4
+            # REVIEW_REQUIRED (REQ-G6-12) and G6 BLOCKED (REQ-G6-16) instead of changing the G2/G3/G4 schema check.
+            # integration_applicability (G2, G3): {"decision": "not_required", "reason": str,
+            #                                      "endpoints_reviewed": [str]}
+            # interfaces (G4): [{"id": "IF-nnn", "result": "ok"|"issue", "provider_symbols": [str], "note": str,
+            #                    "runtime_paths": [{"test": "TEST-nnn", "kind": "subprocess"|"ipc"|"api"|"dynamic_import",
+            #                                       "test_file_sha256": "sha256:...", "entry": str, "note": str}]}]
+            "integration_applicability": {"type": "object"},
+            "interfaces": {"type": "array", "items": {"type": "object"}},
         },
     },
     "defects": {
@@ -280,15 +289,15 @@ schemas = {
                 "required": ["id", "gate", "found_in_records", "description", "root_cause_phase", "root_cause", "fix_scope", "status"],
                 "properties": {
                     "id": {"type": "string", "pattern": r"^DEFECT-\d{3,}$"},
-                    "gate": {"enum": ["G1", "G2", "G3", "G4", "G5"]},
+                    "gate": {"enum": ["G1", "G2", "G3", "G4", "G5", "G6"]},
                     "found_in_records": {"type": "array", "minItems": 1, "items": {"type": "string", "pattern": r"^R\d{5,}$"}},
                     "description": S,
                     "failed_checks": {"type": "array", "items": S},
-                    "root_cause_phase": {"enum": ["P1", "P2", "P3", "P4", "P5"]},
+                    "root_cause_phase": {"enum": ["P1", "P2", "P3", "P4", "P5", "P6"]},
                     "root_cause": S,
                     "fix_scope": {"type": "array", "minItems": 1, "items": S},
                     "related": ids(ANY_ID),
-                    "removed_ids": ids(r"^(DESIGN|TEST)-\d{3,}$"),
+                    "removed_ids": ids(r"^(IF|DESIGN|TEST)-\d{3,}$"),
                     "test_changes": {"type": "array", "items": TEST_CHANGE},
                     "status": {"enum": ["open", "fixed"]},
                 },
@@ -310,7 +319,7 @@ schemas = {
                     "reason": S,
                     "requested_by": OPT_S,
                     "affected": ids(ANY_ID, 1),
-                    "removed_ids": ids(r"^(REQ|DESIGN|TEST)-\d{3,}$"),
+                    "removed_ids": ids(r"^(REQ|IF|DESIGN|TEST)-\d{3,}$"),
                     "test_changes": {"type": "array", "items": TEST_CHANGE},
                     "status": {"enum": ["open", "applied", "rejected"]},
                 },
@@ -338,6 +347,17 @@ schemas = {
                 },
             },
             "unit_test": {
+                "type": "object",
+                "required": ["argv", "timeout_s"],
+                "properties": {
+                    "argv": {"type": "array", "minItems": 1, "items": S},
+                    "timeout_s": {"type": "integer"},
+                    "plugin_autoload": {"type": "boolean"},
+                },
+            },
+            # 0.2.0 (G6, optional): the integration test command. G6 re-checks this shape on every evaluation
+            # (config is schema-checked only at init) and needs {junit} in argv and a positive timeout.
+            "integration_test": {
                 "type": "object",
                 "required": ["argv", "timeout_s"],
                 "properties": {

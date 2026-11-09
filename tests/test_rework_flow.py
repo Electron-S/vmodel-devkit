@@ -44,7 +44,9 @@ class ReworkOrder(unittest.TestCase):
         self.sb.add_defect(self.failed, "G5", phase="P4")
         self.sb.regate_g4()
         self.assertEqual(self.sb.gate("G5")[1]["status"], "PASSED")
-        self.assertEqual(self.wi_state()[0], "PARTIALLY_VERIFIED")
+        # 0.2.0 (REQ-G6-25): G1-G5 PASSED and G6 not evaluated -> IN_PROGRESS (0.1.5: PARTIALLY_VERIFIED)
+        self.assertEqual(self.wi_state()[0], "IN_PROGRESS")
+        self.assertEqual(self.wi_state()[1]["G5"]["status"], "PASSED")
         path = self.sb.wi_dir / "defects.json"
         doc = json.loads(path.read_text(encoding="utf-8"))
         doc["defects"][0]["status"] = "fixed"
@@ -62,7 +64,7 @@ class ReworkOrder(unittest.TestCase):
         self.sb.regate_g4()
         res = self.sb.gate("G5")[1]
         self.assertEqual(res["status"], "PASSED")
-        self.assertEqual(self.wi_state()[0], "PARTIALLY_VERIFIED")
+        self.assertEqual(self.wi_state()[0], "IN_PROGRESS")  # 0.2.0 REQ-G6-25 (0.1.5: PARTIALLY_VERIFIED)
         self.sb.vm("report", "WI-001")
         report = (self.sb.root / ".vmodel/reports/WI-001.md").read_text(encoding="utf-8")
         self.assertIn(f"DEFECT-001 [fixed — verified by {res['record_id']}]", report)

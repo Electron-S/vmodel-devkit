@@ -14,6 +14,6 @@ This project uses the VModel DevKit (V-Model development workflow with an indepe
 4. Never weaken or delete tests to pass a gate. If a test must change, record `test_changes` (reason, requirements, impact) in a defect or change request.
 5. When a gate fails: record a DEFECT that references the failed record id and links every failing TEST id `vmodel status` shows, fix at the root-cause phase, set the DEFECT `status` to `fixed` together with the fix (defects.json is a G4/G5 input: editing it after a pass makes the gates STALE), then re-evaluate. After the same failure 3 times the validator BLOCKS the gate: stop and report to the user.
 6. Ask the user (once, batched) about critical ambiguities at G1. Record non-critical assumptions instead of asking.
-7. The MVP verifies G1–G5 only. A work item that passes G1–G5 is `PARTIALLY_VERIFIED`; never call it a complete V-Model verification.
+7. This DevKit verifies G1–G6. G6 runs the separate `integration_test` command; if it is missing, ask the user (never substitute the unit tests). G6 "N/A" means no integration test ran (a confirmed single component without interfaces): never report it as an integration pass. A work item that passes G1–G6 is `PARTIALLY_VERIFIED` (G7 is not implemented); never call it a complete V-Model verification.
 
 Commands: `/vmodel:start`, `/vmodel:status`, `/vmodel:verify`, `/vmodel:rework`, `/vmodel:report`.

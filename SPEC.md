@@ -1,14 +1,14 @@
 # VModel DevKit — SPEC
 
-버전: 0.1 (MVP 범위 확정본, 2026-11-08)
+버전: 0.1 (MVP 범위 확정본, 2026-11-08) + 0.2.0 후보(G6 구현, 2026-11-09, D42)
 상태 표기: **[MVP]** = 이번에 구현·검증, **[EXT]** = 설계만 하고 확장 단계로 남김
 
 ## 1. 목적과 범위
 
 Claude Code 위에서 ASPICE V-Model을 따르는 개발 절차(요구사항 → 설계 → 구현 → 독립 검증 → 결함 수정 → 재검증)를 강제하는 재사용 가능한 개발환경이다. ASPICE 인증이 목적이 아니다. "AI가 PASS라고 말했다"가 아니라 **독립 Validator가 직접 실행·판정한 증거**만 완료로 인정하는 것이 핵심이다.
 
-- MVP = STANDARD 프로파일의 G1~G5 실행. G6~G7, LITE, STRICT는 [EXT].
-- MVP 완료는 V-Model 전체 완료가 아니다. Work Item은 G1~G5를 통과해도 `PARTIALLY_VERIFIED`까지만 간다(§6.2).
+- MVP = STANDARD 프로파일의 G1~G5 실행(0.1.x). 0.2.0은 G6 통합 검증을 더한다. G7, LITE, STRICT는 [EXT].
+- V-Model 전체 완료가 아니다. Work Item은 G1~G6(G6은 통과 또는 확인된 N/A)을 통과해도 `PARTIALLY_VERIFIED`까지만 간다(§4.2).
 - WorkMind는 이 MVP 이후 첫 적용 대상이며 지금은 건드리지 않는다.
 
 ## 2. 구성 요소
@@ -33,7 +33,7 @@ Claude Code 위에서 ASPICE V-Model을 따르는 개발 절차(요구사항 →
 | P3 | 상세 설계·테스트 명세 | G3 Design & Test Planning | 오케스트레이터(Detailed Design) + vmodel:test-designer | vmodel:verifier | MVP |
 | P4 | 구현·정적 분석·코드 리뷰 | G4 Implementation | 오케스트레이터(Implementation 역할) | vmodel:verifier | MVP |
 | P5 | 단위 검증 | G5 Unit Verification | Validator가 직접 실행 | (기계 판정) | MVP |
-| P6 | 통합 검증 | G6 Integration Verification | Validator가 `integration_test` 명령을 직접 실행 | (기계 판정, AI 리뷰 없음) | EXT (설계 확정 D41, 미구현) |
+| P6 | 통합 검증 | G6 Integration Verification | Validator가 `integration_test` 명령을 직접 실행 | (기계 판정, AI 리뷰 없음) | 0.2.0 (D41·D42) |
 | P7 | 시스템 검증 | G7 System Verification | — | — | EXT |
 
 각 Gate의 입력·출력·필수 산출물·체크 ID·PASS 기준의 정본은 `gates.json`이다. 아래는 그 요약이다.
@@ -88,20 +88,22 @@ Claude Code 위에서 ASPICE V-Model을 따르는 개발 절차(요구사항 →
 - G5.NO_WEAKENING 직전 G5 기록 대비 변경·삭제된 테스트 파일은 결함/CR의 `test_changes`(근거·관련 REQ·영향)로 정당화, 이전에 실행된 TEST ID가 사라지지 않음
 - G5.INPUTS_UNCHANGED 실행 중 검증 대상 파일이 바뀌지 않음
 
-### 3.1-1 G6 Integration Verification (설계 확정 2026-11-09, D41, 미구현)
-정본은 `docs/g6/G6-DESIGN.md`. 요약:
+### 3.1-1 G6 Integration Verification (0.2.0, D41·D42)
+정본은 `docs/g6/G6-DESIGN.md`(REQ-G6-01~26)와 `docs/g6/WORKITEM.md`(사용자 결정 D1~D8 반영, REQ-G6-27~34). 요약:
 - 실행: config `integration_test`(argv에 `{junit}`)를 Validator가 직접 실행한다. 적용 대상인데 명령이 없으면 BLOCKED이고 unit 명령으로 대체하지 않는다.
-- 체크: G6.PREREQ, G6.APPLICABILITY, G6.CONFIG, G6.EXECUTION, G6.RESULTS, G6.SCOPE(unit 테스트가 섞이면 실패), G6.TEST_MAPPING(integration 명세 ID마다 통과 케이스), G6.IF_COVERAGE(IF마다 통과했고 Validator의 함수 단위 정적 분석으로 provider·consumer에 닿는 integration 테스트), G6.NO_WEAKENING(이전에 실행된 ID와 이전 G2 PASS의 IF 유지, 삭제는 `removed_ids`), G6.INPUTS_UNCHANGED. 모두 기계 판정이고 ai_review 체크가 없다.
+- 체크: G6.PREREQ, G6.APPLICABILITY, G6.CONFIG, G6.EXECUTION, G6.RESULTS, G6.SCOPE(unit 테스트가 섞이면 실패), G6.TEST_MAPPING(integration 명세 ID마다 통과 케이스), G6.IF_COVERAGE, G6.NO_WEAKENING(이전에 실행된 ID와 이전 G2 PASS의 IF 유지, 삭제는 `removed_ids`), G6.INPUTS_UNCHANGED. 모두 기계 판정이고 ai_review 체크가 없다.
+- IF 커버리지(D42): IF마다 이번 실행에서 통과한 integration 테스트가 (A) Validator가 다시 계산한 **호출 기반** 정적 경로로 provider(와 ARCH consumer)에 닿거나, (B) G4 리뷰가 선언한 실행 경로(subprocess·IPC·API·동적 import, 테스트 파일 해시 연결)이고 Validator의 실행 계측이 그 테스트 동안 provider(와 consumer) 함수 실행을 기록해야 한다. import·참조만 하는 테스트와 호출 없는 placeholder는 G4에서 실패한다. (B) 선언에 실행 증거가 없으면 BLOCKED(`integration_evidence_insufficient`).
 - N/A: IF 0, integration 명세 0, 단일 컴포넌트, G2·G3 리뷰의 `integration_applicability` 확인(외부 끝점 포함), 이전 IF 삭제의 `removed_ids` 정당화가 모두 있을 때만. PASSED + `applicability: not_applicable`로 기록하고 N/A로 표시하며 결함 검증으로 치지 않는다. 확인할 수 없으면 BLOCKED.
-- G4는 통합 준비 상태(인터페이스 구현 심볼, 통합 테스트 코드, IF별 정적 도달, IF별 리뷰)를 맡는다. G5는 `integration_test`가 설정되면 integration 테스트를 실행하지 않아야 한다(G5.SCOPE).
-- G6은 G1~G5의 manifest를 바꾸지 않는다. 판정이 바뀌는 범위는 IF·통합 명세가 있는 WI의 G4와 `integration_test`를 설정한 프로젝트의 G5뿐이다(설계 §1.2). G6 manifest = 코드 manifest + `reviews/G2.json` + `reviews/G3.json`.
+- G4는 통합 준비 상태를 맡는다: G4.TEST_CODE(unit·integration 명세 모두 함수 필요), G4.INTERFACE_IMPLEMENTED(IF signature의 심볼이 provider 모듈에 정의), G4.INTEGRATION_WIRING(테스트별 경로 A/B 분류, placeholder·도달 없음 실패, 선언 없는 경로 B는 REVIEW_REQUIRED, provider patch 경고), G4.REVIEW의 `interfaces` 항목(모든 IF, 실재하는 `provider_symbols`, `issue`면 FAILED). G5는 `integration_test`가 설정되면 integration 테스트를 실행하지 않아야 한다(G5.SCOPE).
+- G6은 G1~G5의 manifest를 바꾸지 않는다. 판정이 바뀌는 범위는 IF·통합 명세가 있는 WI의 G4와 `integration_test`를 설정한 프로젝트의 G5뿐이다(설계 §1.2). G6 manifest = 코드 manifest + `reviews/G2.json` + `reviews/G3.json` + `reviews/G4.json`.
+- 결함: G6 실패 결함의 범위를 정당하게 지워 G6이 N/A가 되면 표시 상태 OUT_OF_SCOPE(CLOSED 아님, §7 3-1).
 
 ### 3.2 공통 전제 조건 (기록 없이 BLOCKED 반환)
 - Validator 무결성 확인 실패, 서명 키 없음, 원장 변조·롤백(외부 앵커 불일치) → 모든 Gate BLOCKED
 - 이전 Gate가 현재 해시로 PASSED가 아님
 - 직전 평가가 FAILED인데 그 기록 ID를 가리키는 결함(DEFECT) 기록이 없음 (재작업 절차 강제)
 - 동일 원인 3회 연속 실패로 BLOCKED된 뒤 사용자 `unblock`이 없음
-- 미구현 Gate(G6, G7) 요청 (0.1.5 기준. G6은 설계 확정, D41)
+- 미구현 Gate(G7) 요청 (0.1.5까지는 G6도)
 
 ## 4. 상태 정의
 
@@ -120,7 +122,7 @@ Claude Code 위에서 ASPICE V-Model을 따르는 개발 절차(요구사항 →
 
 ### 4.2 Work Item 상태 (파생)
 - `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`
-- `PARTIALLY_VERIFIED` — 구현된 필수 Gate(G1~G5)는 모두 현재 해시로 PASSED, 그러나 프로파일이 요구하는 G6~G7이 DevKit에 미구현
+- `PARTIALLY_VERIFIED` — 구현된 필수 Gate(0.2.0: G1~G6, G6은 N/A 포함)는 모두 현재 해시로 PASSED, 그러나 프로파일이 요구하는 G7이 DevKit에 미구현. G1~G5만 PASSED이고 G6을 평가하지 않았으면 `IN_PROGRESS`(status의 `gate_summary`가 Gate 결과를 따로 보인다)
 - `COMPLETED` — 프로파일이 요구하는 **모든** Gate가 현재 해시로 PASSED (MVP의 STANDARD에서는 도달 불가 — 의도된 동작)
 
 ## 5. 증거 신뢰 모델
@@ -132,7 +134,7 @@ Claude Code 위에서 ASPICE V-Model을 따르는 개발 절차(요구사항 →
 5. **최신성**: Gate별 manifest = 해당 Gate 산출물 + 모든 상위 산출물 (+ G4/G5는 VCS·도구 캐시·가상환경·`build/`·`dist/`·`__pycache__` 바이트코드를 뺀 **프로젝트 전체 파일**, `.vmodel/config.json`, `defects.json`, `change-requests.json`). 파일 하나라도 바뀌면 PASSED → STALE. Validator Core가 바뀌거나 상위 Gate가 PASSED가 아니게 되어도 STALE. dirty 작업 트리도 검증 가능하며 그 시점 파일 해시를 저장한다. 테스트 인터프리터의 설치 패키지 목록은 증거에 기록만 한다(STALE 판정 미포함 — 한계).
 5-1. **리뷰 진위**: guard 훅이 `vmodel review-submit`을 `agent_type == vmodel:verifier`에게만 허용하고, Gate는 원장에 등록된 해시와 같은 리뷰만 인정한다.
 6. **Validator 보호**: Core 해시를 프로젝트 `.vmodel/devkit.lock.json`에 고정. 실행 시 자기 파일 해시를 다시 계산해 lock과 다르면 BLOCKED. 릴리스 사본은 `RELEASE_MANIFEST.json`으로 파일별 대조. 쓰기 보호는 PreToolUse Hook(`onFailure: block`으로 fail-closed) + 프로젝트 권한 deny 규칙의 이중 장치. guard는 Bash 명령에서 쓸 수 없는 리디렉션(정확히 `/dev/null`로 가는 출력, fd 복제·닫기, 단순 입력)을 지운 뒤 쓰기 여부를 판정하고, 해석이 불확실하면 쓰기로 본다(0.1.4, D36).
-7. **한계 (주장하지 않는 것)**: 같은 OS 사용자로 임의 코드를 실행할 수 있는 에이전트(자기가 쓴 스크립트 실행, pty로 TTY 흉내)는 이론상 키를 읽고 원장·앵커를 위조하거나 사용자 전용 명령을 실행할 수 있다. 테스트 코드는 테스트 러너와 같은 프로세스에서 돌기 때문에 G4.TEST_INTEGRITY가 못 잡는 방식으로 결과를 조작할 수 있다. 사용자 결정 기록(`decided_by: "user"`)은 자기 증명이다. Hook과 권한 규칙은 우발적·일반적 우회를 막는 장치이지 OS 수준 격리가 아니다. 최종 신뢰 경계는 별도 사용자/CI에서 신뢰 사본으로 `vmodel audit` 및 전체 재검증(`vmodel verify`)을 돌리는 것이다 [EXT: CI 연동].
+7. **한계 (주장하지 않는 것)**: G6의 실행 계측 파일은 테스트 대상 프로세스 안에서 쓰이므로 테스트 코드가 위조할 수 있다(JUnit과 같은 경계; G4.TEST_INTEGRITY가 `VMODEL_TRACE` 언급을 잡는다). 정적 호출 분석은 Python 근사이며 "provider 모듈에 닿음"이 인터페이스 의미 검증을 뜻하지는 않는다(G4 리뷰 몫). 같은 OS 사용자로 임의 코드를 실행할 수 있는 에이전트(자기가 쓴 스크립트 실행, pty로 TTY 흉내)는 이론상 키를 읽고 원장·앵커를 위조하거나 사용자 전용 명령을 실행할 수 있다. 테스트 코드는 테스트 러너와 같은 프로세스에서 돌기 때문에 G4.TEST_INTEGRITY가 못 잡는 방식으로 결과를 조작할 수 있다. 사용자 결정 기록(`decided_by: "user"`)은 자기 증명이다. Hook과 권한 규칙은 우발적·일반적 우회를 막는 장치이지 OS 수준 격리가 아니다. 최종 신뢰 경계는 별도 사용자/CI에서 신뢰 사본으로 `vmodel audit` 및 전체 재검증(`vmodel verify`)을 돌리는 것이다 [EXT: CI 연동].
 8. **순환 검증 금지**: Validator 자체의 정확성은 독립 하네스(`tests/`, unittest)로만 판정한다. DevKit 개발 자체를 DevKit Validator로 승인하지 않는다.
 
 ## 6. Work Item과 추적성
@@ -153,6 +155,7 @@ Claude Code 위에서 ASPICE V-Model을 따르는 개발 절차(요구사항 →
     reviews/G1..G4.json  # Verifier 리뷰 (vmodel:verifier만 쓰기 가능)
   state/ledger.jsonl, head.json   # Validator 전용 (보호)
   evidence/WI-001/G5/<run>/       # Validator 전용 (보호)
+  evidence/WI-001/G6/<run>/       # 통합 실행 증거 + trace/ 계측 파일 (0.2.0)
   reports/WI-001.md               # 파생 보고서
 ```
 기계 판독 형식은 JSON(UTF-8)이다. YAML은 표준 라이브러리가 없어 쓰지 않는다.
@@ -171,13 +174,13 @@ REQ ↔ ARCH(`components[].requirements`) ↔ DESIGN(`units[].component`, `units
 ## 7. 재작업 루프
 
 1. Gate FAILED → Validator가 실패 체크·실패 테스트를 기록, `failure_signature` 계산. `vmodel status`가 FAILED Gate 아래에 실패 체크와 실패 TEST ID를 보여준다 (0.1.3, D30)
-2. 오케스트레이터가 DEFECT 작성: `found_in_records`(실패 기록 ID), `root_cause_phase`(P1~P4), `root_cause`, `fix_scope`, `related`(실패 TEST ID 포함). Validator는 인용된 실패 기록에서 실패 TEST를 직접 꺼내 `failing_tests`·`unlinked_failing_tests`를 status/lint/report에 표시한다 (원장 파생, 경고만, D29)
+2. 오케스트레이터가 DEFECT 작성: `found_in_records`(실패 기록 ID), `root_cause_phase`(P1~P4, 0.2.0부터 통합 실행 환경은 P6), `root_cause`, `fix_scope`, `related`(실패 TEST ID 포함). Validator는 인용된 실패 기록에서 실패 TEST를 직접 꺼내 `failing_tests`·`unlinked_failing_tests`를 status/lint/report에 표시한다 (원장 파생, 경고만, D29)
 2-1. 결함 추적 점검 (0.1.4, D35·D36, 표시 전용이며 Gate 판정에 쓰지 않는다)
    - 유효한 실패 증거는 같은 WI의 서명된 gate 기록 중 FAILED 또는 3회 동일 실패 BLOCKED뿐이다(재작업 전제 조건과 같은 정의). 그 밖의 인용(원장에 없음, 다른 WI, gate 기록 아님, PASSED·REVIEW_REQUIRED·환경 BLOCKED)은 무효이고 `failing_tests`와 `verified_by` 계산에서 빠진다.
-   - TEST별 결과: G5 기록은 실패 TEST와 UNKNOWN(실행되지 않았거나 결과가 기록되지 않음)을 구분한다. 테스트를 실행하지 않는 G1~G4의 실패는 N/A다.
+   - TEST별 결과: G5·G6 기록은 실패 TEST와 UNKNOWN(실행되지 않았거나 결과가 기록되지 않음)을 구분한다. 테스트를 실행하지 않는 G1~G4의 실패는 N/A다.
    - 분류: 오류 `evidence_integrity`(원장 무결성 실패, 또는 인용된 실패 기록·검증 PASS 기록의 증거 파일이 원장과 다름 → `verified_by` 보류)와 `invalid_citation`, 경고 `unlinked_failing_test`와 `unknown_test_result`. status(JSON `errors`·`warnings`·WI `defect_checks`, 텍스트 `ERROR [..]`/`WARNING [..]`), lint, report(`## Defect trace check` 절, 항목이 없으면 None)가 같은 이름을 쓴다. lint는 오류나 경고가 하나라도 있으면 종료 코드 1이다
 3. 원인 단계로 복귀해 산출물·코드 수정, **같은 단계에서 DEFECT `status: fixed`** (재리뷰 전). defects.json은 G4/G5 입력이므로 통과 후 수정하면 다시 STALE (D28). 영향 Gate 자동 STALE. G4 재리뷰에서 verifier는 원인이 모든 실패를 설명하는지 status의 실패 정보와 대조한다
-3-1. 결함 종료의 증거는 `fixed` 표기가 아니라 원장의 "인용된 실패 기록 이후 그 Gate의 첫 PASS"(`verified_by`)다. 0.1.4부터 표시 상태를 원장과 현재 Gate 상태에서 파생한다(D32 권장안 C, 이름과 규칙은 D37). 앞 조건이 우선한다: UNKNOWN(원장 무결성 실패), VERIFICATION_FAILED(결함이 실패를 인용한 Gate마다 첫 인용 실패 이후 마지막 PASS/실패 평가를 보고 하나라도 실패 — FAILED 또는 3회 동일 실패 BLOCKED. REVIEW_REQUIRED·환경 BLOCKED는 건너뜀), UNKNOWN(검증 PASS는 있지만 그 PASS나 인용 실패 기록의 증거가 원장과 다름), CLOSED(`verified_by`가 있고 그 Gate가 현재 입력으로 PASSED), REVERIFY_REQUIRED(`verified_by`는 있지만 그 Gate가 지금 PASSED가 아님: STALE·REVIEW_REQUIRED·BLOCKED), FIX_APPLIED·OPEN(검증 전, 주장 `fixed`·`open`). 과거 검증 성공은 상태와 따로 `verified_by`·`verification_history`로 남는다. "verified by"는 CLOSED에만 쓰고, 다른 상태의 과거 성공은 "previously passed in"으로 표시한다(증거가 보류된 PASS는 제외). 다음 조치는 `closure_action`. Gate가 STALE이거나 재검증에 실패하면 CLOSED·검증 완료로 표시하지 않는다. defects.json의 enum은 `open`/`fixed` 그대로다
+3-1. 결함 종료의 증거는 `fixed` 표기가 아니라 원장의 "인용된 실패 기록 이후 그 Gate의 첫 PASS"(`verified_by`)다. 0.1.4부터 표시 상태를 원장과 현재 Gate 상태에서 파생한다(D32 권장안 C, 이름과 규칙은 D37). 앞 조건이 우선한다: UNKNOWN(원장 무결성 실패), VERIFICATION_FAILED(결함이 실패를 인용한 Gate마다 첫 인용 실패 이후 마지막 PASS/실패 평가를 보고 하나라도 실패 — FAILED 또는 3회 동일 실패 BLOCKED. REVIEW_REQUIRED·환경 BLOCKED는 건너뜀), UNKNOWN(검증 PASS는 있지만 그 PASS나 인용 실패 기록의 증거가 원장과 다름), CLOSED(`verified_by`가 있고 그 Gate가 현재 입력으로 PASSED), REVERIFY_REQUIRED(`verified_by`는 있지만 그 Gate가 지금 PASSED가 아님: STALE·REVIEW_REQUIRED·BLOCKED), FIX_APPLIED·OPEN(검증 전, 주장 `fixed`·`open`). 0.2.0(D42): UNKNOWN(원장) 다음에 OUT_OF_SCOPE(종료 Gate가 G6이고 G6이 지금 N/A — 범위 삭제가 CR/DEFECT `removed_ids`와 G2·G3 리뷰로 정당화됨, 검증 아님)를 본다. G6 N/A 기록은 `verified_by`·`verification_history`·`last_verification`에서 빠진다. 과거 검증 성공은 상태와 따로 `verified_by`·`verification_history`로 남는다. "verified by"는 CLOSED에만 쓰고, 다른 상태의 과거 성공은 "previously passed in"으로 표시한다(증거가 보류된 PASS는 제외). 다음 조치는 `closure_action`. Gate가 STALE이거나 재검증에 실패하면 CLOSED·검증 완료로 표시하지 않는다. defects.json의 enum은 `open`/`fixed` 그대로다
 4. 상위부터 재평가. 재평가 전 결함 기록이 없으면 BLOCKED
 5. 같은 `failure_signature`로 3회 연속 FAILED → BLOCKED, 자동 반복 중지 후 사용자 보고. 해제는 사용자가 터미널(TTY)에서 `vmodel unblock`
 6. 테스트 완화·삭제 금지: G3.NO_SILENT_REMOVAL, G5.NO_WEAKENING이 기계적으로 막는다. 테스트를 바꿔야 하면 `test_changes`에 근거·관련 REQ·영향을 기록하고 Verifier가 검토
@@ -188,14 +191,14 @@ REQ ↔ ARCH(`components[].requirements`) ↔ DESIGN(`units[].component`, `units
 
 | 요구 이름 | 실제 명령 | 내용 |
 |---|---|---|
-| /vmodel-start | `/vmodel:start <요청>` | WI 생성 후 P1~P5 진행 (자동 트리거 대상) |
+| /vmodel-start | `/vmodel:start <요청>` | WI 생성 후 P1~P6 진행 (자동 트리거 대상) |
 | /vmodel-status | `/vmodel:status [WI]` | Gate 상태·STALE·무결성 |
-| /vmodel-verify | `/vmodel:verify [WI] [G#]` | Validator로 Gate 재평가 (G5는 테스트 재실행) |
+| /vmodel-verify | `/vmodel:verify [WI] [G#]` | Validator로 Gate 재평가 (G5·G6은 테스트 재실행) |
 | /vmodel-rework | `/vmodel:rework [WI]` | 실패 분석 → DEFECT → 원인 단계 수정 → 재검증 |
 | /vmodel-report | `/vmodel:report [WI]` | Markdown 보고서 생성 |
 
-CLI(`bin/vmodel`): `init`, `install`, `uninstall`, `new-wi`, `next-id`, `lint`, `hash`, `review-submit`, `gate`, `verify`, `status`, `trace`, `impact`, `report`, `audit`, `verify-evidence`, `unblock`, `lock`, `hook`, `version`.
-사용자 전용(guard가 에이전트 실행 차단): `init`, `install`, `uninstall`, `unblock`(TTY), `lock --accept-current`(TTY), `uninstall --purge`(TTY). verifier 전용: `review-submit`.
+CLI(`bin/vmodel`): `init`, `install`, `uninstall`, `new-wi`, `next-id`, `lint`, `hash`, `review-submit`, `gate`, `verify`, `status`, `trace`, `impact`, `report`, `audit`, `verify-evidence`, `unblock`, `lock`, `hook`, `version`, `wiring`(0.2.0, 읽기 전용), `configure-tests`(0.2.0).
+사용자 전용(guard가 에이전트 실행 차단): `init`, `install`, `uninstall`, `unblock`(TTY), `lock --accept-current`(TTY), `uninstall --purge`(TTY), `configure-tests`(TTY, 0.2.0). verifier 전용: `review-submit`.
 
 ### 8.1 자동 실행 정책
 자동 대상: 신규 기능 개발, 기존 기능의 실질적 변경, 버그 수정, 아키텍처 변경, 대규모 리팩터링.
@@ -214,22 +217,22 @@ G1에서 필수 모호점을 모아 한 번에 묻는다. 안전한 기본값이
 | Detailed Design | `agents/detailed-designer.md` | 역할 지침 | |
 | Test Design | `agents/test-designer.md` | **서브에이전트로 활성** — 구현과 독립적으로 테스트 명세 작성 | |
 | Implementation | `agents/implementer.md` | 역할 지침 (큰 WI는 위임 가능) | |
-| Verification | `agents/verifier.md` | **서브에이전트로 활성** — 별도 컨텍스트, G1~G4 리뷰만 작성 | Hook이 reviews/ 쓰기를 verifier로 제한 |
+| Verification | `agents/verifier.md` | **서브에이전트로 활성** — 별도 컨텍스트, G1~G4 리뷰만 작성 (0.2.0: G2·G3의 `integration_applicability`, G4의 `interfaces`·`runtime_paths`) | Hook이 reviews/ 쓰기를 verifier로 제한 |
 
 WI 하나당 병렬 서브에이전트는 최대 2개. Agent 리뷰만으로 Gate를 통과시키지 않는다(리뷰는 체크 하나일 뿐, 판정은 Validator).
 
 ## 10. 개발 프로파일
 
-| Gate / 산출물 | LITE [EXT] | STANDARD [MVP: G1~G5] | STRICT [EXT] |
+| Gate / 산출물 | LITE [EXT] | STANDARD [0.2.0: G1~G6] | STRICT [EXT] |
 |---|---|---|---|
 | G1 Requirements | 필수 (영향 분석 중심, 변경 REQ만) | 필수 | 필수 + 사용자 승인 |
 | G2 Architecture | N/A 사유 기록 가능 | 필수 | 필수 + 대안 2개 이상 트레이드오프 |
 | G3 Design & Test Planning | 변경 단위 설계 + 테스트 명세 필수 | 필수 | 필수 + 모든 경계조건별 테스트 |
 | G4 Implementation | 필수 (정적 분석 + 리뷰) | 필수 | 필수 + 리뷰 2회(독립 2인) |
 | G5 Unit Verification | 필수 | 필수 | 필수 + 커버리지 기준 |
-| G6 Integration | 선택 | 필수 [EXT] | 필수 [EXT] |
+| G6 Integration | 선택 | 필수 (IF 없음이 확인되면 N/A) | 필수 [EXT] |
 | G7 System | 선택 | 필수 [EXT] | 필수 [EXT] |
-| WI 완료 상태 | COMPLETED 가능 (G6/7 미구현 시에도 선택이므로) [EXT] | MVP에서는 PARTIALLY_VERIFIED | [EXT] |
+| WI 완료 상태 | COMPLETED 가능 (G6/7 미구현 시에도 선택이므로) [EXT] | G7 미구현이라 PARTIALLY_VERIFIED | [EXT] |
 
 ## 11. 설치·버전·제거
 
@@ -238,6 +241,7 @@ WI 하나당 병렬 서브에이전트는 최대 2개. Agent 리뷰만으로 Gat
 - 프로젝트 설치: `<release>/bin/vmodel install --project <dir>` → `.vmodel/` 생성, lock 고정, `.claude/settings.json`에 deny 규칙 **병합**(기존 값 보존, 백업, 충돌 보고), 설치 기록 저장. CLAUDE.md는 기본적으로 건드리지 않고 SessionStart Hook으로 지침을 주입한다. 옵션 `--claude-md-import`일 때만 기존 CLAUDE.md 끝에 `@.vmodel/VMODEL.md` 한 줄을 추가한다.
 - 플러그인 등록: 전역 레지스트리(`~/.claude/plugins`)를 건드리므로 설치 스크립트가 자동 실행하지 않고, 사용자가 실행할 명령(`claude plugin marketplace add <dist> --scope project`, `claude plugin install vmodel@vmodel-devkit --scope project`)을 출력한다. 세션 한정 사용은 `--plugin-dir dist/vmodel-<ver>`.
 - 업그레이드 (0.1.5, D38): 새 릴리스의 `bin/vmodel lock --accept-current`(사용자 TTY) 한 번으로 한다. TTY가 없으면 설정을 읽기 전에 거부한다. 확인 전에 바뀔 권한 규칙을 보여 주고, 'yes'를 받으면 (1) 쓰기 없이 검사(settings·설치 기록을 읽을 수 있는지와 형식, Validator 무결성, 서명 키·원장, 보여 준 계획과 지금 파일이 같은지), (2) settings·설치 기록·lock 사본을 `.vmodel/install/backup/upgrade-<시각>/`에 저장, (3) 설치 기록에 새 규칙 소유권을 먼저 적고 settings에 새 릴리스 규칙(Core deny, CLI allow)을 추가, (4) 재고정(서명된 원장 lock 기록 → lock 파일), (5) 설치 기록의 이전 릴리스 DevKit 규칙만 settings에서 제거하고 설치 기록을 새 릴리스로 확정한다. DevKit 규칙은 설치 기록의 `added_deny`·`added_allow` 문자열로만 식별하므로 사용자 규칙(이전 경로를 언급하는 것, DevKit과 같은 문자열 포함)은 남는다. deny 규칙은 사용자가 지웠어도 다시 넣고, allow 규칙은 이전 릴리스의 같은 자리 규칙을 사용자가 지웠으면 다시 허용하지 않는다. 원장에 재고정 기록이 생기기 전에 실패하거나 중단되면 settings·설치 기록·lock을 바이트 그대로 복원한다. 그 뒤의 실패는 되돌리지 않고 이전+새 규칙이 함께 남은 안전한 상태로 끝나며, 같은 명령을 다시 실행하면 마무리된다. 바꿀 것이 없으면 settings·설치 기록을 쓰지 않는다. 설치 기록이 없는 프로젝트(`init`만)는 settings를 건드리지 않는다. Core 해시가 바뀌므로 기존 PASS는 전부 STALE. 재검증 때 G1~G3 리뷰는 산출물이 그대로면 유효하지만, 업그레이드가 G4/G5 코드 manifest에 포함된 `.claude/settings.json`을 바꾸므로 G4는 verifier 리뷰를 다시 받아야 한다(0.1.5에서 확인, D40). 다른 릴리스(경로나 버전)가 설치한 프로젝트에 `install`을 하면 거부하고 이 절차를 안내한다. 생성 deny 규칙에 업그레이드 백업 폴더(`Edit(/.vmodel/install/**)`)가 들어간다. 0.1.4 이하로 내릴 때는 그 릴리스에 설정 갱신이 없으므로 Claude 세션을 닫고 `<현재> uninstall` → `<이전> install` → `<이전> lock --accept-current` 순서로 한다(그 사이 DevKit 규칙이 없는 구간이 있다). 0.1.4까지는 재고정이 settings를 바꾸지 않아 규칙이 이전 릴리스 경로에 남았다.
+- G6 명령 설정 (0.2.0, D42): 새 `init`은 실제로 있고 테스트 함수가 있는 통합 테스트 경로(`--integration-tests PATH` 또는 `tests/integration/`)만 `integration_test`로 등록하고 unit 명령에 `--ignore=<경로>`를 더한다. 기존 프로젝트는 사용자 전용 `vmodel configure-tests --integration PATH`(TTY, 같은 검증, 서명 원장 `config` 기록)로 옮긴다. `integration_test` 없는 config는 그대로 유효하고 G5 판정은 0.1.5와 같다(섞인 실행은 status·report 경고). 0.1.5 → 0.2.0 업그레이드 뒤 WI는 G6 평가 전까지 IN_PROGRESS다.
 - 제거: `vmodel uninstall --project <dir>` → 설치 기록에 있는 항목만 되돌림. `.vmodel/` 데이터·서명 키·앵커는 `--purge`(TTY 필요)일 때만 삭제. 앵커가 남은 경로에서는 `init`이 거부된다(이력 보호).
 
 ## 12. 실행 환경
@@ -247,7 +251,7 @@ WI 하나당 병렬 서브에이전트는 최대 2개. Agent 리뷰만으로 Gat
 - 메시지는 ASCII 영어(CP949 콘솔에서도 깨지지 않음). 산출물 안의 한글은 그대로 통과.
 - 훅 명령은 `sh`로 python3/python/py를 탐색 (Windows는 Git Bash 필요).
 
-## 13. 테스트 시나리오 (T01~T18)
+## 13. 테스트 시나리오 (T01~T18, G6은 `docs/g6/WORKITEM.md` §5의 T01~T20)
 
 | ID | 내용 | 검증 방법 |
 |---|---|---|
@@ -269,4 +273,4 @@ WI 하나당 병렬 서브에이전트는 최대 2개. Agent 리뷰만으로 Gat
 T01~T04의 의미적 정확성(요구사항이 사용자 의도와 맞는지 등)은 자동 평가로 보장할 수 없으며 Verifier 리뷰와 사람 검토의 몫이다.
 
 ## 14. 확장 단계 [EXT] (구현하지 않음)
-G6 통합 검증 실행(설계 확정: `docs/g6/G6-DESIGN.md`, D41), G7 시스템 수용 검증, LITE/STRICT 프로파일 실행, 다중 언어 어댑터(JUnit 기반 일반화), 커버리지 기준, 강화된 배포(서명 릴리스), CI 독립 검증, WorkMind 적용.
+G7 시스템 수용 검증, LITE/STRICT 프로파일 실행, 다중 언어 어댑터(JUnit 기반 일반화), 커버리지 기준, 강화된 배포(서명 릴리스), CI 독립 검증, WorkMind 적용.

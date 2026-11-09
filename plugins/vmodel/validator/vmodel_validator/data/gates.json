@@ -166,7 +166,7 @@
         {
           "id": "G2.REVIEW",
           "kind": "ai_review",
-          "desc": "verifier review approves the current manifest hash; the review must be registered in the signed ledger with 'vmodel review-submit' (verifier only)"
+          "desc": "verifier review approves the current manifest hash; the review must be registered in the signed ledger with 'vmodel review-submit' (verifier only); a work item without interfaces also records integration_applicability (decision not_required, reason, endpoints_reviewed), which only G6 uses for N/A (not part of the G2 decision)"
         }
       ],
       "pass_criteria": "all checks pass; pending review -> REVIEW_REQUIRED by vmodel:verifier"
@@ -251,7 +251,7 @@
         {
           "id": "G3.REVIEW",
           "kind": "ai_review",
-          "desc": "verifier review (design + test adequacy) approves the current manifest hash; the review must be registered in the signed ledger with 'vmodel review-submit' (verifier only)"
+          "desc": "verifier review (design + test adequacy) approves the current manifest hash; the review must be registered in the signed ledger with 'vmodel review-submit' (verifier only); a work item without integration test specs also records integration_applicability, which only G6 uses for N/A (not part of the G3 decision)"
         }
       ],
       "pass_criteria": "all checks pass; pending review -> REVIEW_REQUIRED by vmodel:verifier"
@@ -320,7 +320,7 @@
         {
           "id": "G4.TEST_CODE",
           "kind": "mechanical",
-          "desc": "every unit TEST id has a test function (AST) whose name carries exactly that one TEST_nnn token"
+          "desc": "every unit and integration TEST id has a test function (AST) whose name carries exactly that one TEST_nnn token"
         },
         {
           "id": "G4.REQ_IMPLEMENTED",
@@ -328,14 +328,24 @@
           "desc": "every functional requirement reaches an implemented symbol"
         },
         {
+          "id": "G4.INTERFACE_IMPLEMENTED",
+          "kind": "mechanical",
+          "desc": "only with interfaces: the def/class named in each IF signature is defined in a design unit module of the provider component (unreadable signature -> warning, the G4 review's provider_symbols decide)"
+        },
+        {
+          "id": "G4.INTEGRATION_WIRING",
+          "kind": "mechanical",
+          "desc": "only with integration test specs: per integration test and interface, a call path from the test function (helpers and fixtures, depth 3) into the provider (and ARCH consumer) modules (path A), or a runtime integration mechanism (subprocess, IPC, API, dynamic import: path B) declared by the verifier in the G4 review with the test file hash (pending until declared); placeholder tests without calls and tests with neither path fail; provider patching warns"
+        },
+        {
           "id": "G4.TEST_INTEGRITY",
           "kind": "mechanical",
-          "desc": "test/support code defines no pytest result hooks and does not touch exit status, junit or os._exit"
+          "desc": "test/support code defines no pytest result hooks and does not touch exit status, junit or os._exit; no reference to the G6 runtime trace (VMODEL_TRACE)"
         },
         {
           "id": "G4.REVIEW",
           "kind": "ai_review",
-          "desc": "verifier code review + test code adequacy review of the current code hash; the review must be registered in the signed ledger with 'vmodel review-submit' (verifier only)"
+          "desc": "verifier code review + test code adequacy review of the current code hash; the review must be registered in the signed ledger with 'vmodel review-submit' (verifier only); with interfaces the review lists every IF in 'interfaces' (result ok/issue, provider_symbols defined in the provider modules, runtime_paths for path B tests); missing or malformed -> REVIEW_REQUIRED, issue -> FAILED"
         }
       ],
       "pass_criteria": "all checks pass; pending review -> REVIEW_REQUIRED by vmodel:verifier; file hashes recorded"
@@ -392,6 +402,11 @@
           "desc": "every unit TEST id has a passed test case (named with exactly one id) and no failed/skipped case"
         },
         {
+          "id": "G5.SCOPE",
+          "kind": "mechanical",
+          "desc": "only when integration_test is configured: the unit run executes no integration-level TEST id (fail) and no system-level id (warning); levels come from every work item's tests.json"
+        },
+        {
           "id": "G5.REQ_COVERAGE",
           "kind": "mechanical",
           "desc": "every functional requirement is linked to a passed test"
@@ -399,7 +414,7 @@
         {
           "id": "G5.NO_WEAKENING",
           "kind": "mechanical",
-          "desc": "changed/removed test files justified in test_changes; previously executed TEST ids still executed"
+          "desc": "changed/removed test files justified in test_changes; previously executed TEST ids still executed (when integration_test is configured, ids that are integration level now are left to G6)"
         },
         {
           "id": "G5.INPUTS_UNCHANGED",
@@ -413,19 +428,20 @@
       "id": "G6",
       "phase": "P6",
       "name": "Integration Verification",
-      "implemented": false,
+      "implemented": true,
       "inputs": [
-        "architecture.json interfaces",
-        "tests.json integration specs"
+        "G5 manifest (architecture interfaces, tests spec, source, test code, config)",
+        "reviews/G2.json, reviews/G3.json (N/A confirmation), reviews/G4.json (declared runtime paths)"
       ],
       "outputs": [
-        "integration test evidence"
+        "integration test execution evidence (stdout/stderr/junit, hashes, environment, runtime trace, interface reach) or a recorded N/A decision"
       ],
       "agents": {
-        "author": "validator",
-        "reviewer": "vmodel:verifier"
+        "author": "validator (executes the configured integration_test command itself)",
+        "reviewer": "none (mechanical); interface wiring and integration test adequacy are reviewed at G4, N/A reasons at G2/G3"
       },
       "required_artifacts": [
+        "architecture.json",
         "tests.json"
       ],
       "manifest": {
@@ -434,25 +450,68 @@
           "requirements.json",
           "architecture.json",
           "design.json",
-          "tests.json"
+          "tests.json",
+          "reviews/G2.json",
+          "reviews/G3.json",
+          "reviews/G4.json"
         ],
         "code": true,
-        "notes": "code gates hash every project file except VCS/tool/venv dirs and __pycache__ bytecode, plus .vmodel/config.json, defects.json and change-requests.json"
+        "notes": "the G5 code manifest plus the G2/G3/G4 review files G6 relies on; adding G6 changes no G1-G5 manifest"
       },
       "item_artifacts": [],
       "checks": [
         {
+          "id": "G6.PREREQ",
+          "kind": "mechanical",
+          "desc": "G5 PASSED for the current manifest"
+        },
+        {
+          "id": "G6.APPLICABILITY",
+          "kind": "mechanical",
+          "desc": "required when there is an interface or an integration test spec; not_applicable only when there are none, one component without data flows to another ARCH id, the G2 and G3 reviews accepted by the current PASSes confirm integration_applicability (all external endpoints) and interfaces of earlier G2 PASSes are in a CR/DEFECT removed_ids; otherwise BLOCKED applicability_unconfirmed"
+        },
+        {
+          "id": "G6.CONFIG",
+          "kind": "mechanical",
+          "desc": "integration_test is configured (argv with {junit}, positive timeout_s); missing or invalid -> BLOCKED misconfigured, nothing is executed and the unit command is never used instead"
+        },
+        {
           "id": "G6.EXECUTION",
           "kind": "execution",
-          "desc": "[EXT] run integration tests"
+          "desc": "validator runs the integration test command itself with a scrubbed environment and its runtime tracer; exit code 0; junit produced"
+        },
+        {
+          "id": "G6.RESULTS",
+          "kind": "execution",
+          "desc": "tests > 0, failures = 0, errors = 0"
+        },
+        {
+          "id": "G6.SCOPE",
+          "kind": "mechanical",
+          "desc": "the integration run executes no unit-level TEST id (fail); system-level ids warn"
+        },
+        {
+          "id": "G6.TEST_MAPPING",
+          "kind": "mechanical",
+          "desc": "every integration TEST id has a passed test case (named with exactly one id) and no failed/skipped case"
         },
         {
           "id": "G6.IF_COVERAGE",
           "kind": "mechanical",
-          "desc": "[EXT] every interface verified by a passed integration test"
+          "desc": "every interface is covered by a passed integration test that reaches the provider (and ARCH consumer) by the validator's own static call analysis (path A) or, for a runtime path declared at G4, whose runtime trace shows provider (and consumer) code executing during that test (path B); declared path B without that trace -> BLOCKED integration_evidence_insufficient"
+        },
+        {
+          "id": "G6.NO_WEAKENING",
+          "kind": "mechanical",
+          "desc": "integration TEST ids executed by the baseline G6 run and interfaces of earlier G2 PASSes are still there, or listed in a CR/DEFECT removed_ids"
+        },
+        {
+          "id": "G6.INPUTS_UNCHANGED",
+          "kind": "mechanical",
+          "desc": "verified files did not change during the run"
         }
       ],
-      "pass_criteria": "[EXT] not implemented in the MVP"
+      "pass_criteria": "required: every check passes on this run's own evidence, the validator's own static analysis and runtime trace; not_applicable: only when every N/A condition is confirmed (recorded PASSED with applicability=not_applicable, shown as N/A, nothing executed, never counted as defect verification); unconfirmed applicability, missing/invalid integration_test or insufficient runtime evidence -> BLOCKED"
     },
     {
       "id": "G7",
@@ -525,7 +584,7 @@
         "G6",
         "G7"
       ],
-      "notes": "MVP implements G1-G5 only; a work item that passes G1-G5 is PARTIALLY_VERIFIED, never COMPLETED, until G6/G7 exist"
+      "notes": "implements G1-G6; a work item that passes G1-G6 (G6 PASSED or N/A) is PARTIALLY_VERIFIED, never COMPLETED, until G7 exists"
     },
     "STRICT": {
       "implemented": false,

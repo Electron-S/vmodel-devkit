@@ -90,10 +90,11 @@ Ids are project-unique (`VM next-id <KIND>`). The authoritative schemas are the 
 ```
 - Per design unit: >= 1 unit test with category `normal`; `abnormal` if it declares errors; `boundary` (always, since
   every unit declares boundaries). Every interface needs an integration test spec; every acceptance criterion of a
-  functional requirement needs a system test spec. Integration/system specs are planned now and executed in G6/G7
-  (extension, not in the MVP).
-- Test code: each unit-level spec is implemented by test function(s) whose name contains the token, e.g.
-  `def test_TEST_001_tokenize_lowercases():`.
+  functional requirement needs a system test spec. Integration specs are planned now and executed in G6 (the
+  `integration_test` command); system specs belong to G7 (extension, not implemented).
+- Test code: each unit-level and integration-level spec is implemented by test function(s) whose name contains the
+  token, e.g. `def test_TEST_001_tokenize_lowercases():`. Integration tests live in the integration folder and call the
+  real provider (G4 checks a call path, or a runtime path the verifier declares).
 
 ## reviews/G1..G4.json (written only by vmodel:verifier)
 ```json

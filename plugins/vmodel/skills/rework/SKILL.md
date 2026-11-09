@@ -12,7 +12,7 @@ Run every VM call as its own Bash command (no `VM=` variables, `;`/`&&` chains o
    what alternative you would propose; only the user can unblock.
 2. Analyse the failure from the validator output (failed checks, failing test cases, review findings), not from earlier
    explanations by whoever wrote the code. Decide in which phase the error was introduced (P1 requirements,
-   P2 architecture, P3 design/test spec, P4 code/test code). The root cause must explain every failing case.
+   P2 architecture / interface contract, P3 design/test spec, P4 code/test code, P6 integration environment). The root cause must explain every failing case.
 3. Record a DEFECT in `defects.json` (`VM next-id DEFECT`) with `gate`, `found_in_records: [<record id>]`,
    `description`, `failed_checks`, `root_cause_phase`, `root_cause`, `fix_scope`, `related` (REQ/DESIGN ids and every
    failing TEST id listed by `VM status`), `status: "open"`.
@@ -23,7 +23,8 @@ Run every VM call as its own Bash command (no `VM=` variables, `;`/`&&` chains o
    closure: `VM status` shows the defect CLOSED, "verified by <record>", once the gate passes. Other states are not
    closed: REVERIFY_REQUIRED (it passed once, but the gate is not PASSED now, e.g. STALE: re-run it),
    VERIFICATION_FAILED (the re-verification failed: cite that record and rework), UNKNOWN (ledger or evidence integrity
-   failed: stop and report). Never relax, skip or delete a test to make it pass. If a test
+   failed: stop and report), OUT_OF_SCOPE (G6 defect whose interfaces were removed by a justified change request and
+   G6 is now N/A: not verified; report it as out of scope, never as fixed). Never relax, skip or delete a test to make it pass. If a test
    really is wrong, change it and add `test_changes` (file, since_record = baseline record id named by the validator,
    reason, requirements, impact) to the defect.
 5. `VM lint $ARGUMENTS` (ERROR: invalid citations, evidence integrity; WARNING: failing TEST ids the defect does

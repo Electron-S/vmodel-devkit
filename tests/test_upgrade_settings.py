@@ -329,18 +329,25 @@ class UpgradeSettingsInvariant(Base):
             self.upgrade(sb)
         vm = str(PLUGIN / "bin" / "vmodel")
         for cmd in (f'"{vm}" lock --accept-current --reason x', "vmodel lock --accept-current",
-                    f'"{vm}" install --project .', "vmodel uninstall", f'"{vm}" uninstall --purge'):
+                    f'"{vm}" install --project .', "vmodel uninstall", f'"{vm}" uninstall --purge',
+                    f'"{vm}" configure-tests --integration tests/integration'):  # 0.2.0 user-only command
             self.assertIn("user-only", self.decide(sb, "Bash", {"command": cmd}), cmd)
         for target in (PLUGIN / "validator" / "vmodel_validator" / "gates.py", PLUGIN / "hooks" / "hooks.json",
                        sb.root / ".vmodel" / "install-record.json", sb.root / ".vmodel" / "devkit.lock.json",
                        sb.root / ".vmodel" / "state" / "ledger.jsonl"):
             self.assertIn('"deny"', self.decide(sb, "Edit", {"file_path": str(target)}), target)
         self.assertIn('"deny"', self.decide(sb, "Bash", {"command": f"echo x >> {PLUGIN / 'bin' / 'vmodel'}"}))
-        # the guard itself is unchanged since the 0.1.4 release
+        # the guard itself is unchanged since the 0.1.4 release, except that 0.2.0 adds the user-only
+        # 'configure-tests' command (REQ-G6-28, D42) to USER_ONLY and its deny message
         rel = "validator/vmodel_validator/hook.py"
         base = old_release("0.1.4")
         if base is not None:
-            self.assertEqual((PLUGIN / rel).read_bytes(), (base / rel).read_bytes())
+            now = (PLUGIN / rel).read_text(encoding="utf-8")
+            if "configure-tests" in now:
+                now = now.replace('|unblock|configure-tests)\\b|accept-current",\n                       re.IGNORECASE)',
+                                  '|unblock)\\b|accept-current", re.IGNORECASE)')
+                now = now.replace("init/install/uninstall/unblock/configure-tests and", "init/install/uninstall/unblock and")
+            self.assertEqual(now, (base / rel).read_text(encoding="utf-8"))
 
 
 @unittest.skipUnless(POSIX, "re-pinning needs a pty (POSIX only)")

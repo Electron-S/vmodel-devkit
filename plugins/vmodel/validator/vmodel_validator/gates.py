@@ -1,4 +1,4 @@
-"""Quality gate evaluation G1-G5 (SPEC section 3).
+"""Quality gate evaluation G1-G6 (SPEC section 3; G6 since 0.2.0, docs/g6).
 
 Only this module decides gate outcomes. Every evaluation is appended to the
 signed ledger; preconditions that prevent an evaluation return BLOCKED
@@ -18,16 +18,17 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Callable
 
-from . import VERSION, runner
+from . import VERSION, runner, wiring
 from .hashing import hash_obj, sha256_file, short
 from .integrity import IntegrityReport, check_against_lock, check_self
 from .ledger import Entry, Ledger, LedgerError
 from .project import ARTIFACTS, SCHEMA_FOR, Project
 from .schema_lite import validate
-from .textio import ArtifactError, display_decode, load_json
+from .textio import ArtifactError, display_decode, load_json, write_json
 from .trace import TraceGraph, item_hashes, test_ids_in_text
 
 DATA = Path(__file__).resolve().parent / "data"
+TRACER_DIR = Path(__file__).resolve().parent / "tracer"  # G6 runtime tracer (sitecustomize), part of the Core
 GATE_ORDER = ["G1", "G2", "G3", "G4", "G5", "G6", "G7"]
 REVIEWER = "vmodel:verifier"
 STATUS_RANK = {"blocked": 4, "fail": 3, "pending": 2, "warn": 1, "pass": 0, "skip": 0}
@@ -114,6 +115,8 @@ class GateRun:
             d["manifest_hash"] = self.record.get("manifest", {}).get("hash")
             if self.record.get("blocked_reason"):
                 d["blocked_reason"] = self.record["blocked_reason"]
+            if self.record.get("applicability"):  # G6 (0.2.0): required | not_applicable | unconfirmed
+                d["applicability"] = self.record["applicability"]
         return d
 
 
@@ -265,8 +268,8 @@ def is_failure_record(rec: dict) -> bool:
         rec.get("status") == "BLOCKED" and rec.get("blocked_reason") == "three_consecutive_identical_failures")
 
 
-# Gates whose records carry per-TEST results (G6/G7 join when implemented). Other gates' failures are N/A for tests.
-TEST_EXECUTING_GATES = ("G5",)
+# Gates whose records carry per-TEST results (G7 joins when implemented). Other gates' failures are N/A for tests.
+TEST_EXECUTING_GATES = ("G5", "G6")
 NOT_EXECUTED = re.compile(r"^(TEST-\d{3,}): not executed$")
 DEFECT_CHECK_CATEGORIES = {"evidence_integrity": "error", "invalid_citation": "error",
                            "unlinked_failing_test": "warning", "unknown_test_result": "warning"}
@@ -295,7 +298,8 @@ def citation_view(entry: Entry | None, rid: str, wi: str) -> dict:
     c["valid"] = True
     if rec.get("gate") not in TEST_EXECUTING_GATES:
         return {**c, "test_results": "not_applicable", "failing_tests": [], "unknown_tests": [], "recorded_tests": []}
-    mapping = [ch for ch in rec.get("checks") or [] if isinstance(ch, dict) and ch.get("id") == "G5.TEST_MAPPING"]
+    mapping = [ch for ch in rec.get("checks") or [] if isinstance(ch, dict)
+               and ch.get("id") == f"{rec.get('gate')}.TEST_MAPPING"]
     not_run = sorted({m.group(1) for ch in mapping for it in ch.get("items") or []
                       if isinstance(it, str) and (m := NOT_EXECUTED.match(it))})
     ex = rec.get("executed_tests")
@@ -305,6 +309,12 @@ def citation_view(entry: Entry | None, rid: str, wi: str) -> dict:
         results = "partial" if not_run else "recorded"
     return {**c, "test_results": results, "failing_tests": failing_tests(rec), "unknown_tests": not_run,
             "recorded_tests": sorted(ex) if isinstance(ex, dict) else []}
+
+
+def is_na_record(rec: dict) -> bool:
+    """A G6 N/A evaluation (PASSED + applicability not_applicable): nothing was executed, so it never verifies a fix
+    (REQ-G6-24)."""
+    return rec.get("applicability") == "not_applicable"
 
 
 def defect_trace(entries: list[Entry], wi: str, defects: list[dict],
@@ -402,7 +412,8 @@ def defect_trace(entries: list[Entry], wi: str, defects: list[dict],
                                key=lambda g: GATE_ORDER.index(g) if g in GATE_ORDER else -1)
             first = min((e for e in valid if str(e.record.get("gate")) == closure_gate), key=lambda e: e.seq)
             for e in gate_entries(entries, wi, closure_gate):
-                if e.seq > first.seq and e.record.get("type") == "gate" and e.record.get("status") == "PASSED":
+                if e.seq > first.seq and e.record.get("type") == "gate" and e.record.get("status") == "PASSED" \
+                        and not is_na_record(e.record):
                     history.append(e.id)
                     if verified_by is None and e.seq > last.seq:
                         verified_by = e.id
@@ -418,7 +429,7 @@ def defect_trace(entries: list[Entry], wi: str, defects: list[dict],
                 if (e.seq <= start or rec.get("type") != "gate" or rec.get("work_item") != wi
                         or str(rec.get("gate")) not in cited_gates):
                     continue
-                if rec.get("status") == "PASSED" or is_failure_record(rec):
+                if (rec.get("status") == "PASSED" and not is_na_record(rec)) or is_failure_record(rec):
                     a = {"record": e.id, "gate": rec.get("gate"), "status": rec.get("status"),
                          "failure": is_failure_record(rec)}
                     if rec.get("blocked_reason"):
@@ -451,6 +462,37 @@ def defect_trace(entries: list[Entry], wi: str, defects: list[dict],
 
 # ---------------------------------------------------------------- state (shared with status)
 def gate_state(ctx: Ctx, gate: str, current_manifests: dict[str, dict] | None = None) -> dict:
+    st = _gate_state(ctx, gate, current_manifests)
+    if gate == "G6" and st["status"] != "NOT_IMPLEMENTED":
+        _g6_state(ctx, st)
+    return st
+
+
+def _g6_state(ctx: Ctx, st: dict) -> None:
+    """G6 display facts from its last record (0.2.0): not evaluated yet, N/A, interface coverage."""
+    last = last_eval(ctx.entries, ctx.wi, "G6")
+    if last is None:
+        if st["status"] in ("IN_PROGRESS", "NOT_STARTED"):
+            st["not_evaluated"] = True
+        return
+    rec = last.record
+    app = rec.get("applicability")
+    if app:
+        st["applicability"] = app
+    if st["status"] == "PASSED" and app == "not_applicable":
+        st["display_status"] = "N/A"
+        basis = rec.get("applicability_basis") or {}
+        st["na_reason"] = basis.get("g2_reason") or basis.get("na_reason") or basis.get("approach")
+        st["external_endpoints"] = basis.get("external_endpoints") or []
+    elif st["status"] == "PASSED" and app == "required":
+        ifs = [i for i in rec.get("interfaces") or [] if isinstance(i, dict)]
+        levels = rec.get("executed_levels") or {}
+        st["coverage"] = {"interfaces": len(ifs), "covered": sum(1 for i in ifs if i.get("covered")),
+                          "integration_tests_passed": sum(1 for t, s in (rec.get("executed_tests") or {}).items()
+                                                          if s == "passed" and levels.get(t) == "integration")}
+
+
+def _gate_state(ctx: Ctx, gate: str, current_manifests: dict[str, dict] | None = None) -> dict:
     gd = gate_def(gate)
     st: dict[str, Any] = {"gate": gate, "name": gd["name"], "status": None, "notes": []}
     if not gd["implemented"]:
@@ -924,7 +966,7 @@ def _result_tampering(tree: ast.AST) -> list[str]:
                 and node.value.id == "os":
             out.append(f"line {node.lineno}: calls os._exit")
         elif isinstance(node, ast.Constant) and isinstance(node.value, str) and (
-                "junitxml" in node.value or "PYTEST_ADDOPTS" in node.value):
+                "junitxml" in node.value or "PYTEST_ADDOPTS" in node.value or "VMODEL_TRACE" in node.value):
             out.append(f"line {node.lineno}: string mentions {node.value[:40]!r}")
     return out
 
@@ -1018,13 +1060,17 @@ def eval_g4(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
             if len(ids) > 1:
                 multi.append(f"{p.rel(f)}::{fn} names more than one TEST id {sorted(ids)}")
             present |= ids if len(ids) == 1 else set()
-    missing = [t for t in g.unit_tests() if t not in present]
+    integ = g.integration_tests()  # 0.2.0 (REQ-G6-09): integration specs need test functions too
+    missing = sorted(t for t in [*g.unit_tests(), *integ] if t not in present)
     orphans = sorted(present - set(g.tests))
     status = "fail" if missing or multi else ("warn" if orphans else "pass")
+    what = "unit/integration test specs" if integ else "unit test specs"
+    done = (f"{len(g.unit_tests())} unit and {len(integ)} integration test spec(s) implemented" if integ
+            else f"{len(g.unit_tests())} unit test spec(s) implemented")
     checks.append(Check("G4.TEST_CODE", "mechanical", status,
-                        "unit test specs without a test function test_TEST_nnn_... / ambiguous test names"
+                        f"{what} without a test function test_TEST_nnn_... / ambiguous test names"
                         if missing or multi else ("test code references TEST ids not in tests.json" if orphans
-                                                  else f"{len(g.unit_tests())} unit test spec(s) implemented"),
+                                                  else done),
                         multi + missing if (missing or multi) else orphans))
 
     # TEST_INTEGRITY: test/support code must not tamper with how results are reported
@@ -1043,8 +1089,212 @@ def eval_g4(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
                         "requirements without implemented design units" if probs
                         else "every functional requirement reaches implemented code", probs))
 
-    checks.append(check_review(ctx, "G4", mhash))
+    # 0.2.0: integration readiness, only for work items with interfaces / integration specs (REQ-G6-10-13)
+    review = check_review(ctx, "G4", mhash)
+    accepted = load_review(ctx, "G4") if review.status == "pass" else None
+    if g.ifaces:
+        checks.append(_interface_implemented(ctx, trees))
+    if integ:
+        wd, _ix = g6_wiring(ctx, trees)
+        checks.append(_integration_wiring(ctx, wd, accepted, mhash))
+    if g.ifaces and review.status == "pass":
+        review = _review_interfaces(ctx, review, accepted, trees, mhash)
+    checks.append(review)
     return checks, {}, evidence
+
+
+# ---------------------------------------------------------------- G4 integration readiness (0.2.0)
+def load_review(ctx: Ctx, gate: str) -> dict | None:
+    path = ctx.project.wi_root / ctx.wi / "reviews" / f"{gate}.json"
+    try:
+        rv = load_json(path, f"reviews/{gate}.json")
+    except (ArtifactError, OSError):
+        return None
+    return rv if isinstance(rv, dict) else None
+
+
+def _defines(tree: ast.AST | None, sym: str) -> bool:
+    if tree is None or not sym:
+        return False
+    if "." in sym:
+        return _find_symbol(tree, sym, "method")
+    if _find_symbol(tree, sym, "class") or _find_symbol(tree, sym, "function"):
+        return True
+    return any(isinstance(n, ast.ClassDef) and any(isinstance(m, (ast.FunctionDef, ast.AsyncFunctionDef))
+                                                   and m.name == sym for m in n.body)
+               for n in getattr(tree, "body", []))
+
+
+def _component_modules(ctx: Ctx, component: Any) -> list[str]:
+    return sorted({u["module"].replace("\\", "/") for u in ctx.graph.units.values()
+                   if u.get("component") == component and isinstance(u.get("module"), str)})
+
+
+def _parse_trees(ctx: Ctx, files: list[Path]) -> dict[str, ast.AST]:
+    trees: dict[str, ast.AST] = {}
+    for f in files:
+        rel = ctx.project.rel(f)
+        try:
+            trees[rel] = ast.parse(f.read_bytes(), filename=rel)
+        except (SyntaxError, ValueError, OSError, RecursionError, MemoryError):
+            continue
+    return trees
+
+
+def g6_wiring(ctx: Ctx, trees: dict[str, ast.AST] | None = None) -> tuple[dict, wiring.Index]:
+    """The static integration analysis G4 and G6 judge from (G6 recomputes it from the files it verifies)."""
+    p = ctx.project
+    src, tst = p.source_files(), p.test_files()
+    if trees is None:
+        trees = _parse_trees(ctx, src + tst)
+    ix = wiring.Index.build(p.root, p.rel, src, tst, trees)
+    return wiring.interface_wiring(ix, ctx.graph, [p.rel(f) for f in tst]), ix
+
+
+def _interface_implemented(ctx: Ctx, trees: dict[str, ast.AST]) -> Check:
+    probs, warns = [], []
+    for iid, i in sorted(ctx.graph.ifaces.items()):
+        sym = wiring.signature_symbol(i.get("signature"))
+        mods = _component_modules(ctx, i.get("provider"))
+        if not mods:
+            probs.append(f"{iid}: provider {i.get('provider')} has no design unit module")
+        elif not sym:
+            warns.append(f"{iid}: the signature names no def/class; the G4 review's provider_symbols decide")
+        elif not any(_defines(trees.get(m), sym) for m in mods):
+            probs.append(f"{iid}: '{sym}' from the interface signature is not defined in {', '.join(mods)} "
+                         f"(provider {i.get('provider')})")
+    if probs:
+        return Check("G4.INTERFACE_IMPLEMENTED", "mechanical", "fail", "interfaces not implemented by their provider",
+                     probs + warns)
+    if warns:
+        return Check("G4.INTERFACE_IMPLEMENTED", "mechanical", "warn", "interface symbols to be confirmed by the review",
+                     warns)
+    return Check("G4.INTERFACE_IMPLEMENTED", "mechanical", "pass",
+                 f"{len(ctx.graph.ifaces)} interface symbol(s) defined in their provider modules")
+
+
+def declared_runtime_paths(review: dict | None) -> dict[tuple[str, str], dict]:
+    out: dict[tuple[str, str], dict] = {}
+    for e in _items(review, "interfaces"):
+        for rp in _items(e, "runtime_paths"):
+            if isinstance(e.get("id"), str) and isinstance(rp.get("test"), str):
+                out[(e["id"], rp["test"])] = rp
+    return out
+
+
+def _runtime_declaration_problem(decl: dict | None, tv: dict, sha: str) -> str | None:
+    best = tv["best"] or {}
+    if decl is None:
+        return "not declared"
+    if decl.get("kind") not in best.get("mechanisms", []):
+        return (f"declared kind {decl.get('kind')!r} is not a mechanism the test uses "
+                f"({', '.join(best.get('mechanisms') or []) or 'none'})")
+    if decl.get("test_file_sha256") != sha:
+        return f"declared test_file_sha256 does not match the current {best.get('file')} ({sha}); re-review"
+    return None
+
+
+def _integration_wiring(ctx: Ctx, wd: dict, review: dict | None, mhash: str) -> Check:
+    p = ctx.project
+    declared = declared_runtime_paths(review)
+    fails, pend, warns = [], [], []
+    shas: dict[str, str] = {}
+
+    def sha(rel: str) -> str:
+        if rel not in shas:
+            shas[rel] = sha256_file(p.root / rel)
+        return shas[rel]
+
+    for tid, views in sorted(wd["tests"].items()):
+        for v in views:
+            if v["placeholder"]:
+                fails.append(f"{tid}: placeholder test {v['function']} (no calls: it cannot verify an interface)")
+    data: dict[str, dict] = {}
+    for iid, iv in sorted(wd["interfaces"].items()):
+        cons = "" if iv["consumer_modules"] is None else f" and consumer {', '.join(iv['consumer_modules'])}"
+        data[iid] = {}
+        if not iv["tests"]:
+            fails.append(f"{iid}: no integration test spec verifies it")
+        for tid, tv in sorted(iv["tests"].items()):
+            best = tv["best"]
+            if best is None:
+                continue  # no function: G4.TEST_CODE reports it
+            fsha = sha(best["file"])
+            data[iid][tid] = {"path": tv["path"], "function": best["function"], "test_file_sha256": fsha,
+                              "reaches_provider": best["reaches_provider"], "reaches_consumer": best["reaches_consumer"],
+                              "mechanisms": best["mechanisms"], "patched_provider": best["patched_provider"]}
+            if tv["path"] == "static":
+                for v in tv["functions"]:
+                    if v["patched_provider"]:
+                        warns.append(f"{tid} ({iid}): {v['function']} patches the provider "
+                                     f"({', '.join(v['patched_provider'])}); the G4 review decides whether the "
+                                     "interface is still exercised")
+            elif tv["path"] == "runtime_candidate":
+                why = _runtime_declaration_problem(declared.get((iid, tid)), tv, fsha)
+                if why is None:
+                    data[iid][tid]["path"] = "runtime_declared"
+                    continue
+                pend.append(f"{tid} ({iid}): no static call path into the provider {', '.join(iv['provider_modules'])}"
+                            f"{cons}; runtime path ({', '.join(best['mechanisms'])}) {why}: {REVIEWER} declares it in "
+                            f"reviews/G4.json interfaces[{iid}].runtime_paths as {{\"test\": \"{tid}\", \"kind\": "
+                            f"\"{best['mechanisms'][0]}\", \"test_file_sha256\": \"{fsha}\"}} ({best['file']}); G6 "
+                            "then needs runtime proof")
+            elif tv["path"] == "none":
+                fails.append(f"{tid} ({iid}): {best['function']} neither calls into the provider "
+                             f"{', '.join(iv['provider_modules'])}{cons} nor uses a runtime integration mechanism "
+                             "(subprocess, IPC, API, dynamic import); reaches provider: "
+                             f"{'yes' if best['reaches_provider'] else 'no'}, consumer: "
+                             f"{'yes' if best['reaches_consumer'] else 'no'}")
+    out = {"interfaces": data}
+    if fails:
+        return Check("G4.INTEGRATION_WIRING", "mechanical", "fail",
+                     "integration tests that cannot verify their interface (placeholder, or no call path)",
+                     fails + pend + warns, data=out)
+    if pend:
+        return Check("G4.INTEGRATION_WIRING", "mechanical", "pending",
+                     "runtime integration paths need the verifier's declaration (reviews/G4.json "
+                     "interfaces[].runtime_paths)", pend + warns,
+                     data={**out, "review_required_by": REVIEWER, "target_hash_expected": mhash})
+    if warns:
+        return Check("G4.INTEGRATION_WIRING", "mechanical", "warn",
+                     "interfaces reached; provider patching to be judged by the G4 review", warns, data=out)
+    return Check("G4.INTEGRATION_WIRING", "mechanical", "pass",
+                 f"{len(wd['interfaces'])} interface(s): every integration test reaches its provider by a call path or "
+                 "a declared runtime path", data=out)
+
+
+def _review_interfaces(ctx: Ctx, review: Check, rv: dict | None, trees: dict[str, ast.AST], mhash: str) -> Check:
+    """REQ-G6-12: an approving G4 review of a work item with interfaces reviews every IF."""
+    entries = {e.get("id"): e for e in _items(rv, "interfaces")}
+    pend, issues = [], []
+    for iid, i in sorted(ctx.graph.ifaces.items()):
+        e = entries.get(iid)
+        if e is None:
+            pend.append(f"{iid}: not reviewed (add it to the review's 'interfaces')")
+            continue
+        if e.get("result") not in ("ok", "issue"):
+            pend.append(f"{iid}: result must be 'ok' or 'issue'")
+            continue
+        syms = e.get("provider_symbols")
+        mods = _component_modules(ctx, i.get("provider"))
+        if not isinstance(syms, list) or not syms or not all(isinstance(x, str) and x.strip() for x in syms):
+            pend.append(f"{iid}: provider_symbols must list the provider symbols implementing the interface")
+        else:
+            missing = [x for x in syms if not any(_defines(trees.get(m), x.strip()) for m in mods)]
+            if missing:
+                pend.append(f"{iid}: provider_symbols {missing} are not defined in the provider modules "
+                            f"{', '.join(mods)}")
+        if e.get("result") == "issue":
+            issues.append(f"{iid}: {str(e.get('note') or 'interface issue')[:200]}")
+    data = {**review.data, "interfaces_reviewed": sorted(k for k in entries if isinstance(k, str))}
+    if issues:
+        return Check("G4.REVIEW", "ai_review", "fail", "verifier reported interface issues", issues, data=data)
+    if pend:
+        return Check("G4.REVIEW", "ai_review", "pending",
+                     f"the review must cover every interface ({', '.join(sorted(ctx.graph.ifaces))}) with result and "
+                     "existing provider_symbols", pend, data={**data, "target_hash_expected": mhash})
+    return Check("G4.REVIEW", "ai_review", "pass",
+                 f"{review.detail}; {len(ctx.graph.ifaces)} interface(s) reviewed", data=data)
 
 
 def _lint(ctx: Ctx, code_files: list[Path], mhash: str, evidence: list[dict]) -> Check:
@@ -1220,6 +1470,11 @@ def eval_g5(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
     checks.append(Check("G5.TEST_MAPPING", "mechanical", "fail" if probs else "pass",
                         "unit test specs not verified by passing tests" if probs
                         else f"{len(g.unit_tests())} unit test spec(s) passed", probs))
+    # 0.2.0 (REQ-G6-05/07): only a project that configured integration_test separates the levels in G5
+    separated = "integration_test" in p.config()
+    levels = project_test_levels(ctx) if separated else {}
+    if separated:
+        checks.append(_scope_check("G5.SCOPE", executed, levels, wrong="integration", owner="G6", command="unit_test"))
 
     passed_ids = {t for t, s in executed.items() if s == "passed"}
     probs = [rid for rid in g.active("functional") if not (set(g.tests_for_req(rid)) & passed_ids)]
@@ -1229,7 +1484,8 @@ def eval_g5(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
 
     roots = test_roots(p)
     test_files = {k: v for k, v in files.items() if any(k.startswith(r) for r in roots if r)}
-    checks.append(_no_weakening(ctx, test_files, executed))
+    checks.append(_no_weakening(ctx, test_files, executed,
+                                skip={t for t, lvl in levels.items() if lvl == "integration"}))
 
     changed = diff_manifest(files, after)
     checks.append(Check("G5.INPUTS_UNCHANGED", "mechanical", "fail" if changed else "pass",
@@ -1240,7 +1496,8 @@ def eval_g5(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
     return checks, extra, evidence
 
 
-def _no_weakening(ctx: Ctx, test_files: dict[str, str], executed: dict[str, str]) -> Check:
+def _no_weakening(ctx: Ctx, test_files: dict[str, str], executed: dict[str, str],
+                  skip: set[str] | None = None) -> Check:
     # Baseline = last PASSED G5 run, or the very first G5 run if none passed yet. Using the latest run
     # instead would let a second attempt silently accept a test changed after a failure.
     runs = [e for e in gate_entries(ctx.entries, ctx.wi, "G5")
@@ -1272,7 +1529,7 @@ def _no_weakening(ctx: Ctx, test_files: dict[str, str], executed: dict[str, str]
     for d in _defects(ctx):
         removed_ok.update(_str_list(d.get("removed_ids")))
     old_exec = prev.record.get("executed_tests") or {}
-    lost = sorted(t for t in old_exec if t not in executed and t not in removed_ok)
+    lost = sorted(t for t in old_exec if t not in executed and t not in removed_ok and t not in (skip or ()))
     probs += [f"{t} was executed in {prev.id} but not now" for t in lost]
     if probs:
         return Check("G5.NO_WEAKENING", "mechanical", "fail", "possible test weakening", probs)
@@ -1280,8 +1537,471 @@ def _no_weakening(ctx: Ctx, test_files: dict[str, str], executed: dict[str, str]
     return Check("G5.NO_WEAKENING", "mechanical", "pass", detail, changed)
 
 
+def project_test_levels(ctx: Ctx) -> dict[str, str]:
+    """TEST id -> level over every work item's tests.json (TEST ids are project-unique; this work item wins)."""
+    levels: dict[str, str] = {}
+    for w in ctx.project.work_items():
+        if w == ctx.wi:
+            continue
+        data, _err = ctx.project.load_artifact(w, "tests.json")
+        for t in _items(data, "tests"):
+            if isinstance(t.get("id"), str) and isinstance(t.get("level"), str):
+                levels.setdefault(t["id"], t["level"])
+    for tid, t in ctx.graph.tests.items():
+        if isinstance(t.get("level"), str):
+            levels[tid] = t["level"]
+    return levels
+
+
+def _scope_check(cid: str, executed: dict[str, str], levels: dict[str, str], wrong: str, owner: str,
+                 command: str) -> Check:
+    bad = sorted(t for t in executed if levels.get(t) == wrong)
+    system = sorted(t for t in executed if levels.get(t) == "system")
+    if bad:
+        return Check(cid, "mechanical", "fail", f"{wrong} tests executed by the {command} command (they belong to {owner})",
+                     [f"{t}: {wrong} test executed by the {command} command (it belongs to {owner})" for t in bad]
+                     + [f"{t}: system test executed (G7, not implemented)" for t in system])
+    if system:
+        return Check(cid, "mechanical", "warn", "system tests executed (G7 is an extension gate)",
+                     [f"{t}: system test executed (G7, not implemented)" for t in system])
+    return Check(cid, "mechanical", "pass", f"no {wrong} or system test in this run")
+
+
+# ---------------------------------------------------------------- G6 (0.2.0, docs/g6/G6-DESIGN.md, WORKITEM)
+ARCH_ID = re.compile(r"^ARCH-\d{3,}$")
+
+
+def removed_interfaces(ctx: Ctx) -> dict[str, list[str]]:
+    """Interfaces of earlier G2 PASSes that are gone now -> the CRs (not rejected) / DEFECTs listing them in
+    removed_ids (empty list: removed without justification)."""
+    before: set[str] = set()
+    for e in gate_entries(ctx.entries, ctx.wi, "G2"):
+        if e.record.get("type") == "gate" and e.record.get("status") == "PASSED":
+            before |= {k for k in (e.record.get("item_hashes") or {}) if k.startswith("IF-")}
+    srcs: dict[str, list[str]] = {}
+    for cr in _change_requests(ctx):
+        if cr.get("status") != "rejected":
+            for i in _str_list(cr.get("removed_ids")):
+                srcs.setdefault(i, []).append(str(cr.get("id")))
+    for d in _defects(ctx):
+        for i in _str_list(d.get("removed_ids")):
+            srcs.setdefault(i, []).append(str(d.get("id")))
+    return {i: srcs.get(i, []) for i in sorted(before - set(ctx.graph.ifaces))}
+
+
+def g6_applicability(ctx: Ctx) -> dict:
+    """REQ-G6-14-16: required | not_applicable | unconfirmed, with the basis. Pure: reads artifacts, reviews, ledger."""
+    g = ctx.graph
+    arch = ctx.arts.get("architecture.json") if isinstance(ctx.arts.get("architecture.json"), dict) else {}
+    its = arch.get("integration_test_strategy") if isinstance(arch.get("integration_test_strategy"), dict) else {}
+    integ = g.integration_tests()
+    basis: dict[str, Any] = {"interfaces": len(g.ifaces), "integration_specs": len(integ), "components": sorted(g.comps),
+                             "approach": its.get("approach"), "na_reason": its.get("na_reason")}
+    if g.ifaces or integ:
+        return {"applicability": "required", "basis": basis, "problems": []}
+    problems: list[str] = []
+    ends: list[str] = []
+    for f in _items(arch, "data_flows"):
+        ends += [v for v in (f.get("from"), f.get("to")) if isinstance(v, str)]
+    arch_ends = sorted({e for e in ends if ARCH_ID.match(e)})
+    external = list(dict.fromkeys(e for e in ends if not ARCH_ID.match(e)))
+    basis["external_endpoints"] = external
+    if len(g.comps) != 1:
+        problems.append(f"{len(g.comps)} components: N/A needs exactly one component")
+    others = [a for a in arch_ends if a not in g.comps]
+    if others:
+        problems.append(f"data_flows connect to other components {others}: integration is not ruled out")
+    for gate in ("G2", "G3"):
+        lp = last_with_status(ctx.entries, ctx.wi, gate, "PASSED")
+        if lp is None:
+            problems.append(f"{gate}: no PASSED evaluation")
+            continue
+        basis[f"{gate.lower()}_record"] = lp.id
+        rc = [c for c in lp.record.get("checks") or [] if isinstance(c, dict) and c.get("id") == f"{gate}.REVIEW"]
+        accepted = (rc[0].get("data") or {}).get("review_sha256") if rc else None
+        path = ctx.project.wi_root / ctx.wi / "reviews" / f"{gate}.json"
+        if not path.is_file():
+            problems.append(f"{gate}: reviews/{gate}.json is missing")
+            continue
+        current = sha256_file(path)
+        basis[f"{gate.lower()}_review_sha256"] = current
+        if accepted != current:
+            problems.append(f"{gate}: reviews/{gate}.json is not the review accepted by {lp.id}; submit it "
+                            f"('vmodel review-submit') and re-run {gate}")
+            continue
+        rv = load_review(ctx, gate) or {}
+        ia = rv.get("integration_applicability")
+        if not isinstance(ia, dict) or ia.get("decision") != "not_required":
+            problems.append(f"{gate}: the review does not confirm integration_applicability.decision 'not_required'")
+            continue
+        reason = ia.get("reason")
+        if not isinstance(reason, str) or not reason.strip():
+            problems.append(f"{gate}: integration_applicability.reason is empty")
+            continue
+        basis[f"{gate.lower()}_reason"] = reason.strip()
+        reviewed = _str_list(ia.get("endpoints_reviewed"))
+        basis[f"{gate.lower()}_endpoints_reviewed"] = reviewed
+        missing = [e for e in external if e not in reviewed]
+        if missing:
+            problems.append(f"{gate}: external data flow endpoints not in integration_applicability.endpoints_reviewed: "
+                            f"{missing}")
+    removed = removed_interfaces(ctx)
+    unjust = [i for i, src in removed.items() if not src]
+    if unjust:
+        problems.append(f"interfaces of earlier G2 PASSes removed without a CR/DEFECT listing them in removed_ids: "
+                        f"{unjust}")
+    basis["removed_interfaces"] = {i: src for i, src in removed.items() if src}
+    return {"applicability": "unconfirmed" if problems else "not_applicable", "basis": basis, "problems": problems}
+
+
+def integration_config_problems(cfg: Any) -> list[str]:
+    """REQ-G6-01b: the integration_test object is checked on every evaluation (config is schema-checked at init only)."""
+    if cfg is None:
+        return ["integration_test is not configured in .vmodel/config.json"]
+    errs = validate(cfg, load_schema("config")["properties"]["integration_test"])
+    if errs:
+        return [f"integration_test {e}" for e in errs[:10]]
+    probs = []
+    if isinstance(cfg["timeout_s"], bool) or cfg["timeout_s"] <= 0:
+        probs.append("integration_test.timeout_s must be a positive integer")
+    if "{junit}" not in " ".join(cfg["argv"]):
+        probs.append("integration_test.argv must contain {junit} so the validator can collect results")
+    return probs
+
+
+def read_runtime_trace(trace_dir: Path) -> dict:
+    """Summary of the tracer files (written inside the processes under test, hashed into the signed evidence)."""
+    procs, methods, errors = 0, set(), []
+    tests: dict[str, set[str]] = {}
+    for f in sorted(trace_dir.glob("*.jsonl")) if trace_dir.is_dir() else []:
+        try:
+            lines = f.read_bytes().decode("utf-8", "replace").splitlines()
+            head = json.loads(lines[0]) if lines else None
+        except (OSError, ValueError) as exc:
+            errors.append(f"{f.name}: {exc.__class__.__name__}")
+            continue
+        if not isinstance(head, dict):
+            errors.append(f"{f.name}: no header")
+            continue
+        procs += 1
+        methods.add(str(head.get("method")))
+        for ln in lines[1:]:
+            try:
+                r = json.loads(ln)
+            except ValueError:
+                errors.append(f"{f.name}: unreadable line")
+                continue
+            if isinstance(r, dict) and isinstance(r.get("t"), str) and isinstance(r.get("m"), str):
+                tests.setdefault(r["t"], set()).add(r["m"])
+    return {"active": procs > 0, "processes": procs, "methods": sorted(methods),
+            "tests": {t: sorted(v) for t, v in sorted(tests.items())}, "errors": errors[:20]}
+
+
+def trace_by_test(rt: dict) -> dict[str, set[str]]:
+    """TEST id -> files that ran functions during the pytest tests named with exactly that id."""
+    out: dict[str, set[str]] = {}
+    for nodeid, labels in (rt.get("tests") or {}).items():
+        ids = test_ids_in_text(nodeid.split("::")[-1].split("[")[0])
+        if len(ids) == 1:
+            out.setdefault(next(iter(ids)), set()).update(labels)
+    return out
+
+
+def _g6_no_weakening(ctx: Ctx, executed: dict[str, str]) -> Check:
+    """REQ-G6-23: baseline = last required PASSED G6, else the first G6 run that executed anything."""
+    runs = [e for e in gate_entries(ctx.entries, ctx.wi, "G6")
+            if e.record.get("type") == "gate" and e.record.get("executed_tests")]
+    passed = [e for e in runs if e.record.get("status") == "PASSED" and e.record.get("applicability") == "required"]
+    base = passed[-1] if passed else (runs[0] if runs else None)
+    removed_ok: set[str] = set()
+    for cr in _change_requests(ctx):
+        if cr.get("status") != "rejected":
+            removed_ok.update(_str_list(cr.get("removed_ids")))
+    for d in _defects(ctx):
+        removed_ok.update(_str_list(d.get("removed_ids")))
+    probs = []
+    if base is not None:
+        old = base.record.get("executed_tests") or {}
+        specs = _str_list(base.record.get("integration_specs"))
+        probs += [f"{t} was executed in {base.id} but not now" for t in specs
+                  if t in old and t not in executed and t not in removed_ok]
+    probs += [f"{i} passed G2 earlier but is no longer in architecture.json and no CR/DEFECT lists it in removed_ids"
+              for i, src in removed_interfaces(ctx).items() if not src]
+    if probs:
+        return Check("G6.NO_WEAKENING", "mechanical", "fail", "possible integration test weakening", probs)
+    return Check("G6.NO_WEAKENING", "mechanical", "pass",
+                 f"no integration test or interface lost since {base.id}" if base else "first G6 run; baseline recorded")
+
+
+def _inputs_unchanged(ctx: Ctx, gate: str, files: dict) -> Check:
+    changed = diff_manifest(files, compute_manifest(ctx.project, ctx.wi, gate))
+    return Check(f"{gate}.INPUTS_UNCHANGED", "mechanical", "fail" if changed else "pass",
+                 "verified files changed during the evaluation" if changed else "inputs unchanged during the run",
+                 changed)
+
+
+G6_RUN_CHECKS = (("G6.CONFIG", "mechanical"), ("G6.EXECUTION", "execution"), ("G6.RESULTS", "execution"),
+                 ("G6.SCOPE", "mechanical"), ("G6.TEST_MAPPING", "mechanical"), ("G6.IF_COVERAGE", "mechanical"))
+
+
+def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[dict]]:
+    p = ctx.project
+    g = ctx.graph
+    checks = [Check("G6.PREREQ", "mechanical", "pass", "G5 PASSED for the current manifest hash")]
+    evidence: list[dict] = []
+    app = g6_applicability(ctx)
+    extra: dict[str, Any] = {"applicability": app["applicability"], "applicability_basis": app["basis"],
+                             "executed_tests": {}, "interfaces": []}
+    if app["applicability"] == "unconfirmed":
+        checks.append(Check("G6.APPLICABILITY", "mechanical", "blocked",
+                            "no interface and no integration test spec, but N/A is not confirmed (REQ-G6-15)",
+                            app["problems"], data={"blocked_reason": "applicability_unconfirmed",
+                                                   "applicability": "unconfirmed", "basis": app["basis"]}))
+        return checks, extra, evidence
+    if app["applicability"] == "not_applicable":
+        b = app["basis"]
+        checks.append(Check("G6.APPLICABILITY", "mechanical", "pass",
+                            f"N/A: one component ({', '.join(b['components'])}), no interface, no integration test "
+                            f"spec; confirmed by the G2 ({b.get('g2_record')}) and G3 ({b.get('g3_record')}) reviews",
+                            data={"applicability": "not_applicable", "basis": b}))
+        checks += [Check(cid, kind, "skip", "not executed: not applicable (no integration test was run)")
+                   for cid, kind in G6_RUN_CHECKS]
+        checks.append(_g6_no_weakening(ctx, {}))
+        checks.append(_inputs_unchanged(ctx, "G6", files))
+        return checks, extra, evidence
+    checks.append(Check("G6.APPLICABILITY", "mechanical", "pass",
+                        f"required: {len(g.ifaces)} interface(s), {len(g.integration_tests())} integration test spec(s)",
+                        data={"applicability": "required", "basis": app["basis"]}))
+    all_cfg = p.config()
+    cfg = all_cfg.get("integration_test")
+    cfg_data = {"config_sha256": sha256_file(p.config_path),
+                "integration_test_sha256": hash_obj(cfg) if cfg is not None else None,
+                "unit_test_sha256": hash_obj(all_cfg.get("unit_test"))}
+    probs = integration_config_problems(cfg)
+    if probs:
+        checks.append(Check("G6.CONFIG", "mechanical", "blocked",
+                            "integration_test is not usable: the user must add or fix it in .vmodel/config.json (the "
+                            "agent cannot edit it; the unit_test command is never used instead)", probs,
+                            data={"blocked_reason": "misconfigured", **cfg_data}))
+        return checks, extra, evidence
+    checks.append(Check("G6.CONFIG", "mechanical", "pass", "integration_test configured",
+                        data={"argv": cfg["argv"], **cfg_data}))
+
+    # static analysis of the verified files, before running anything
+    wd, _ix = g6_wiring(ctx)
+    g4_pass = last_with_status(ctx.entries, ctx.wi, "G4", "PASSED")
+    rc = [c for c in (g4_pass.record.get("checks") if g4_pass else None) or []
+          if isinstance(c, dict) and c.get("id") == "G4.REVIEW"]
+    accepted_sha = (rc[0].get("data") or {}).get("review_sha256") if rc else None
+    rv_path = p.wi_root / ctx.wi / "reviews" / "G4.json"
+    review_note = None
+    review = None
+    if rv_path.is_file() and sha256_file(rv_path) == accepted_sha:
+        review = load_review(ctx, "G4")
+    elif g.ifaces:
+        review_note = (f"reviews/G4.json is not the review accepted by {g4_pass.id if g4_pass else 'a G4 PASS'}: "
+                       "re-run G4")
+    declared = declared_runtime_paths(review)
+    units = list(g.units.values())
+    watch_rels = {u["module"].replace("\\", "/") for u in units if isinstance(u.get("module"), str)}
+    watch_rels &= {p.rel(f) for f in p.source_files()}
+    watch_rels |= {v["file"] for views in wd["tests"].values() for v in views}
+
+    run_dir = runner.new_run_dir(p.evidence_dir, ctx.wi, "G6", "integration")
+    junit = run_dir / "junit.xml"
+    trace_dir = run_dir / "trace"
+    trace_dir.mkdir()
+    spec_path = run_dir / "trace-spec.json"
+    write_json(spec_path, {"out": str(trace_dir), "watch": {str((p.root / r).resolve()): r for r in sorted(watch_rels)}})
+    argv = _substitute(cfg["argv"], {"{python}": p.python_exe(), "{junit}": str(junit)})
+    exe = runner.executable_info(argv[0])
+    if exe["resolved"]:
+        argv[0] = exe["resolved"]
+    with tempfile.TemporaryDirectory(prefix="vmodel-pyc-") as pyc:
+        env, dropped = runner.scrubbed_env(Path(pyc))
+        if cfg.get("plugin_autoload"):
+            env.pop("PYTEST_DISABLE_PLUGIN_AUTOLOAD", None)
+        env["PYTHONPATH"] = str(TRACER_DIR)  # validator-owned: the agent's PYTHONPATH was dropped above
+        env["VMODEL_TRACE_SPEC"] = str(spec_path)
+        run = runner.run_command(argv, p.root, timeout_s=int(cfg["timeout_s"]), env=env)
+    rt = read_runtime_trace(trace_dir)
+    env_info = {"scrubbed": dropped, "set": {"PYTHONDONTWRITEBYTECODE": "1", "PYTHONPYCACHEPREFIX": "<validator temp>",
+                                             "PYTEST_DISABLE_PLUGIN_AUTOLOAD": env.get("PYTEST_DISABLE_PLUGIN_AUTOLOAD"),
+                                             "PYTHONPATH": "<validator tracer>", "VMODEL_TRACE_SPEC": "trace-spec.json"},
+                "distributions": _distributions(argv[0])}
+    junit_summary, junit_error = None, None
+    if junit.is_file():
+        try:
+            junit_summary = parse_junit(junit)
+        except ET.ParseError as exc:
+            junit_error = f"junit.xml unparseable: {exc}"
+    else:
+        junit_error = "junit.xml was not produced by the test run"
+    trace_files = {f"trace/{f.name}": f for f in sorted(trace_dir.glob("*.jsonl"))}
+    ev = runner.write_evidence(
+        p, ctx.ledger, run_dir, wi=ctx.wi, gate="G6", kind="integration_test", run=run, exe=exe,
+        git=runner.git_info(p.root), manifest_hash=mhash, core_hash=ctx.integrity.core_hash,
+        extra={"command_source": "integration_test", **cfg_data,
+               "junit_summary": {k: v for k, v in (junit_summary or {}).items() if k != "cases"} or None,
+               "junit_error": junit_error, "verified_files": files, "environment": env_info,
+               "runtime_trace": {k: v for k, v in rt.items() if k != "tests"} | {"tests_traced": len(rt["tests"])}},
+        extra_files={"junit.xml": junit, "trace-spec.json": spec_path, **trace_files})
+    evidence.append(ev)
+    tail = [ln for ln in display_decode(run.stdout + run.stderr, limit=4000).splitlines() if ln.strip()][-40:]
+
+    if run.error:
+        checks.append(Check("G6.EXECUTION", "execution", "blocked", f"test command could not start: {run.error}",
+                            data={"blocked_reason": "tool_unavailable", "evidence": ev["path"]}))
+        return checks, {**extra, "runtime_trace": rt}, evidence
+    if run.timed_out:
+        checks.append(Check("G6.EXECUTION", "execution", "fail", f"timed out after {cfg['timeout_s']}s", tail,
+                            data={"evidence": ev["path"]}, sig=["timeout"]))
+    elif run.exit_code != 0:
+        checks.append(Check("G6.EXECUTION", "execution", "fail", f"test command exit code {run.exit_code}", tail,
+                            data={"evidence": ev["path"], "exit_code": run.exit_code}, sig=[f"exit {run.exit_code}"]))
+    elif junit_error:
+        checks.append(Check("G6.EXECUTION", "execution", "fail", junit_error, data={"evidence": ev["path"]}))
+    else:
+        checks.append(Check("G6.EXECUTION", "execution", "pass", "exit code 0, junit produced",
+                            data={"evidence": ev["path"], "exit_code": 0}))
+    cases = (junit_summary or {}).get("cases", [])
+    failed_cases = [f"{c['classname']}::{c['name']} [{c['status']}] {c['message'][:200]}"
+                    for c in cases if c["status"] in ("failed", "error")]
+    if junit_summary is None:
+        checks.append(Check("G6.RESULTS", "execution", "fail", junit_error or "no results"))
+    elif junit_summary["tests"] == 0:
+        checks.append(Check("G6.RESULTS", "execution", "fail", "0 tests executed"))
+    elif failed_cases:
+        checks.append(Check("G6.RESULTS", "execution", "fail",
+                            f"{junit_summary['failures']} failed, {junit_summary['errors']} error(s) of {junit_summary['tests']}",
+                            failed_cases, sig=[f"{c['classname']}::{c['name']}" for c in cases
+                                               if c["status"] in ("failed", "error")]))
+    else:
+        checks.append(Check("G6.RESULTS", "execution", "pass",
+                            f"{junit_summary['passed']} passed, {junit_summary['skipped']} skipped of {junit_summary['tests']}"))
+
+    executed: dict[str, str] = {}
+    rank = {"passed": 0, "skipped": 1, "failed": 2, "error": 2}
+    ambiguous, unmapped = [], []
+    levels = project_test_levels(ctx)
+    for c in cases:
+        ids = test_ids_in_text(c["name"])
+        if len(ids) > 1:
+            ambiguous.append(f"{c['classname']}::{c['name']} names more than one TEST id")
+            continue
+        if not ids or not ids <= set(levels):
+            unmapped.append(f"{c['classname']}::{c['name']}")
+        for tid in ids:
+            prev = executed.get(tid)
+            if prev is None or rank[c["status"]] > rank[prev]:
+                executed[tid] = c["status"]
+    checks.append(_scope_check("G6.SCOPE", executed, levels, wrong="unit", owner="G5", command="integration_test"))
+    if unmapped:
+        checks[-1].data["unmapped_cases"] = unmapped[:50]
+    probs = list(ambiguous)
+    for tid in g.integration_tests():
+        st = executed.get(tid)
+        if st is None:
+            probs.append(f"{tid}: not executed")
+        elif st != "passed":
+            probs.append(f"{tid}: {st}")
+    checks.append(Check("G6.TEST_MAPPING", "mechanical", "fail" if probs else "pass",
+                        "integration test specs not verified by passing tests" if probs
+                        else f"{len(g.integration_tests())} integration test spec(s) passed", probs))
+
+    ran = trace_by_test(rt)
+    fails, blocks, warns = [], [], []
+    if_view = []
+    for iid, iv in sorted(wd["interfaces"].items()):
+        prov, cons = set(iv["provider_modules"]), iv["consumer_modules"]
+        prov_rels = {m.rel for name, m in _ix.source.items() if name in prov}
+        cons_rels = None if cons is None else {m.rel for name, m in _ix.source.items() if name in set(cons)}
+        covered_by, tests_view = [], {}
+        for tid, tv in sorted(iv["tests"].items()):
+            st = executed.get(tid, "not executed")
+            best = tv["best"] or {}
+            labels = ran.get(tid, set())
+            traced = best.get("file") in labels
+            prov_ran = bool(labels & prov_rels)
+            cons_ran = True if cons_rels is None else bool(labels & cons_rels)
+            view = {"status": st, "path": tv["path"], "function": best.get("function"),
+                    "reaches_provider": best.get("reaches_provider", False),
+                    "reaches_consumer": best.get("reaches_consumer", False),
+                    "patched_provider": best.get("patched_provider", []),
+                    "runtime": {"traced": traced, "provider_ran": prov_ran, "consumer_ran": cons_ran}}
+            if tv["path"] == "static":
+                if st == "passed":
+                    covered_by.append(tid)
+                    if traced and not prov_ran:
+                        warns.append(f"{tid} ({iid}): statically reaches the provider, but no provider function ran "
+                                     "during the test (mocked or not called?): the provider did not run")
+            elif tv["path"] == "runtime_candidate":
+                why = review_note or _runtime_declaration_problem(declared.get((iid, tid)),
+                                                                   tv, sha256_file(p.root / best["file"]))
+                if why is not None:
+                    view["path"] = "runtime_undeclared"
+                    if review_note:
+                        blocks.append(f"{tid} ({iid}): {review_note}")
+                    else:
+                        fails.append(f"{tid} ({iid}): no static call path and no valid runtime path in the G4 review "
+                                     f"accepted by {g4_pass.id if g4_pass else '?'} ({why})")
+                    tests_view[tid] = view
+                    continue
+                view["path"] = "runtime"
+                if st == "passed" and prov_ran and cons_ran:
+                    covered_by.append(tid)
+                elif st == "passed":
+                    missing = [w for w, ok in (("provider", prov_ran), ("consumer", cons_ran)) if not ok]
+                    blocks.append(f"{tid} ({iid}): runtime path declared at G4, but the runtime trace shows no "
+                                  f"{' or '.join(missing)} function running during the test "
+                                  f"({'test traced' if traced else 'test not traced'}): insufficient evidence")
+            elif tv["path"] in ("none", "placeholder"):
+                fails.append(f"{tid} ({iid}): {best.get('function')} has no call path into the interface "
+                             f"({tv['path']})")
+            tests_view[tid] = view
+        covered = bool(covered_by)
+        if not covered and not any(b.startswith(tuple(f"{t} ({iid})" for t in iv["tests"])) for b in blocks):
+            fails.append(f"{iid}: not covered by a passed integration test that reaches its provider "
+                         f"({', '.join(iv['provider_modules']) or 'no module'})")
+        if_view.append({"id": iid, "provider": iv["provider"], "consumers": iv["consumers"],
+                        "provider_modules": iv["provider_modules"], "consumer_modules": iv["consumer_modules"],
+                        "covered": covered, "covered_by": covered_by, "tests": tests_view})
+    n_cov = sum(1 for v in if_view if v["covered"])
+    if fails:
+        checks.append(Check("G6.IF_COVERAGE", "mechanical", "fail", "interfaces not verified", fails + blocks + warns))
+    elif blocks:
+        checks.append(Check("G6.IF_COVERAGE", "mechanical", "blocked",
+                            "declared runtime integration paths without runtime proof (REQ-G6-32)", blocks + warns,
+                            data={"blocked_reason": "integration_evidence_insufficient"}))
+    elif warns:
+        checks.append(Check("G6.IF_COVERAGE", "mechanical", "warn",
+                            f"{n_cov}/{len(if_view)} interface(s) covered; runtime cross-check warnings", warns))
+    else:
+        checks.append(Check("G6.IF_COVERAGE", "mechanical", "pass",
+                            f"{n_cov}/{len(if_view)} interface(s) covered by passed integration tests "
+                            "(static call path or runtime trace)"))
+    checks.append(_g6_no_weakening(ctx, executed))
+    checks.append(_inputs_unchanged(ctx, "G6", files))
+    roots = test_roots(p)
+    g5_pass = last_with_status(ctx.entries, ctx.wi, "G5", "PASSED")
+    extra.update({
+        "test_files": {k: v for k, v in files.items() if any(k.startswith(r) for r in roots if r)},
+        "executed_tests": dict(sorted(executed.items())),
+        "executed_levels": {t: levels.get(t) for t in sorted(executed)},
+        "unmapped_cases": unmapped[:50],
+        "integration_specs": g.integration_tests(),
+        "integration_test_functions": {t: [v["function"] for v in vs] for t, vs in sorted(wd["tests"].items())},
+        "interfaces": if_view,
+        "basis_records": {"G4": g4_pass.id if g4_pass else None, "G5": g5_pass.id if g5_pass else None},
+        "runtime_trace": rt,
+        "junit": {k: v for k, v in (junit_summary or {}).items() if k != "cases"},
+        "failed_cases": failed_cases[:50],
+    })
+    return checks, extra, evidence
+
+
 EVALUATORS: dict[str, Callable[[Ctx, dict, str], tuple[list[Check], dict, list[dict]]]] = {
-    "G1": eval_g1, "G2": eval_g2, "G3": eval_g3, "G4": eval_g4, "G5": eval_g5,
+    "G1": eval_g1, "G2": eval_g2, "G3": eval_g3, "G4": eval_g4, "G5": eval_g5, "G6": eval_g6,
 }
 
 
@@ -1327,7 +2047,9 @@ def derive_status(checks: list[Check]) -> str:
     return {4: "BLOCKED", 3: "FAILED", 2: "REVIEW_REQUIRED"}.get(worst, "PASSED")
 
 
-NEUTRAL_BLOCKS = {"tool_unavailable", "misconfigured", "blocked"}
+# environment / input blocks: no DEFECT needed, not counted by the 3-strike rule (G6 adds the last two, 0.2.0)
+NEUTRAL_BLOCKS = {"tool_unavailable", "misconfigured", "blocked", "applicability_unconfirmed",
+                  "integration_evidence_insufficient"}
 
 
 def consecutive_same_failures(entries: list[Entry], wi: str, gate: str, sig: str) -> int:

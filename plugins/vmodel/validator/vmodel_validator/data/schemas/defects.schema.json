@@ -35,7 +35,8 @@
               "G2",
               "G3",
               "G4",
-              "G5"
+              "G5",
+              "G6"
             ]
           },
           "found_in_records": {
@@ -63,7 +64,8 @@
               "P2",
               "P3",
               "P4",
-              "P5"
+              "P5",
+              "P6"
             ]
           },
           "root_cause": {
@@ -89,7 +91,7 @@
             "type": "array",
             "items": {
               "type": "string",
-              "pattern": "^(DESIGN|TEST)-\\d{3,}$"
+              "pattern": "^(IF|DESIGN|TEST)-\\d{3,}$"
             }
           },
           "test_changes": {

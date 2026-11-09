@@ -29,18 +29,27 @@ class HappyPath(GateTestBase):
     def test_T01_T05_full_flow_partially_verified(self):
         self.sb.advance("G5")
         st = self.sb.status()["work_items"][0]
-        self.assertEqual(st["status"], "PARTIALLY_VERIFIED")
+        # 0.2.0 (REQ-G6-25, D41 decision 4): G6 is implemented and not evaluated yet, so the work item is IN_PROGRESS
+        # (0.1.5: PARTIALLY_VERIFIED, gates PASSED x5 + NOT_IMPLEMENTED x2). G1-G5 stay PASSED.
+        self.assertEqual(st["status"], "IN_PROGRESS")
         self.assertEqual([g["status"] for g in st["gates"]],
-                         ["PASSED"] * 5 + ["NOT_IMPLEMENTED"] * 2)
+                         ["PASSED"] * 5 + ["IN_PROGRESS", "NOT_IMPLEMENTED"])
+        self.assertEqual(st["gate_summary"]["passed_current"], ["G1", "G2", "G3", "G4", "G5"])
+        self.assertEqual(st["gate_summary"]["not_evaluated"], ["G6"])
         self.assertIn("NOT a full V-Model completion", self.sb.status()["mvp_note"])
 
     def test_verify_reexecutes_everything(self):
         self.sb.advance("G5")
         code, res = self.sb.vm_json("verify", "WI-001")
-        self.assertEqual(code, 0, res)
-        self.assertEqual([r["status"] for r in res["results"]], ["PASSED"] * 5)
+        # 0.2.0 (REQ-G6-02): verify now runs G6 too; this work item has an interface (IF-001) but the project has no
+        # integration_test command, so G6 is BLOCKED (misconfigured) without running anything
+        # (0.1.5: exit 0, PASSED x5, PARTIALLY_VERIFIED).
+        self.assertEqual(code, 3, res)
+        self.assertEqual([r["status"] for r in res["results"]], ["PASSED"] * 5 + ["BLOCKED"])
+        self.assertEqual(res["results"][5]["blocked_reason"], "misconfigured")
+        self.assertEqual(res["results"][5]["evidence"], [])
         self.assertEqual(len(res["results"][4]["evidence"]), 1)  # tests were executed again
-        self.assertEqual(res["work_item_status"], "PARTIALLY_VERIFIED")
+        self.assertEqual(res["work_item_status"], "BLOCKED")
 
     def test_T14_state_restored_in_new_process(self):
         self.sb.advance("G3")

@@ -18,6 +18,11 @@ from vmodel_version import VERSION
 GATES = ("G1", "G2", "G3", "G4", "G5")
 
 
+# 0.2.0 (G6 design C5): the only intended G4 difference for a work item with interfaces is two new checks (both pass
+# for this fixture; IF review entries are written by the harness verifier). They are left out of the comparison.
+G4_CHECKS_SINCE_020 = {"G4.INTERFACE_IMPLEMENTED", "G4.INTEGRATION_WIRING"}
+
+
 def projection(sb: Sandbox) -> list[tuple]:
     """What a gate decided, without times, paths, project ids or core hashes."""
     out = []
@@ -26,8 +31,11 @@ def projection(sb: Sandbox) -> list[tuple]:
         if r.get("type") != "gate":
             out.append((r.get("type"), r.get("work_item"), r.get("gate")))
             continue
+        if r["gate"] == "G6":  # 0.2.0: not part of the 0.1.x history
+            continue
         out.append(("gate", r["work_item"], r["gate"], r["status"], r.get("blocked_reason"), r.get("failure_signature"),
-                    tuple((c["id"], c["status"]) for c in r.get("checks") or []),
+                    tuple((c["id"], c["status"]) for c in r.get("checks") or []
+                          if c["id"] not in G4_CHECKS_SINCE_020),
                     tuple(sorted((r.get("executed_tests") or {}).items()))))
     return out
 

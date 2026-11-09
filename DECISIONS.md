@@ -279,3 +279,29 @@ D39의 결정안에 대한 사용자 결정이다. 확정 설계(요구사항 RE
 4. 기존 WI: G6이 생기면 G1~G5 PASSED WI는 G6 평가 전까지 IN_PROGRESS로 보인다. G6은 G1~G5 manifest·판정 입력을 늘리지 않고, 기존 기록·증거는 다시 쓰지 않는다. status는 Gate별 결과 요약(`gate_summary`)과 WI 상태를 나누고, G6 미평가를 "not evaluated yet"으로 표시한다. 업그레이드 때 Core 해시 변경으로 생기는 STALE은 G6과 무관한 기존 무결성 규칙(SPEC §5 5항)이며 유지한다(사용자 확인 항목, 설계 §1.1·§9 1번).
 
 함께 정한 것: G6 FAILED는 G5와 같은 재작업 전제 조건·3회 실패 차단·결함 추적(D35)·표시 상태(D37)를 따른다(defects `gate` G6, `root_cause_phase` P6, `removed_ids`에 IF). `applicability_unconfirmed`를 중립 차단에 더한다(`misconfigured`·`tool_unavailable`은 이미 중립). G6.NO_WEAKENING은 실행 기록이 있는 기준(마지막 required PASS, 없으면 실행된 첫 G6)에서 실행된 integration ID와, 이전 G2 PASS에 있던 IF가 사라지면 `removed_ids`를 요구한다(CR·defects 스키마에 IF 허용). D39 §6의 "IF 삭제로 N/A 만들기" 빈틈을 닫는다. `citation_view`의 TEST_MAPPING 체크 ID를 Gate별로 바꿔 G6 결함 추적이 G5와 같은 분류를 낸다. 기존 하네스 중 결정 4로 기대값이 바뀌는 테스트(G6 NOT_IMPLEMENTED·G5 뒤 PARTIALLY_VERIFIED)는 설계 §6.1 목록으로만 의도 변경한다.
+
+## D42. G6 Integration Verification 구현 결정 (2026-11-09, 사용자 결정 D1~D8 승인, v0.2.0 후보)
+사용자가 설계 §9의 여덟 가지를 정했다("VModel DevKit v0.2.0 — G6 Integration Verification 개발"). 작업 기록과 요구사항 변경은 `docs/g6/WORKITEM.md`(REQ-G6-27~34), 설계 정본은 `docs/g6/G6-DESIGN.md`(REQ-G6-01~26)다.
+
+사용자 결정과 설계 대비 바뀐 것
+1. D1 Core 변경: 설계 §1.1 그대로. G6 추가는 G1~G5 manifest·판정 입력을 늘리지 않고, Core 교체 STALE 규칙은 유지한다(T16, C2).
+2. D2 N/A: G2·G3 리뷰 둘 다 확인(설계 기본값). 내부 PASSED + `applicability: not_applicable`, 표시 N/A.
+3. D3 명령 분리: 설계 기본값(경로가 없어도 기본 argv를 써 둠)을 버렸다. `init`은 **실제로 있고 테스트 함수가 있는** 경로만 `integration_test`로 등록하고 unit argv에 `--ignore=<경로>`를 더한다(`--integration-tests PATH` 또는 `tests/integration/` 자동). 없는 경로·테스트 없는 경로·unit 전체 범위·tests 경로 밖은 거부하고 아무것도 만들지 않는다. 기존 프로젝트는 사용자 전용 `vmodel configure-tests --integration PATH`(TTY + guard USER_ONLY, 같은 경로 검증, 서명 원장 `config` 기록 후 config 쓰기)로 옮긴다. `integration_test` 없는 0.1.x config는 그대로 유효하다.
+4. D4 G4 manifest: `.claude/settings.json`을 코드 manifest에 그대로 둔다. 업그레이드마다 G4 재리뷰 비용은 남는다(D40).
+5. D5 정적 도달 + 실제 통합 증거: 설계 §4.6의 "하위 프로세스·동적 import는 도달 아님"을 버리고 두 경로로 나눴다.
+   - 경로 A(정적): 테스트 함수의 **호출식**에서 시작한 소스 모듈 import 폐포에 provider(와 ARCH consumer)가 있어야 한다. import·참조만으로는 도달이 아니고, 테스트 안의 중첩 def·class·lambda 본문은 테스트가 이름으로 부를 때만 따라간다(호출 없는 함수는 placeholder로 G4 FAILED).
+   - 경로 B(실행 경로): 정적 호출 경로는 없지만 subprocess·IPC·API·동적 import 호출이 있는 테스트. G4는 verifier 리뷰의 `interfaces[].runtime_paths`(TEST, 종류, 테스트 파일 sha256)가 Validator가 찾은 종류·현재 해시와 맞을 때만 인정하고, 아니면 REVIEW_REQUIRED다. G6은 Validator Core의 계측 모듈(`tracer/sitecustomize.py`)을 `PYTHONPATH`로 실행 중 모든 Python 프로세스에 넣어, 그 테스트(`PYTEST_CURRENT_TEST`) 동안 provider(와 consumer) 함수가 실행됐는지 기록하고 해시를 서명 증거에 넣는다. 선언은 있는데 실행 증거가 없으면 BLOCKED(`integration_evidence_insufficient`, 중립)이고 PASS하지 않는다. AI 리뷰 문장만으로는 IF를 덮지 않는다.
+   - 경로 A도 계측을 받는다. 테스트 함수 실행은 기록됐는데 provider 함수 실행이 없으면 IF_COVERAGE 경고(목 대체 의심). 판정은 바꾸지 않는다(데이터 타입 IF 오탐 가능).
+   - 별도 프로세스라는 이유로 G7로 보내지 않는다. 판정 대상은 인터페이스다.
+6. D6 버전 0.2.0. 0.1.5 태그·릴리스 사본은 그대로다.
+7. D7 범위 삭제된 G6 결함: 설계 기본값(기존 상태 + 주석)을 버리고 표시 상태 OUT_OF_SCOPE를 더했다(D37의 6종 + 1). 결함의 종료 Gate가 G6이고 G6이 지금 N/A(현재 manifest)일 때다. `scope_removal`에 실패 기록의 IF·통합 TEST ID와 그것을 `removed_ids`에 둔 CR/DEFECT와 사유를 보인다. CLOSED가 아니고 `verified_by`·`verification_history`는 N/A 기록을 세지 않는다. 결함 저장 형식은 enum(G6, P6, IF)만 넓혔다.
+8. D8 실전 E2E: 계획만 했다(시나리오 A·B, sonnet 2회, 회당 $2, 합계 $4). 유료 실행은 별도 승인.
+
+구현에서 정한 것
+- G5 실행부(`eval_g5`)는 고치지 않았다. 설계 §4.5의 `_execute_suite` 분리 대신 G6이 같은 runner 함수를 따로 호출한다(G5 무변경 우선). G5에 더한 것은 `integration_test`가 설정됐을 때만 도는 G5.SCOPE와 NO_WEAKENING의 integration 수준 ID 제외뿐이다.
+- G6 manifest에 `reviews/G4.json`을 더했다(경로 B 선언의 근거). G4 PASS가 인정한 리뷰와 지금 파일이 다르면 경로 B 선언을 쓰지 않는다.
+- 리뷰 스키마의 새 키(`integration_applicability`, `interfaces`)는 형태만 느슨하게 두고 내용은 그 키를 쓰는 Gate 코드가 검사한다. 잘못된 항목이 G2·G3 판정을 바꾸지 않게(설계 §1.2), G4에서는 REVIEW_REQUIRED가 되게 하기 위해서다.
+- G6.IF_COVERAGE 안에서는 실패 항목이 있으면 FAILED(재작업·결함 필요), 실패 없이 증거 부족만 있으면 BLOCKED다. 선언된 경로 B는 같은 IF가 다른 테스트로 덮였더라도 모두 실행 증거를 요구한다.
+- placeholder 탐지는 integration 수준 테스트에만 한다(unit 테스트 G4 판정 불변, REQ-G6-13).
+- 계측 한계(SPEC §5.7과 같은 같은 프로세스 신뢰 경계): 테스트 코드는 계측 파일을 위조할 수 있다. G4.TEST_INTEGRITY가 테스트·지원 코드의 `VMODEL_TRACE` 문자열을 잡는다. `-I`/`-E`로 시작한 Python, 세션 범위 fixture가 띄운 하위 프로세스(처음 테스트에 귀속), pytest가 아닌 러너는 경로 B를 증명하지 못해 BLOCKED가 된다(보수적).
+- 읽기 전용 `vmodel wiring WI`: verifier가 경로 B를 선언할 때 쓰는 분류·해시를 보인다.

@@ -115,6 +115,15 @@
           }
         }
       }
+    },
+    "integration_applicability": {
+      "type": "object"
+    },
+    "interfaces": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
     }
   }
 }

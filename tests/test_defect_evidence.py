@@ -118,16 +118,16 @@ class DefectEvidenceRed(FailedG5Case):
         section = report.split("## Defect trace check", 1)[1].split("\n## ", 1)[0]
         self.assertRegex(section, r"(?m)^None\b")
         self.assertIn("defect checks: 0 error(s), 0 warning(s)", self.status_text())
-        # PARTIALLY_VERIFIED with an unlinked failing test: the gap is still listed in the final report
+        # G1-G5 PASSED with an unlinked failing test: the gap is still listed in the final report
         self.sb.add_defect(self.failed, "G5", related=["REQ-002", *self.failing[1:]], status="fixed")
         self.s["wf"].write_text(self.s["good"], encoding="utf-8")
         self.gate_g4()
         self.assertEqual(self.sb.gate("G5")[1]["status"], "PASSED")
-        self.assertEqual(self.wi()["status"], "PARTIALLY_VERIFIED")
+        self.assertEqual(self.wi()["status"], "IN_PROGRESS")  # 0.2.0 REQ-G6-25 (0.1.5: PARTIALLY_VERIFIED)
         section = self.report().split("## Defect trace check", 1)[1].split("\n## ", 1)[0]
         self.assertIn("WARNING [unlinked_failing_test]", section)
         self.assertIn(self.failing[0], section)
-        self.assertIn("WI-001 [PARTIALLY_VERIFIED]", self.status_text())
+        self.assertIn("WI-001 [IN_PROGRESS]", self.status_text())  # 0.2.0 REQ-G6-25 (0.1.5: PARTIALLY_VERIFIED)
         self.assertIn("defect checks: 0 error(s), 1 warning(s)", self.status_text())
 
 

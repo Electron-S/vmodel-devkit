@@ -33,7 +33,8 @@ WRITE_VERBS = re.compile(
     r"(^|[\s;&|])(del|erase|rd|ren|move|copy|xcopy|robocopy)\s", re.IGNORECASE)
 REPO_WIDE_DESTRUCTIVE = re.compile(
     r"git\s+clean\b|\bfind\b[^|;&]*-delete|\brm\s+(-[a-zA-Z]+\s+)*(\.|\./|\*|\./\*|\.\*)(\s|$)", re.IGNORECASE)
-USER_ONLY = re.compile(r"vmodel(\.cmd)?[\"']?\s+(init|install|uninstall|unblock)\b|accept-current", re.IGNORECASE)
+USER_ONLY = re.compile(r"vmodel(\.cmd)?[\"']?\s+(init|install|uninstall|unblock|configure-tests)\b|accept-current",
+                       re.IGNORECASE)
 VERIFIER_WRITE_VERBS = WRITE_VERBS
 # Bash redirections that cannot write a file (D36): output to exactly /dev/null, fd duplication or closing, and plain
 # input redirection. They are removed before the write checks, so they neither count as writes nor hide a write verb
@@ -186,7 +187,7 @@ def guard(payload: dict) -> dict | None:
         validator_call = _is_validator_call(cmd)
         writes = shell_writes(cmd, tool)
         if USER_ONLY.search(cmd):
-            return _deny("init/install/uninstall/unblock and 'lock --accept-current' are user-only actions; "
+            return _deny("init/install/uninstall/unblock/configure-tests and 'lock --accept-current' are user-only actions; "
                          "ask the user to run them in a terminal")
         if "review-submit" in low and not verifier:
             return _deny("only the vmodel:verifier subagent may submit gate reviews")

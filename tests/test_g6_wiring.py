@@ -56,6 +56,17 @@ class WiringRed(WiringBase):
         self.assertEqual(res["status"], "FAILED", f"{RED} {res}")
         self.assertTrue(any("TEST-010" in i and "placeholder" in i for i in self.wiring(res)["items"]))
 
+    def test_T06_unused_nested_call_does_not_hide_a_placeholder(self):
+        """Found while making the API path work: a nested def the test never calls is not a call of the test."""
+        replace_function(self.itest, "test_TEST_012_cli_main_reads_file",
+                         "def test_TEST_012_cli_main_reads_file():\n"
+                         "    def never_called():\n"
+                         "        return main(['x'])\n"
+                         "    assert True\n")
+        code, res = self.g4()
+        self.assertEqual(res["status"], "FAILED", f"{RED} {res}")
+        self.assertTrue(any("TEST-012" in i and "placeholder" in i for i in self.wiring(res)["items"]), res)
+
     def test_T07_interface_test_function_missing_fails_test_code(self):
         replace_function(self.itest, "test_TEST_012_cli_main_reads_file", None)
         code, res = self.g4()

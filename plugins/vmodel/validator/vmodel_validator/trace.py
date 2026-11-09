@@ -95,6 +95,9 @@ class TraceGraph:
     def unit_tests(self) -> list[str]:
         return sorted(tid for tid, t in self.tests.items() if t.get("level") == "unit")
 
+    def integration_tests(self) -> list[str]:
+        return sorted(tid for tid, t in self.tests.items() if t.get("level") == "integration")
+
     # ---- dangling references ----------------------------------------
     def dangling(self) -> list[str]:
         problems: list[str] = []

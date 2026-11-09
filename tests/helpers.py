@@ -247,6 +247,10 @@ class Sandbox:
 def copy_plugin(dest_parent: Path) -> Path:
     dest = dest_parent / "plugin copy"
     shutil.copytree(PLUGIN, dest, ignore=shutil.ignore_patterns("__pycache__"))
+    # released copies are read-only (dist/vmodel-<ver>); the tests that tamper with the copy need it writable (0.2.0)
+    for f in dest.rglob("*"):
+        if f.is_file():
+            f.chmod(f.stat().st_mode | 0o200)
     return dest
 
 
