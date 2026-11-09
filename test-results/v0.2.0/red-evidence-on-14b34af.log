@@ -1,0 +1,35 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/43cdb556-8cbb-4e88-9bf3-ce8c6609a0de/scratchpad/red-14b34af/plugins/vmodel",
+    "release_manifest": null
+  },
+  "git_head": "c83df4b",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "marker": "RED-TARGET",
+  "tests": 10,
+  "expectations_met": 10,
+  "violations": 0,
+  "seconds": 28.4
+}
+
+OK  expect=ok   got=ok      test_g6_evidence.EvidenceCaseChar.test_case_D_provider_only_test_has_no_consumer_path
+OK  expect=FAIL got=FAIL    test_g6_evidence.EvidenceCaseRed.test_case_A_real_connection_is_test_level_verified
+      AssertionError: Tuples differ: (None, {'TEST-010': None, 'TEST-011': None[23 chars]11']) != ('test_level', {'TEST-010': 'test_level', [47 chars]11'])
+OK  expect=FAIL got=FAIL    test_g6_evidence.EvidenceCaseRed.test_case_B_mock_only_tests_do_not_verify_the_interface
+      AssertionError: Tuples differ: ('PASSED', None) != ('BLOCKED', 'integration_evidence_insufficient')
+OK  expect=FAIL got=FAIL    test_g6_evidence.EvidenceCaseRed.test_case_C_another_tests_provider_run_is_not_attributed
+      AssertionError: Lists differ: ['TEST-010', 'TEST-011'] != ['TEST-011']
+OK  expect=FAIL got=FAIL    test_g6_evidence.EvidenceCaseRed.test_case_D_provider_and_consumer_running_unconnected_is_not_a_connection
+      AssertionError: Tuples differ: ('PASSED', None) != ('BLOCKED', 'integration_evidence_insufficient')
+OK  expect=FAIL got=FAIL    test_g6_evidence.EvidenceCaseRed.test_case_E_api_server_in_a_function_fixture
+      AssertionError: Tuples differ: (None, {'TEST-012': None}, ['TEST-012']) != ('test_level', {'TEST-012': 'test_level'}, ['TEST-012'])
+OK  expect=FAIL got=FAIL    test_g6_evidence.EvidenceCaseRed.test_case_E_consumer_using_a_shared_thread_pool
+      AssertionError: Tuples differ: (None, {'TEST-010': None, 'TEST-011': None[23 chars]11']) != ('test_level', {'TEST-010': 'test_level', [47 chars]11'])
+OK  expect=FAIL got=FAIL    test_g6_evidence.EvidenceCaseRed.test_case_E_subprocess_runtime_path
+      AssertionError: Tuples differ: (None, {'TEST-012': None}, ['TEST-012']) != ('test_level', {'TEST-012': 'test_level'}, ['TEST-012'])
+OK  expect=FAIL got=FAIL    test_g6_evidence.EvidenceCaseRed.test_case_F_provider_that_never_runs_is_insufficient
+      AssertionError: Tuples differ: (None, {'TEST-010': None, 'TEST-011': None}, []) != ('insufficient', {'TEST-010': 'insufficient', 'TEST-011': 'insufficient'}, [])
+OK  expect=FAIL got=FAIL    test_g6_evidence.EvidenceCaseRed.test_case_F_untraced_subprocess_is_insufficient_and_shown
+      AssertionError: Tuples differ: (None, {'TEST-012': None}, []) != ('suite_level', {'TEST-012': 'suite_level'}, [])
