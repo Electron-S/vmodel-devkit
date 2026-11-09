@@ -204,29 +204,6 @@ class ReviewG6Red(SandboxClass):
         r4, r5, code, r6 = self.to_g6()
         self.assertEqual(r4["status"], "FAILED", f"{RED} test_TEST_012_smoke has no call path: {r4}")
 
-    # F2 (G6 side): static reach contradicted by the runtime trace is not coverage
-    def test_F2_mocked_provider_in_every_test_of_the_interface_fails_g6(self):
-        replace_function(self.itest, "test_TEST_010_report_uses_real_parser",
-                         "def test_TEST_010_report_uses_real_parser(monkeypatch):\n"
-                         "    monkeypatch.setattr('pipeline.report.parse', lambda text: [{'name': 'x', 'score': 1}])\n"
-                         "    assert summarize('ignored')['top'] == 'x'\n")
-        replace_function(self.itest, "test_TEST_011_parser_error_reaches_report",
-                         "def test_TEST_011_parser_error_reaches_report(monkeypatch):\n"
-                         "    def boom(text):\n        raise ValueError('x')\n"
-                         "    monkeypatch.setattr('pipeline.report.parse', boom)\n"
-                         "    with pytest.raises(ValueError):\n        summarize('kim,ninety')\n")
-        r4, r5, code, r6 = self.to_g6()
-        self.assertEqual((r4["status"], r5.get("status")), ("PASSED", "PASSED"), r4)
-        # D43 (third review): per-test runtime attribution is advisory. Both IF-001 tests mock the parser, but the parser
-        # runs in this run (TEST-012 drives main -> summarize -> parse), so G6 passes with a warning per mocked test;
-        # judging the mocks is the G4 review's job (patch warning there). 3239eba: PASSED without any warning;
-        # c216910: FAILED; 08469ae: BLOCKED.
-        self.assertEqual(r6["status"], "PASSED", f"{RED} {r6}")
-        cov = [c for c in r6["checks"] if c["id"] == "G6.IF_COVERAGE"][0]
-        self.assertEqual(cov["status"], "warn", f"{RED} mocked tests must be flagged: {cov}")
-        for tid in ("TEST-010", "TEST-011"):
-            self.assertTrue(any(tid in i and "did not run" in i for i in cov["items"]), cov)
-
     # F4: entries the tests plant in the trace or junit location never crash G6
     def test_F4_directory_in_the_trace_folder_is_a_recorded_result(self):
         replace_function(self.itest, "test_TEST_012_cli_main_reads_file",
@@ -280,6 +257,35 @@ class ReviewG6Red(SandboxClass):
                          f"{RED} the provider ran in fixture setup of the pytest process, not in the subprocess: {r6}")
         rec = ledger_record(self.sb, r6["record_id"])
         self.assertFalse([i for i in rec["interfaces"] if i["id"] == "IF-002"][0]["covered"])
+
+
+class ReviewG6Char(SandboxClass):
+    """D43: behaviour the reviewed build and this one share (pipeline, split commands, G1-G5 PASSED)."""
+    itest = ReviewG6Red.itest
+    to_g6 = ReviewG6Red.to_g6
+
+    # F2 (G6 side): static reach contradicted by the runtime trace is not coverage
+    def test_F2_mocked_provider_in_every_test_of_the_interface_is_flagged(self):
+        replace_function(self.itest, "test_TEST_010_report_uses_real_parser",
+                         "def test_TEST_010_report_uses_real_parser(monkeypatch):\n"
+                         "    monkeypatch.setattr('pipeline.report.parse', lambda text: [{'name': 'x', 'score': 1}])\n"
+                         "    assert summarize('ignored')['top'] == 'x'\n")
+        replace_function(self.itest, "test_TEST_011_parser_error_reaches_report",
+                         "def test_TEST_011_parser_error_reaches_report(monkeypatch):\n"
+                         "    def boom(text):\n        raise ValueError('x')\n"
+                         "    monkeypatch.setattr('pipeline.report.parse', boom)\n"
+                         "    with pytest.raises(ValueError):\n        summarize('kim,ninety')\n")
+        r4, r5, code, r6 = self.to_g6()
+        self.assertEqual((r4["status"], r5.get("status")), ("PASSED", "PASSED"), r4)
+        # D43 (third review): per-test runtime attribution is advisory. Both IF-001 tests mock the parser, but the parser
+        # runs in this run (TEST-012 drives main -> summarize -> parse), so G6 passes with a warning per mocked test;
+        # judging the mocks is the G4 review's job (patch warning there). This is the original design's behaviour
+        # (3239eba gives the same), so the test characterises it; c216910 gave FAILED and 08469ae BLOCKED.
+        self.assertEqual(r6["status"], "PASSED", r6)
+        cov = [c for c in r6["checks"] if c["id"] == "G6.IF_COVERAGE"][0]
+        self.assertEqual(cov["status"], "warn", f"mocked tests must be flagged: {cov}")
+        for tid in ("TEST-010", "TEST-011"):
+            self.assertTrue(any(tid in i and "did not run" in i for i in cov["items"]), cov)
 
 
 class ReviewDisplayRed(SandboxClass):
