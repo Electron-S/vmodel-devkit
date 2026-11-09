@@ -521,7 +521,7 @@ def trace_view(project: Project, wi: str) -> dict:
             tests[tid] = {"level": g.tests[tid].get("level"), "result": g6_exec.get(tid, "not run"),
                           "path": tv.get("path"), "function": tv.get("function")}
         ifaces.append({"id": iid, "name": i.get("name"), "provider": i.get("provider"),
-                       "consumers": i.get("consumers") or [], "tests": tests, "covered": rec.get("covered"),
+                       "consumers": _str_list(i.get("consumers")), "tests": tests, "covered": rec.get("covered"),
                        "g6_record": last_g6.id if last_g6 else None})
     return {"work_item": wi, "rows": rows, "reverse": reverse, "dangling": g.dangling(),
             "results_from": last_g5.id if last_g5 else None,

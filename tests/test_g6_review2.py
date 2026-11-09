@@ -177,7 +177,13 @@ class R2G6Red(SandboxClass):
             "threading.Thread(target=_spin, daemon=True).start()\n", encoding="utf-8")
         r4, r5, code, r6 = self.to_g6()
         self.assertEqual((r4["status"], r5.get("status")), ("PASSED", "PASSED"), r4)
-        self.assertNotEqual(r6.get("status"), "PASSED", f"{RED} a conftest thread ran the provider, not the tests")
+        # D43 (third review): the import-time thread belongs to no test, so it no longer backs the mocked tests; they
+        # are flagged, while the run-wide check sees the parser run (TEST-012 and the thread). c216910 gave a clean
+        # PASSED with the thread counted for the mocked tests.
+        self.assertEqual(r6.get("status"), "PASSED", r6)
+        cov = [c for c in r6["checks"] if c["id"] == "G6.IF_COVERAGE"][0]
+        self.assertEqual(cov["status"], "warn", f"{RED} the mocked tests must be flagged: {cov}")
+        self.assertTrue(any("TEST-010" in i and "did not run" in i for i in cov["items"]), cov)
 
     @unittest.skipUnless(sys.platform.startswith("linux"), "fork start method (Linux)")
     def test_N2_forked_ipc_child_is_another_process(self):

@@ -15,9 +15,10 @@ layouts, namespace packages (no __init__.py) and `src.`-style imports resolve al
   order (a later def or assignment shadows an import).
 - Dependency injection: a source def/class passed as an argument to a call into the interface's consumer counts as
   reaching the provider.
-- Import names: a file can be imported as the dotted path from the project root, from a top-level directory without
-  __init__.py (src layout), or as its usual package name; a project file never takes over a name like `json` or
-  `http` from inside a package.
+- Import names: a file can be imported as its dotted path from an import root (the project root, pyproject
+  [tool.pytest.ini_options] pythonpath entries, the static prefixes of the configured source globs and top-level
+  directories without __init__.py) or as its usual package name; outside the project root and explicit pythonpath
+  entries a project file never takes over a standard library name such as `json` or `http`.
 - reach = the static import closure (all imports, including function-local ones) of the source modules reached.
 - No static call path but a subprocess / IPC / API / dynamic-import call: a runtime-path candidate (path B), declared
   by the verifier at G4 and proven by the runtime trace at G6. No call at all: placeholder.
@@ -28,6 +29,7 @@ import ast
 import builtins
 import posixpath
 import re
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -48,8 +50,11 @@ MECHANISMS: tuple[tuple[str, str], ...] = (
     ("__import__", "dynamic_import"), ("runpy.", "dynamic_import"),
 )
 KINDS = ("subprocess", "ipc", "api", "dynamic_import")
-INVOKERS = {"pytest.raises", "pytest.warns", "pytest.deprecated_call"}  # call the callable they are handed
-SELF_INVOKERS = {"assertRaises", "assertRaisesRegex", "assertWarns", "assertWarnsRegex"}
+# callables that call the callable they are handed, and its argument position
+INVOKERS = {"pytest.raises": 1, "pytest.warns": 1, "pytest.deprecated_call": 0}
+SELF_INVOKERS = {"assertRaises": 1, "assertWarns": 1, "assertRaisesRegex": 2, "assertWarnsRegex": 2}
+STDLIB = set(getattr(sys, "stdlib_module_names", ()))
+STRONG, WEAK = 2, 1  # binding strength: import/def/class/alias beat a plain value from another branch
 PATCHERS = {"unittest.mock.patch", "mock.patch", "unittest.mock.patch.object", "mock.patch.object",
             "unittest.mock.patch.dict"}
 SETUP_METHODS = ("setUp", "setup_method")
@@ -126,16 +131,27 @@ def _is_fixture(fn: ast.AST) -> bool:
     return False
 
 
-def _top_statements(tree: ast.AST):
-    """Module-level statements, including those nested in top-level if/try/with blocks (not function bodies)."""
-    todo = list(getattr(tree, "body", []))
-    while todo:
-        node = todo.pop(0)
-        yield node
-        if isinstance(node, (ast.If, ast.Try, ast.With, ast.AsyncWith)) or type(node).__name__ == "TryStar":
-            for key in ("body", "orelse", "finalbody", "handlers"):
-                for x in getattr(node, key, []) or []:
-                    todo.extend(x.body if isinstance(x, ast.ExceptHandler) else [x])
+def _target_names(t: ast.AST) -> list[str]:
+    """Names an assignment target binds: plain names (also inside tuples/lists/starred); `obj.attr = ...` and
+    `obj[k] = ...` bind nothing."""
+    if isinstance(t, ast.Name):
+        return [t.id]
+    if isinstance(t, (ast.Tuple, ast.List)):
+        return [n for e in t.elts for n in _target_names(e)]
+    if isinstance(t, ast.Starred):
+        return _target_names(t.value)
+    return []
+
+
+def _merge(into: dict[str, tuple], branches: list[dict[str, tuple]]) -> None:
+    """Alternative branches (if/else, try/except): a strong binding (import/def/class/alias) in any branch wins over a
+    plain value from another one (`except ImportError: main = None` is a fallback); among equals the first wins."""
+    merged: dict[str, tuple] = {}
+    for b in branches:
+        for k, v in b.items():
+            if k not in merged or v[-1] > merged[k][-1]:
+                merged[k] = v
+    into.update(merged)
 
 
 @dataclass
@@ -145,10 +161,17 @@ class Index:
     source: set[str] = field(default_factory=set)  # rels of source modules
     tests: set[str] = field(default_factory=set)
     names: dict[str, str] = field(default_factory=dict)  # dotted import name -> rel
+    resolving: set = field(default_factory=set)  # symbol() recursion guard (cyclic star imports / aliases)
 
     @staticmethod
-    def build(project_root: Path, rel_of, source: list[Path], tests: list[Path], trees: dict[str, ast.AST]) -> "Index":
+    def build(project_root: Path, rel_of, source: list[Path], tests: list[Path], trees: dict[str, ast.AST],
+              roots: list[tuple[str, bool]] | None = None) -> "Index":
+        """roots: (project-relative directory, explicit) import roots; explicit roots (project root, pythonpath) may
+        shadow standard library names, inferred ones (source glob prefixes, top-level dirs) may not."""
         ix = Index(project_root)
+        if roots is None:
+            roots = [("", True)] + [(d.name, False) for d in sorted(project_root.iterdir())
+                                    if d.is_dir() and not (d / "__init__.py").is_file()]
         claims: dict[str, set[str]] = {}
         canonical: dict[str, str] = {}
         for group, files in ((ix.source, source), (ix.tests, tests)):
@@ -167,11 +190,15 @@ class Index:
                 group.add(rel)
                 parts = _parts(rel)
                 canonical[rel] = canonical_name(project_root, rel)
-                names = {".".join(parts)}  # from the project root (flat layout, `src.`-style imports)
-                top = project_root / parts[0] if len(parts) > 1 else None
-                if top is not None and top.is_dir() and not (top / "__init__.py").is_file():
-                    names.add(".".join(parts[1:]))  # from a top-level source root such as src/
-                if "." in canonical[rel] or group is ix.tests:
+                names: set[str] = set()
+                for root, explicit in roots:
+                    rparts = [x for x in root.split("/") if x]
+                    if parts[:len(rparts)] != rparts or len(parts) <= len(rparts):
+                        continue
+                    name = ".".join(parts[len(rparts):])
+                    if explicit or name.split(".")[0] not in STDLIB:
+                        names.add(name)
+                if ("." in canonical[rel] and canonical[rel].split(".")[0] not in STDLIB) or group is ix.tests:
                     names.add(canonical[rel])  # the usual package name (tests: pytest's rootdir-based name)
                 for name in names:
                     if name:
@@ -237,34 +264,65 @@ class Index:
                         out.append((a.asname or a.name, ("dotted", f"{node.module}.{a.name}" if node.module else a.name)))
         return out
 
-    def _bind_module(self, m: Module) -> None:
-        for node in _top_statements(m.tree):  # statement order: the last binding of a name wins
+    def _bind_block(self, m: Module, stmts: list, out: dict[str, tuple]) -> None:
+        """Module-level bindings in source order (the last binding wins), alternative branches merged by _merge."""
+        for node in stmts:
             if isinstance(node, (ast.Import, ast.ImportFrom)):
                 for name, tgt in self.import_targets(m, node):
                     if name == "*":
                         m.stars.append(tgt)
                     else:
                         m.imports[name] = tgt
-                        m.bindings[name] = ("import", tgt)
+                        out[name] = ("import", tgt, STRONG)
             elif isinstance(node, (*FUNC, ast.ClassDef)):
-                m.bindings[node.name] = ("def" if isinstance(node, FUNC) else "class", node)
+                out[node.name] = ("def" if isinstance(node, FUNC) else "class", node, STRONG)
                 if isinstance(node, FUNC) and _is_fixture(node):
                     m.fixtures[node.name] = node
-            elif isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
-                targets = node.targets if isinstance(node, ast.Assign) else [node.target]
-                for t in targets:
-                    for n in ast.walk(t):
-                        if isinstance(n, ast.Name):
-                            m.bindings[n.id] = ("value", None)
-                if isinstance(node, ast.Assign) and len(targets) == 1 and isinstance(targets[0], ast.Name):
-                    m.aliases[targets[0].id] = node.value
-                    m.bindings[targets[0].id] = ("alias", node.value)
-            elif isinstance(node, (ast.For, ast.AsyncFor, ast.With, ast.AsyncWith)):
-                for t in ([node.target] if isinstance(node, (ast.For, ast.AsyncFor)) else
-                          [i.optional_vars for i in node.items if i.optional_vars is not None]):
-                    for n in ast.walk(t):
-                        if isinstance(n, ast.Name):
-                            m.bindings[n.id] = ("value", None)
+            elif isinstance(node, ast.Assign):
+                for t in node.targets:
+                    for n in _target_names(t):
+                        out[n] = ("value", None, WEAK)
+                if all(isinstance(t, ast.Name) for t in node.targets) and isinstance(
+                        node.value, (ast.Call, ast.Name, ast.Attribute, ast.Lambda)):
+                    for t in node.targets:  # NAME = Cls(...) / NAME = other_symbol: followed by _bind and symbol()
+                        m.aliases[t.id] = node.value
+                        out[t.id] = ("alias", node.value, STRONG)
+            elif isinstance(node, (ast.AnnAssign, ast.AugAssign)):
+                for n in _target_names(node.target):
+                    out[n] = ("value", None, WEAK)
+            elif isinstance(node, (ast.For, ast.AsyncFor)):
+                for n in _target_names(node.target):
+                    out[n] = ("value", None, WEAK)
+                self._bind_block(m, node.body + node.orelse, out)
+            elif isinstance(node, (ast.With, ast.AsyncWith)):
+                for it in node.items:
+                    if it.optional_vars is not None:
+                        for n in _target_names(it.optional_vars):
+                            out[n] = ("value", None, WEAK)
+                self._bind_block(m, node.body, out)
+            elif isinstance(node, ast.If):
+                a: dict[str, tuple] = {}
+                b: dict[str, tuple] = {}
+                self._bind_block(m, node.body, a)
+                self._bind_block(m, node.orelse, b)
+                _merge(out, [a, b])
+            elif isinstance(node, ast.Try) or type(node).__name__ == "TryStar":
+                main: dict[str, tuple] = {}
+                self._bind_block(m, node.body + node.orelse, main)
+                handlers = []
+                for h in node.handlers:
+                    hb: dict[str, tuple] = {}
+                    if h.name:
+                        hb[h.name] = ("value", None, WEAK)
+                    self._bind_block(m, h.body, hb)
+                    handlers.append(hb)
+                _merge(out, [main, *handlers])
+                self._bind_block(m, node.finalbody, out)
+
+    def _bind_module(self, m: Module) -> None:
+        bindings: dict[str, tuple] = {}
+        self._bind_block(m, list(getattr(m.tree, "body", [])), bindings)
+        m.bindings = {k: v[:2] for k, v in bindings.items()}
         for node in ast.walk(m.tree):  # dependencies: every import, including lazy ones inside functions
             if isinstance(node, (ast.Import, ast.ImportFrom)):
                 for _name, tgt in self.import_targets(m, node):
@@ -306,6 +364,16 @@ class Index:
         tgt = self.normal(tgt)
         if not tgt or tgt[0] != "src" or depth > 4:
             return None
+        key = (tgt[1], tuple(tgt[2]))
+        if key in self.resolving:  # a cycle (e.g. star imports of each other): resolves to nothing
+            return None
+        self.resolving.add(key)
+        try:
+            return self._symbol(tgt, depth)
+        finally:
+            self.resolving.discard(key)
+
+    def _symbol(self, tgt: tuple, depth: int) -> tuple[str, tuple] | None:
         rel, path = tgt[1], tgt[2]
         m = self.modules.get(rel)
         if m is None or rel not in self.source or not path:
@@ -419,6 +487,15 @@ def _scope(ix: Index, mod: Module, fn: ast.AST, cls: str | None) -> Scope:
         sc.locals |= {a.arg for a in [*named, *(a for a in (args.vararg, args.kwarg) if a is not None)]}
         sc.fixtures = {a.arg for a in named} - _parametrized(fn) - {"self", "cls"}
     imported: dict[str, tuple] = {}
+    fallback: set[int] = set()  # `except ImportError: name = None` after `try: from x import name`
+    for node, _parent in _walk_own(list(getattr(fn, "body", []))):
+        if isinstance(node, ast.Try):
+            body_names = {n for st in node.body for x in ast.walk(st) if isinstance(x, (ast.Import, ast.ImportFrom))
+                          for n, _t in ix.import_targets(mod, x)}
+            for h in node.handlers:
+                for st in ast.walk(h):
+                    if isinstance(st, ast.Assign) and all(set(_target_names(t)) <= body_names for t in st.targets):
+                        fallback.add(id(st))
     for node, _parent in _walk_own(list(getattr(fn, "body", []))):
         if isinstance(node, (ast.Import, ast.ImportFrom)):
             for name, tgt in ix.import_targets(mod, node):
@@ -428,18 +505,18 @@ def _scope(ix: Index, mod: Module, fn: ast.AST, cls: str | None) -> Scope:
             sc.nested[node.name] = node
             sc.locals.add(node.name)
         elif isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
+            if id(node) in fallback:
+                continue
             targets = node.targets if isinstance(node, ast.Assign) else [node.target]
             for t in targets:
-                if isinstance(t, ast.Attribute):
-                    continue
-                sc.locals |= {n.id for n in ast.walk(t) if isinstance(n, ast.Name)}
+                sc.locals |= set(_target_names(t))
                 if isinstance(t, ast.Name) and isinstance(node, ast.Assign) and \
                         isinstance(node.value, (ast.Name, ast.Attribute, ast.Lambda)):
                     sc.aliases[t.id] = node.value
         elif isinstance(node, (ast.For, ast.AsyncFor, ast.comprehension)):
-            sc.locals |= {n.id for n in ast.walk(node.target) if isinstance(n, ast.Name)}
+            sc.locals |= set(_target_names(node.target))
         elif isinstance(node, ast.withitem) and node.optional_vars is not None:
-            sc.locals |= {n.id for n in ast.walk(node.optional_vars) if isinstance(n, ast.Name)}
+            sc.locals |= set(_target_names(node.optional_vars))
         elif isinstance(node, ast.ExceptHandler) and node.name:
             sc.locals.add(node.name)
         elif isinstance(node, ast.NamedExpr):
@@ -594,11 +671,13 @@ def analyze(ix: Index, mod: Module, fn: ast.AST, depth: int = 0, seen: set | Non
                 inj = ix.symbol(ab) if ab and ab[0] == "src" else None
                 if inj:
                     out.injections.add((hit[0], inj[0]))
-        invoker = (b is not None and b[0] == "ext" and b[1] in INVOKERS) or (
-            isinstance(node.func, ast.Attribute) and node.func.attr in SELF_INVOKERS
-            and isinstance(node.func.value, ast.Name) and node.func.value.id == "self")
-        if invoker and depth < MAX_DEPTH:  # pytest.raises(E, f, *a) / pytest.raises(E, lambda: ...) call f
-            for arg in args:
+        pos = INVOKERS.get(b[1]) if b is not None and b[0] == "ext" else None
+        if pos is None and isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name) \
+                and node.func.value.id == "self":
+            pos = SELF_INVOKERS.get(node.func.attr)
+        if pos is not None and depth < MAX_DEPTH and len(node.args) > pos:
+            # pytest.raises(E, f, *a) / pytest.raises(E, lambda: ...) call only that callable argument
+            for arg in (node.args[pos],):
                 if isinstance(arg, ast.Lambda):
                     analyze(ix, mod, arg, depth + 1, seen, out, cls=sc.cls, parent=sc)
                     continue
@@ -707,7 +786,10 @@ def interface_wiring(ix: Index, graph, test_rels: list[str]) -> dict:
     tests_view: dict[str, list[dict]] = {}
     for tid, fl in sorted(funcs.items()):
         for m, name in fl:
-            a = analyze(ix, m, m.functions[name], cls=name.split(".")[0] if "." in name else None)
+            try:
+                a = analyze(ix, m, m.functions[name], cls=name.split(".")[0] if "." in name else None)
+            except RecursionError:  # pathological nesting: judged as calling nothing analysable
+                a = Analysis(calls=1)
             analyses[(m.rel, name)] = a
             tests_view.setdefault(tid, []).append({"function": f"{m.rel}::{name}", "file": m.rel, "name": name,
                                                    "placeholder": a.calls == 0,

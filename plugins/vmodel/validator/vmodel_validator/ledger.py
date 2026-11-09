@@ -154,7 +154,7 @@ class Ledger:
                     obj = json.loads(line)
                     body = {"seq": obj["seq"], "prev": obj["prev"], "record": obj["record"]}
                     sig = obj["sig"]
-                except (json.JSONDecodeError, KeyError, TypeError):
+                except (ValueError, KeyError, TypeError, RecursionError):  # ValueError covers JSONDecodeError (0.2.0)
                     raise LedgerError(f"ledger line {lineno} is malformed (tampered or corrupted)") from None
                 expected_seq = len(entries) + 1
                 if body["seq"] != expected_seq:

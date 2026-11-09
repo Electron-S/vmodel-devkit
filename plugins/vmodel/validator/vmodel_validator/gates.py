@@ -9,6 +9,7 @@ from __future__ import annotations
 import ast
 import json
 import os
+import posixpath
 import re
 import tempfile
 import xml.etree.ElementTree as ET
@@ -1147,8 +1148,40 @@ def g6_wiring(ctx: Ctx, trees: dict[str, ast.AST] | None = None) -> tuple[dict, 
     src, tst = p.source_files(), p.test_files()
     if trees is None:
         trees = _parse_trees(ctx, src + tst)
-    ix = wiring.Index.build(p.root, p.rel, src, tst, trees)
+    ix = wiring.Index.build(p.root, p.rel, src, tst, trees, roots=import_roots(p))
     return wiring.interface_wiring(ix, ctx.graph, [p.rel(f) for f in tst]), ix
+
+
+def import_roots(p: Project) -> list[tuple[str, bool]]:
+    """Directories the project's code is imported from: the project root and pyproject [tool.pytest.ini_options]
+    pythonpath entries (explicit), the static prefixes of the configured source globs and top-level directories
+    without __init__.py (inferred; review 3 R6: src/__init__.py with pythonpath = ["src"], nested source roots)."""
+    roots: dict[str, bool] = {"": True}
+    try:
+        import tomllib
+        data = tomllib.loads((p.root / "pyproject.toml").read_text(encoding="utf-8"))
+        pp = data.get("tool", {}).get("pytest", {}).get("ini_options", {}).get("pythonpath", [])
+        for entry in [pp] if isinstance(pp, str) else pp if isinstance(pp, list) else []:
+            if isinstance(entry, str):
+                rel = posixpath.normpath(entry.replace("\\", "/")).strip("/")
+                if rel and rel != "." and not rel.startswith(".."):
+                    roots[rel] = True
+    except (OSError, ValueError, ImportError, AttributeError):
+        pass
+    for pat in p.config()["paths"]["source"]:
+        parts = []
+        for part in pat.replace("\\", "/").split("/"):
+            if any(ch in part for ch in "*?[") or part.endswith(".py"):
+                break
+            parts.append(part)
+        while parts and (p.root.joinpath(*parts) / "__init__.py").is_file():
+            parts.pop()  # a package directory: its parent is the root
+        if parts:
+            roots.setdefault("/".join(parts), False)
+    for d in sorted(p.root.iterdir()):
+        if d.is_dir() and not d.name.startswith(".") and not (d / "__init__.py").is_file():
+            roots.setdefault(d.name, False)
+    return sorted(roots.items())
 
 
 def _interface_implemented(ctx: Ctx, trees: dict[str, ast.AST]) -> Check:
@@ -1682,21 +1715,23 @@ def integration_config_problems(cfg: Any) -> list[str]:
 TRACE_FILE_LIMIT = 32 * 1024 * 1024
 
 
-def trace_files(trace_dir: Path) -> tuple[list[Path], list[str]]:
+def trace_files(trace_dir: Path) -> tuple[list[Path], list[str], int]:
     """Regular, non-symlink *.jsonl files up to the size limit; anything else planted in the folder is reported, not
-    read or hashed (a directory, FIFO or device there must not crash or hang the validator, review F4)."""
-    files, errors = [], []
+    read or hashed (a directory, FIFO or device there must not crash or hang the validator, review F4). Also returns
+    how many files were too large to read (they make the trace truncated, review 3 R8)."""
+    files, errors, oversized = [], [], 0
     for f in sorted(trace_dir.glob("*.jsonl")) if trace_dir.is_dir() else []:
         try:
             if f.is_symlink() or not f.is_file():
                 errors.append(f"{f.name}: not a regular file (ignored)")
             elif f.stat().st_size > TRACE_FILE_LIMIT:
-                errors.append(f"{f.name}: larger than {TRACE_FILE_LIMIT} bytes (ignored)")
+                errors.append(f"{f.name}: larger than {TRACE_FILE_LIMIT} bytes (not read; trace counted as truncated)")
+                oversized += 1
             else:
                 files.append(f)
         except OSError as exc:
             errors.append(f"{f.name}: {exc.__class__.__name__}")
-    return files, errors
+    return files, errors, oversized
 
 
 TRACE_LINE_LIMIT = 64 * 1024
@@ -1716,9 +1751,10 @@ def read_runtime_trace(trace_dir: Path) -> dict:
     """The tracer files (written inside the processes under test, hashed into the signed evidence). `_events` stays
     in memory: (pytest node id, phase, process file, watched file, function). `truncated`: some process hit the
     record limit, so the absence of a record is not evidence that something did not run."""
-    files, errors = trace_files(trace_dir)
-    procs, methods, truncated = 0, set(), False
+    files, errors, oversized = trace_files(trace_dir)
+    procs, methods, truncated = oversized, set(), oversized > 0
     tests: dict[str, set[str]] = {}
+    ran_files: set[str] = set()  # watched files with a function run anywhere in the run, any test or none
     events: list[tuple[str, str, str, str, str]] = []
     for f in files:
         try:
@@ -1739,11 +1775,14 @@ def read_runtime_trace(trace_dir: Path) -> dict:
                 continue
             if r.get("truncated") is True:
                 truncated = True
-            elif isinstance(r.get("t"), str) and isinstance(r.get("m"), str):
-                tests.setdefault(r["t"], set()).add(r["m"])
-                events.append((r["t"], str(r.get("p") or ""), f.name, r["m"], str(r.get("f"))))
+            elif isinstance(r.get("m"), str):
+                ran_files.add(r["m"])
+                if isinstance(r.get("t"), str):
+                    tests.setdefault(r["t"], set()).add(r["m"])
+                    events.append((r["t"], str(r.get("p") or ""), f.name, r["m"], str(r.get("f"))))
     return {"active": procs > 0, "processes": procs, "methods": sorted(methods), "truncated": truncated,
-            "tests": {t: sorted(v) for t, v in sorted(tests.items())}, "errors": errors[:20], "_events": events}
+            "ran_files": sorted(ran_files), "tests": {t: sorted(v) for t, v in sorted(tests.items())},
+            "errors": errors[:20], "_events": events}
 
 
 def trace_by_test(rt: dict) -> dict[str, dict]:
@@ -1752,12 +1791,13 @@ def trace_by_test(rt: dict) -> dict[str, dict]:
     phase). The tracer attributes another thread to the test that started it (review N1)."""
     out: dict[str, dict] = {}
     for nodeid, phase, proc, label, func in rt.get("_events") or []:
-        ids = test_ids_in_text(nodeid.split("::")[-1].split("[")[0])
+        ids = test_ids_in_text(nodeid.split("[", 1)[0].split("::")[-1])  # parameters may contain '::'
         if len(ids) != 1:
             continue
         d = out.setdefault(next(iter(ids)), {"functions": {}, "call": {}, "any": set()})
         d["functions"].setdefault(f"{label}::{func}", set()).add(proc)
-        d["any"].add(label)
+        if phase != "detached":  # a thread of this test still running after the test: not attributable
+            d["any"].add(label)
         if phase == "call":
             d["call"].setdefault(label, set()).add(proc)
     return out
@@ -1977,7 +2017,8 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
         prov_rels = set(iv["provider_modules"])
         cons_rels = None if iv["consumer_modules"] is None else set(iv["consumer_modules"])
         covered_by, tests_view = [], {}
-        unbacked: list[str] = []  # claims (path A or declared B) without runtime backing: warn if covered, else block
+        unbacked: list[str] = []  # declared path B claims without runtime backing: warn if covered, else block
+        static_credit: set[str] = set()
         for tid, tv in sorted(iv["tests"].items()):
             st = executed.get(tid, "not executed")
             seen = ran.get(tid, {"functions": {}, "call": {}, "any": set()})
@@ -1993,15 +2034,16 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
                 if procs is None:
                     continue
                 if fv["path"] == "static":
-                    # path A: the static call path, and the provider (and ARCH consumer) ran during that test (any
-                    # phase: a requested fixture may do the work). A contradiction is missing evidence, not a pass.
-                    if prov_any and cons_any:
-                        credit = credit or ("static", fv)
-                    elif st == "passed":
+                    # path A (D43): the static call path of a function that ran. Whether the provider ran *for this
+                    # test* is advisory: threads, pools and event loops make per-test attribution unreliable. The
+                    # run-wide check below (the provider ran at all) is part of the decision.
+                    credit = credit or ("static", fv)
+                    static_credit.add(tid)
+                    if st == "passed" and not (prov_any and cons_any):
                         what = "provider" if not prov_any else "consumer"
-                        unbacked.append(f"{tid} ({iid}): {fv['function']} statically reaches the interface, but the "
-                                        f"{what} did not run during the test (no {what} function ran: mocked, or a "
-                                        "data-only interface?)")
+                        warns.append(f"{tid} ({iid}): {fv['function']} statically reaches the interface, but no {what} "
+                                     f"function was attributed to this test: the {what} did not run in it (mocked? "
+                                     "or run in a shared thread/pool); the G4 review judges mocking")
                 elif fv["path"] == "runtime_candidate":
                     why = review_note or _runtime_declaration_problem(declared.get((iid, tid)), fv,
                                                                        sha256_file(p.root / fv["file"]))
@@ -2046,12 +2088,24 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
                                "patched_provider": best.get("patched_provider", []),
                                "runtime": {"traced": bool(seen["functions"]), "provider_ran": prov_any,
                                            "consumer_ran": cons_any}}
+        ran_all = set(rt.get("ran_files") or [])
+        never_ran = False
+        if covered_by and set(covered_by) <= static_credit and rt["active"]:
+            # D43: covered only by static paths, so the provider (and ARCH consumer) must have run somewhere in the run
+            missing = [(w, rels) for w, rels in (("provider", prov_rels), ("consumer", cons_rels or set()))
+                       if rels and not (ran_all & rels)]
+            if missing:
+                what = "; ".join(f"no {w} function ({', '.join(sorted(rels))})" for w, rels in missing)
+                blocks.append(f"{iid}: {what} ran anywhere in the integration run although its tests reach it "
+                              "statically: the interface never ran (all mocked, or a data-only interface?); "
+                              "insufficient evidence")
+                covered_by, never_ran = [], True
         covered = bool(covered_by)
         if covered:
             warns.extend(f"{u} (not counted; {iid} is covered by {', '.join(covered_by)})" for u in unbacked)
         else:
             blocks.extend(f"{u}: insufficient evidence" for u in unbacked)
-        if not covered and rt["active"] and \
+        if not covered and rt["active"] and not never_ran and \
                 not any(b.startswith(tuple(f"{t} ({iid})" for t in iv["tests"])) for b in blocks):
             fails.append(f"{iid}: not covered by a passed integration test that reaches its provider "
                          f"({', '.join(iv['provider_modules']) or 'no module'})")
@@ -2063,7 +2117,7 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
         checks.append(Check("G6.IF_COVERAGE", "mechanical", "fail", "interfaces not verified", fails + blocks + warns))
     elif blocks:
         checks.append(Check("G6.IF_COVERAGE", "mechanical", "blocked",
-                            "declared runtime integration paths without runtime proof (REQ-G6-32)", blocks + warns,
+                            "insufficient runtime evidence for interface coverage (REQ-G6-32/33)", blocks + warns,
                             data={"blocked_reason": "integration_evidence_insufficient"}))
     elif warns:
         checks.append(Check("G6.IF_COVERAGE", "mechanical", "warn",

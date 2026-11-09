@@ -4,7 +4,8 @@ G6 puts this directory first on PYTHONPATH and VMODEL_TRACE_SPEC in the environm
 so every Python process of the run (pytest and the processes it starts) imports this file at start-up. For the
 watched files (interface provider/consumer modules and integration test files) it records which functions started,
 together with the pytest test id (parameters dropped) and phase. The main thread follows PYTEST_CURRENT_TEST (inherited
-by child processes); another thread belongs to the test that started it. One line per new (test, phase, file,
+by child processes); another thread belongs to the test that started it, in that test's live phase ("detached" once
+another test runs). One line per new (test, phase, file,
 function); a forked child writes its own file; past the record limit a {"truncated": true} line is written. Module
 and class bodies are not counted, so importing a module is not execution.
 
@@ -32,6 +33,7 @@ def _vmodel_trace_install():
 
     watch = {norm(k): v for k, v in spec["watch"].items()}
     limit = int(spec.get("limit", 100000))
+    byte_limit = int(spec.get("byte_limit", 24 * 1024 * 1024))  # below the validator's per-file reading limit
     mon = getattr(sys, "monitoring", None)
     tool = None
     if mon is not None and not spec.get("force_setprofile"):
@@ -43,7 +45,7 @@ def _vmodel_trace_install():
             except (ValueError, RuntimeError):
                 continue
     method = "sys.monitoring" if tool is not None else "setprofile"
-    state = {"out": None, "seen": set(), "full": False}
+    state = {"out": None, "seen": set(), "full": False, "bytes": 0}
     lock = threading.Lock()
 
     def open_out():
@@ -52,6 +54,7 @@ def _vmodel_trace_install():
                             encoding="utf-8", buffering=1)
         state["seen"] = set()
         state["full"] = False
+        state["bytes"] = 0
         state["out"].write(json.dumps({"v": 1, "pid": os.getpid(), "ppid": os.getppid(),
                                        "python": sys.version.split()[0], "method": method,
                                        "argv": [str(a) for a in getattr(sys, "orig_argv", sys.argv)][:20]},
@@ -71,22 +74,28 @@ def _vmodel_trace_install():
         if not test or not test.endswith(")") or " (" not in test:
             return None, None
         node, phase = test[:-1].rsplit(" (", 1)
-        head, sep, tail = node.rpartition("::")
-        return (head + sep + tail.split("[", 1)[0]), phase  # parameters dropped: evidence is per test function
+        return node.split("[", 1)[0], phase  # parameters dropped (they may contain '::'): evidence per function
 
     def context():
-        """The test a running function belongs to: the main thread follows pytest's current test; another thread
-        belongs to the test (and phase) that started it, so a thread started at import time belongs to none."""
-        th = threading.current_thread()
-        if th is threading.main_thread():
+        """The test a running function belongs to. The main thread follows pytest's current test. Another thread
+        belongs to the test that started it (owner), in that test's live phase; once the owner is no longer the
+        current test its records are "detached"; a thread started outside any test belongs to none."""
+        main = threading.main_thread()
+        ident = threading.get_ident()  # no current_thread(): it would create a _DummyThread for raw threads
+        if ident == main.ident:
             return env_context()
-        return getattr(th, "_vmodel_context", (None, None))
+        th = getattr(threading, "_active", {}).get(ident)  # looked up each time: fork rebuilds it
+        owner = getattr(th, "_vmodel_owner", None) if th is not None else None
+        if owner is None:
+            return None, None
+        test, phase = env_context()
+        return owner, (phase if test == owner else "detached")
 
     original_start = threading.Thread.start
 
     def start(self, *args, **kwargs):
         try:
-            self._vmodel_context = context()
+            self._vmodel_owner = context()[0]
         except Exception:
             pass
         return original_start(self, *args, **kwargs)
@@ -121,13 +130,14 @@ def _vmodel_trace_install():
             with lock:
                 if key in seen or state["full"]:
                     return True
-                if len(seen) >= limit:
+                line = json.dumps({"t": key[0], "p": key[1], "m": key[2], "f": key[3]}, ensure_ascii=True) + "\n"
+                if len(seen) >= limit or state["bytes"] + len(line) > byte_limit:
                     state["full"] = True  # the validator must not read absence as "did not run"
                     state["out"].write(json.dumps({"truncated": True}) + "\n")
                     return True
                 seen.add(key)
-                state["out"].write(json.dumps({"t": key[0], "p": key[1], "m": key[2], "f": key[3]},
-                                              ensure_ascii=True) + "\n")
+                state["bytes"] += len(line)
+                state["out"].write(line)
         return True
 
     if tool is not None:
