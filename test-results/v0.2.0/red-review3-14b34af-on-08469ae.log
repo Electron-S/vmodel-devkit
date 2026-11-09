@@ -1,0 +1,42 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/407947ea-d932-4fb4-a68a-ceeeb447c64f/scratchpad/rel-08469ae/plugins/vmodel",
+    "release_manifest": null
+  },
+  "git_head": "14b34af",
+  "worktree_dirty": false,
+  "python": "3.12.3",
+  "marker": "RED-TARGET",
+  "tests": 13,
+  "expectations_met": 13,
+  "violations": 0,
+  "seconds": 16.3
+}
+
+OK  expect=FAIL got=FAIL    test_g6_review3.R3G6Red.test_R12_parametrize_ids_with_double_colons
+      AssertionError: 'FAILED' != 'PASSED'
+OK  expect=FAIL got=FAIL    test_g6_review3.R3G6Red.test_R2_api_server_started_in_a_function_fixture
+      AssertionError: 'BLOCKED' != 'PASSED'
+OK  expect=FAIL got=FAIL    test_g6_review3.R3G6Red.test_R2_consumer_using_a_shared_thread_pool
+      AssertionError: 'BLOCKED' != 'PASSED'
+OK  expect=FAIL got=FAIL    test_g6_review3.R3PreexistingRed.test_R10_huge_seq_in_the_ledger_is_an_integrity_failure_not_a_crash
+      ValueError: Exceeds the limit (4300 digits) for integer string conversion: value has 5001 digits; use sys.set_int_max_str_digits() to increase the limit
+OK  expect=FAIL got=FAIL    test_g6_review3.R3UnitRed.test_R13_tracer_creates_no_dummy_threads
+      AssertionError: '2' != '1'
+OK  expect=FAIL got=FAIL    test_g6_review3.R3UnitRed.test_R8_oversized_trace_file_counts_as_truncated
+      AssertionError: False is not true : RED-TARGET an oversized trace must not read as 'no trace': {'active': False, 'processes': 0, 'methods': [], 'truncated': False, 'tests': {}, 'errors': ['1-x.jsonl: larger than 33554432 bytes (ignored)'], '_events': []}
+OK  expect=FAIL got=FAIL    test_g6_review3.R3WiringRed.test_R11_only_the_callable_argument_of_pytest_raises_is_called
+      AssertionError: 'static' == 'static' : RED-TARGET main is the expected exception here
+OK  expect=FAIL got=FAIL    test_g6_review3.R3WiringRed.test_R4_attribute_assignment_does_not_unbind_a_module
+      AssertionError: 'none' != 'static'
+OK  expect=FAIL got=FAIL    test_g6_review3.R3WiringRed.test_R5_try_import_then_later_def_is_shadowed
+      AssertionError: 'static' == 'static' : RED-TARGET the later top-level def wins
+OK  expect=FAIL got=FAIL    test_g6_review3.R3WiringRed.test_R5_try_import_with_fallback_keeps_the_import
+      AssertionError: 'none' != 'static'
+OK  expect=FAIL got=FAIL    test_g6_review3.R3WiringRed.test_R6_src_package_init_with_pythonpath_src
+      AssertionError: 'none' != 'static'
+OK  expect=FAIL got=FAIL    test_g6_review3.R3WiringRed.test_R7_cyclic_star_alias_is_not_a_crash
+      AssertionError: 2 == 2 : RED-TARGET wiring crashed:  File "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/407947ea-d932-4fb4-a68a-ceeeb447c64f/scratchpad/rel-08469ae/plugins/vmodel/validator/vmodel_validator/wiring.py", line 328, in symbol
+OK  expect=FAIL got=FAIL    test_g6_review3.R3WiringRed.test_R9_non_list_consumers_is_not_a_crash
+      TypeError: can only join an iterable

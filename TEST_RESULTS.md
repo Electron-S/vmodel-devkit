@@ -1,6 +1,6 @@
 # TEST_RESULTS
 
-마지막 갱신: 2026-11-09(7차, §13 v0.1.5 확정 검증). 확정 버전: VModel DevKit **0.1.5** (core `sha256:37071459…`, `releases/vmodel-0.1.5.json`, 태그 `v0.1.5`) — §12의 하네스(WSL·Windows)·RED/GREEN·독립 검토 3회와 §13의 확정 검증(릴리스 해시, 업그레이드 공백 프로브, 원장·리뷰 호환 프로브, 깨끗한 worktree 전체 회귀)으로 검증, 실제 Claude 세션 없음. 이전 확정 버전 **0.1.4** (core `sha256:5dd1d010…`, `releases/vmodel-0.1.4.json`) — 하네스(WSL·Windows), 첫 0.1.4 빌드 대상 RED, 독립 검토 2회, **실제 Claude Code 세션 1회**(sonnet, $0.15, §11)로 검증. §10은 첫 0.1.4 빌드(core `b1fee43f…`) 기준 기록으로 보존한다. 이전 버전 **0.1.3** (core `sha256:0208c798…`, `releases/vmodel-0.1.3.json`) — 하네스와 **실제 Claude 재작업 세션 1회**(§9, drill-3)로 검증. 기준 버전 **0.1.2** (core `sha256:a0555e32…`, 태그 `v0.1.2` → 커밋 `bbd6a3d`)는 §3의 E2E-3과 §8의 실전 재작업 드릴에서 실제 세션으로 검증. 0.1.0·0.1.1은 E2E-1·2에서 쓴 이전 릴리스.
+마지막 갱신: 2026-11-09(8차, §14 v0.2.0 후보: G6 Integration Verification). 후보 **0.2.0** (core `sha256:f835ec91…`, `releases/vmodel-0.2.0.json`, 브랜치 `g6-dev`, 사용자 확정 전, 실제 Claude 세션 없음) — §14. 2026-11-09(7차, §13 v0.1.5 확정 검증). 확정 버전: VModel DevKit **0.1.5** (core `sha256:37071459…`, `releases/vmodel-0.1.5.json`, 태그 `v0.1.5`) — §12의 하네스(WSL·Windows)·RED/GREEN·독립 검토 3회와 §13의 확정 검증(릴리스 해시, 업그레이드 공백 프로브, 원장·리뷰 호환 프로브, 깨끗한 worktree 전체 회귀)으로 검증, 실제 Claude 세션 없음. 이전 확정 버전 **0.1.4** (core `sha256:5dd1d010…`, `releases/vmodel-0.1.4.json`) — 하네스(WSL·Windows), 첫 0.1.4 빌드 대상 RED, 독립 검토 2회, **실제 Claude Code 세션 1회**(sonnet, $0.15, §11)로 검증. §10은 첫 0.1.4 빌드(core `b1fee43f…`) 기준 기록으로 보존한다. 이전 버전 **0.1.3** (core `sha256:0208c798…`, `releases/vmodel-0.1.3.json`) — 하네스와 **실제 Claude 재작업 세션 1회**(§9, drill-3)로 검증. 기준 버전 **0.1.2** (core `sha256:a0555e32…`, 태그 `v0.1.2` → 커밋 `bbd6a3d`)는 §3의 E2E-3과 §8의 실전 재작업 드릴에서 실제 세션으로 검증. 0.1.0·0.1.1은 E2E-1·2에서 쓴 이전 릴리스.
 
 "실측"은 이 PC에서 실제로 실행한 결과, "미검증"은 실행하지 않은 것입니다. 추정은 따로 표시합니다.
 
@@ -584,3 +584,67 @@ Validator 코드를 쓰지 않고 hashlib로 다시 계산했다(파일별 sha25
 - Windows의 pty 경로(업그레이드 TTY 확인·Ctrl-C·계획 대조 등 34건 + 기존 6건)는 Windows에서 돌리지 않았다. Windows에서 Claude Code가 settings.json을 연 채로 있을 때의 원자적 교체는 미실측.
 - 마켓플레이스 캐시 경로에서 실행될 때 규칙이 가리킬 경로, 다운그레이드 자동화 없음(수동 절차의 규칙 공백), Python 3.11은 §12.7과 같이 미검증이다.
 - 업그레이드마다 G4 재리뷰 비용(§13.4), 제거 직후 중단 시 안내 문구 부정확(§13.3)은 알려진 한계로 남는다.
+
+## 14. v0.2.0 후보: G6 Integration Verification (2026-11-09, 브랜치 `g6-dev`, 실제 Claude 세션 없음)
+
+사용자 지시("VModel DevKit v0.2.0 — G6 Integration Verification 개발", 결정 D1~D8 승인)에 따라 G6을 구현해 v0.2.0 후보를 만들었다. main 병합·`v0.2.0` 태그·원격 푸시·유료 헤드리스 실행은 하지 않았다. 절차·요구사항·검토 처리표는 `docs/g6/WORKITEM.md`, 결정은 D42·D43, 로그는 `test-results/v0.2.0/`. 아래는 모두 이 PC에서 실제로 실행한 결과다(하네스는 Claude 없이 사용자·verifier 역할을 대신한다: 그 부분은 시뮬레이션이다).
+
+### 14.1 출발 상태
+- Git: `main` = 태그 `v0.1.5` = `78517d5`, `g6-dev` = `fe38239`(설계 문서). 예상과 같았다.
+- 기준 하네스(`fe38239`, WSL): **225/225**, 690초.
+- 테스트 도우미 변경(G4 리뷰에 `interfaces`, 스냅샷 등)을 0.1.5 릴리스 사본에 돌린 결과 225 중 223 통과, 오류 2는 `copy_plugin`이 읽기 전용 릴리스 파일을 복사해 쓰기 실패한 테스트 환경 문제(`existing225-helpers-c6bc3ce-on-0.1.5.log`). `copy_plugin`이 사본을 쓰기 가능하게 바꾸도록 고쳤다.
+
+### 14.2 RED → GREEN (`scripts/red_green.py`, 0.2.0에서 `--marker RED-TARGET` 추가: 목표 assertion이 아닌 실패는 위반)
+| 대상 | 커밋(깨끗한 worktree) | 결과 | 로그 |
+|---|---|---|---|
+| G6 하네스 10개 모듈 → 불변 `dist/vmodel-0.1.5` | `c6bc3ce`, `aab3422` | 75 중 70, 72: 테스트 도우미 결함(`re.sub` 역슬래시, C2 비교 방식, test_changes 정당화 누락)이 드러나 테스트를 고침 | `red-c6bc3ce.log`, `red-aab3422.log` |
+| 같은 모듈 → `dist/vmodel-0.1.5` | `3239eba`, `08469ae`, `14b34af` | **76/76**, 위반 0 (실패 사유도 확인: G6 미구현 BLOCKED, G4가 placeholder·import-only 통과, G5가 통합 테스트 수용, init 옵션 없음) | `red-3239eba.log`, `red-14b34af-on-0.1.5.log` |
+| 검토 1회차 테스트 → 검토 빌드 `3239eba` | `5e64974` | **19/19**(Red 18 + D43 특성 1) | `red-review-5e64974-on-3239eba.log` |
+| 검토 2회차 테스트 → `c216910` | `14b34af` | **19/19** | `red-review2-14b34af-on-c216910.log` |
+| 검토 3회차 테스트 → `08469ae` | `14b34af` | **13/13** | `red-review3-14b34af-on-08469ae.log` |
+| GREEN(전 G6·검토 모듈, 소스) | `14b34af` | **135/135** | `green-14b34af.log` |
+| GREEN(같은 모듈 + 업그레이드·호환 모듈, 릴리스 사본 `dist/vmodel-0.2.0`) | 작업 트리(코드는 `14b34af`와 같음) | **177/177** | `green-release-0.2.0.log` |
+
+### 14.3 사용자 테스트 T01~T20 대응 (모두 자동화, 하네스)
+T01 `test_g6_gate` T01, T02 T02, T03 `test_g6_config` T03, T04 gate T04·T04b, T05 `test_g6_scope` T05 2건, T06 `test_g6_wiring` T06 2건 + 검토 F1·placeholder, T07 wiring T07·gate T07·T07b, T08 wiring T08 + 검토 F2, T09 wiring T09 5건(선언 없음·subprocess·API·해시 불일치·provider 미실행) + 검토 N2(fork)·R2(fixture 서버), T10 `test_g6_applicability` T10, T11 T11 3건, T12 `test_g6_rework` T12(OUT_OF_SCOPE), T13 T13, T14 `test_g6_compat` T14 2건, T15 T15, T16 T16(pty), T17 C1/C2/T17, T18 gate T18 5건 + 검토 N4, T19 `test_g6_encoding` 2건(Windows에서 실제 실행), T20 config InitRed 6건·MigrationRed 4건(pty)·compat T20(0.1.5 릴리스 → 0.2.0 재고정·`configure-tests`·G6, pty). 실행 증거 표본: `g6-demo-release-0.2.0.txt`(릴리스 사본, 모델 호출 없음).
+
+### 14.4 독립 검토 3회 (별도 컨텍스트, 작업 트리 읽기 전용, 사본에서 재현)
+| 회차 | 대상 | 지적 | 처리 |
+|---|---|---|---|
+| 1 | `3239eba` | 12(주요 7) | 직접 재현 후 수정 `c216910` (WORKITEM §7.1) |
+| 2 | `c216910` | 1회차 중 닫힘 6·부분 5, 새 11(주요 10) + 0.1.x 내부 오류 2 | 재현 후 수정 `08469ae` (§7.2) |
+| 3 | `08469ae` | 2회차 중 닫힘 9·부분 5, 새 14(주요 7) | 테스트별 실행 귀속의 한계를 인정하고 판정 규칙을 정리(D43), 재현 후 수정 `14b34af` (§7.3) |
+3회차 수정 자체는 독립 재검토를 받지 않았다(§14.9).
+
+### 14.5 전체 회귀
+| 환경 | 코드 | 결과 |
+|---|---|---|
+| WSL2 Ubuntu 24.04, Python 3.12.3, pytest 9.0.3 (깨끗한 detached worktree) | `14b34af` | **360/360 통과**, skip 0, 1051초 (`wsl-harness-14b34af.log`) |
+| 같음 | `08469ae`, `c216910` | 346/346, 327/327 |
+| Windows 11, Python 3.13.14 venv, cp949, 한글·공백 경로 | `5e64974`(코드 = `14b34af`) | WINDOWS_FINAL |
+| 같음 | `54eac4c`(코드 = `08469ae`), `c216910`, `3239eba` | 346 실행·실패 0·skip 48 / 327 실행·실패 1(아래)·skip 46 / 308 실행·실패 0·skip 46 |
+- Windows `c216910`의 실패 1과 WSL 부하 중 1회 실패는 같은 원인이었다: `test_g6_scope` D4가 G5.EXECUTION의 pytest 출력 꼬리(소요 시간 포함)를 비교했다. 테스트 결함이며 고쳤다(`54eac4c`). 제품 결함 아님.
+- Windows skip은 pty가 필요한 사용자 전용 경로(재고정, `configure-tests`, unblock 등), 권한이 필요한 심볼릭 링크, ruff 없음이다.
+
+### 14.6 실제 Integration Test 실행 증거 (릴리스 사본, `g6-demo-release-0.2.0.txt`)
+- 경로 A: `{python} -m pytest -q -p no:cacheprovider tests/integration --junitxml=…`를 Validator가 직접 실행, 종료 0, 3 passed, G6.SCOPE에 unit ID 없음, IF 2/2. 서명된 증거에 `kind: integration_test`, `command_source: integration_test`, `junit.xml`, `stdout/stderr.bin`, `trace-spec.json`, `trace/<pid>-….jsonl`(해시). `verify-evidence`·`audit` OK.
+- 경로 B: TEST-012가 `python -m pipeline.report`를 하위 프로세스로 실행. 선언 없으면 G4 REVIEW_REQUIRED, verifier 선언(테스트 파일 해시) 후 G4 PASSED, G6 PASSED(IF-002 `runtime`, 자식 프로세스의 계측 파일에서 provider 실행 확인).
+- 실패 → 재작업: consumer가 parser의 ValueError를 삼키게 심으면 unit은 통과하고 G6 FAILED(TEST-011). DEFECT 없이 재평가는 기록 없이 BLOCKED, DEFECT(G6, P4) → 수정 → G6 PASSED, 결함 CLOSED.
+
+### 14.7 N/A·OUT_OF_SCOPE·G5/G6 분리·호환
+- N/A: 단일 컴포넌트에서 G2·G3 리뷰 확인 전에는 BLOCKED `applicability_unconfirmed`, 확인 후 `G6 N/A`(기록은 PASSED + `not_applicable`, 실행 체크 skip, 증거 없음). 출력·status·report에 "integration tests passed"·"G1-G5 verified" 없음. IF를 `removed_ids` 없이 지우면 N/A 불가(T11).
+- OUT_OF_SCOPE: G6 실패 결함 뒤 CR로 IF·통합 TEST를 지우고 G2·G3가 확인하면 결함은 CLOSED가 아니라 OUT_OF_SCOPE, `verified_by` 없음, CR 연결, FAILED 기록 보존(T12).
+- G5/G6: `integration_test` 설정 시 unit 명령이 integration 테스트를 실행하면 G5.SCOPE FAILED, G6 명령이 unit 테스트를 실행하면 G6.SCOPE FAILED, integration ID가 G5에서 빠지는 것은 약화 아님, unit ID가 빠지면 지금처럼 약화. 설정이 없는 기존 프로젝트의 G5 기록은 0.1.5와 같음(D4 불변식), 섞인 실행은 경고만.
+- 호환: IF 없는 WI의 G1~G5 판정 투영과 manifest가 0.1.5와 같음(C1/C2), 0.1.5가 서명한 원장·증거가 새 코어에서 검증됨(T17), 0.1.5 → 0.2.0 재고정 후 이전 기록 바이트 유지·G1~G5 STALE(Core 교체, D1)·G6 평가 전(T20, 릴리스 사본끼리도 통과). 0.1.x에서 상속한 원장 판독·JSON 판독의 내부 오류 2건(P1·R10)은 오류 보고로 바꿨다.
+
+### 14.8 릴리스 후보
+- `python3 scripts/release.py` → `dist/vmodel-0.2.0/`(45개 파일, tracer·wiring 포함), `releases/vmodel-0.2.0.json`, core `sha256:f835ec913b6a885f1f1eb297981142878f1c81c49e649231ef69ce26ff09eb5f`.
+- `test-results/v0.2.0/release_check.py`(Validator 코드 없이 hashlib로 재계산): 0.1.0~0.2.0 사본·기록·자가 점검 일치, 소스 = 0.2.0 기록, 버전 문자열 일치, 0.1.x 기록 불변, 태그 `v0.1.2`~`v0.1.5` 불변, `v0.2.0` 태그 없음, `main` = `78517d5` (`release-check-14b34af.json`).
+- `claude plugin validate --strict`: 소스·릴리스 모두 통과(README 마켓플레이스 설치 줄 권고만).
+
+### 14.9 미검증·남은 위험
+- **3회차 수정(`14b34af`)은 독립 재검토를 받지 않았다.** 정적 분석은 Python 근사라 의도적으로 꾸민 테스트(동적 setattr, exec 등)를 모두 잡지 못하고, 검토마다 새 형태가 나왔다.
+- D43의 대가: 목만 쓴 경로 A 테스트는 그 IF의 provider가 실행 어딘가에서 돌면 경고와 함께 통과한다(목 판단은 G4 patch 경고와 G4 리뷰).
+- 계측 한계(D43): forkserver(Python 3.14부터 Linux 기본)와 이전 테스트가 만든 fork 풀의 귀속, 세션·모듈 범위 서버의 경로 B BLOCKED, 데이터 전용 IF BLOCKED, 같은 프로세스 위조(F5), pytest가 아닌 러너(경로 B 증명 불가).
+- 실제 Claude 세션에서의 G6(verifier의 `interfaces`·`runtime_paths`·`integration_applicability` 작성, 사용자 `configure-tests` 흐름)은 실행하지 않았다(D8 E2E 계획 WORKITEM §8, 승인 필요).
+- Windows의 pty 경로, Python 3.11, macOS는 미검증. 업그레이드마다 G4 재리뷰 비용(D40)은 그대로(D4 결정).

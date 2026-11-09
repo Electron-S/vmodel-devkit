@@ -1,0 +1,196 @@
+{
+  "mode": "green",
+  "plugin": {
+    "path": "/home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.2.0",
+    "release_manifest": {
+      "version": "0.2.0",
+      "core_hash": "sha256:f835ec913b6a885f1f1eb297981142878f1c81c49e649231ef69ce26ff09eb5f"
+    }
+  },
+  "git_head": "23341af",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "marker": null,
+  "tests": 177,
+  "expectations_met": 177,
+  "violations": 0,
+  "seconds": 424.3
+}
+
+OK  expect=ok   got=ok      test_g6_gate.GateDefinitionRed.test_B14_g6_is_mechanical_without_ai_review
+OK  expect=ok   got=ok      test_g6_gate.GateRed.test_B10_inputs_changed_during_run
+OK  expect=ok   got=ok      test_g6_gate.GateRed.test_B11_g5_stale_blocks_without_record
+OK  expect=ok   got=ok      test_g6_gate.GateRed.test_B13_agent_environment_is_scrubbed
+OK  expect=ok   got=ok      test_g6_gate.GateRed.test_T01_real_provider_consumer_integration_passes
+OK  expect=ok   got=ok      test_g6_gate.GateRed.test_T02_integration_failure_fails_g6
+OK  expect=ok   got=ok      test_g6_gate.GateRed.test_T04_unit_command_reused_as_integration_command_is_rejected
+OK  expect=ok   got=ok      test_g6_gate.GateRed.test_T04b_whole_test_tree_as_integration_command_is_rejected
+OK  expect=ok   got=ok      test_g6_gate.GateRed.test_T07_integration_command_that_skips_an_interface_test
+OK  expect=ok   got=ok      test_g6_gate.GateRed.test_T07b_skipped_integration_test_fails
+OK  expect=ok   got=ok      test_g6_gate.GateRed.test_T18_exit_0_without_junit_is_not_a_pass
+OK  expect=ok   got=ok      test_g6_gate.GateRed.test_T18_forged_results_are_not_evidence
+OK  expect=ok   got=ok      test_g6_gate.GateRed.test_T18_timeout_fails_and_start_failure_blocks
+OK  expect=ok   got=ok      test_g6_gate.GateRed.test_T18_zero_tests_with_exit_0_is_not_a_pass
+OK  expect=ok   got=ok      test_g6_wiring.WiringChar.test_E1_helper_and_fixture_reach_is_accepted
+OK  expect=ok   got=ok      test_g6_wiring.WiringRed.test_E2_interface_symbol_missing_from_provider
+OK  expect=ok   got=ok      test_g6_wiring.WiringRed.test_E3_patched_provider_warns_at_g4_and_g6
+OK  expect=ok   got=ok      test_g6_wiring.WiringRed.test_E4_review_must_cover_every_interface
+OK  expect=ok   got=ok      test_g6_wiring.WiringRed.test_T06_assert_true_placeholder_fails_g4
+OK  expect=ok   got=ok      test_g6_wiring.WiringRed.test_T06_pass_and_docstring_placeholder_fails_g4
+OK  expect=ok   got=ok      test_g6_wiring.WiringRed.test_T06_unused_nested_call_does_not_hide_a_placeholder
+OK  expect=ok   got=ok      test_g6_wiring.WiringRed.test_T07_interface_test_function_missing_fails_test_code
+OK  expect=ok   got=ok      test_g6_wiring.WiringRed.test_T08_import_only_test_does_not_reach_the_interface
+OK  expect=ok   got=ok      test_g6_wiring.WiringRed.test_T09_declared_api_path_passes_on_runtime_evidence
+OK  expect=ok   got=ok      test_g6_wiring.WiringRed.test_T09_declared_path_without_provider_execution_blocks_g6
+OK  expect=ok   got=ok      test_g6_wiring.WiringRed.test_T09_declared_subprocess_path_passes_g4_and_g6_on_runtime_evidence
+OK  expect=ok   got=ok      test_g6_wiring.WiringRed.test_T09_stale_test_hash_in_declaration_needs_rereview
+OK  expect=ok   got=ok      test_g6_wiring.WiringRed.test_T09_subprocess_test_needs_a_declared_runtime_path
+OK  expect=ok   got=ok      test_g6_config.ConfigChar.test_A5_015_config_without_integration_test_is_valid
+OK  expect=ok   got=ok      test_g6_config.ConfigRed.test_A2_integration_argv_without_junit_is_misconfigured
+OK  expect=ok   got=ok      test_g6_config.ConfigRed.test_A3_invalid_integration_test_object_is_misconfigured_not_a_crash
+OK  expect=ok   got=ok      test_g6_config.ConfigRed.test_T03_missing_integration_test_blocks_without_running_anything
+OK  expect=ok   got=ok      test_g6_config.InitRed.test_T20_existing_integration_dir_is_registered_and_excluded_from_unit
+OK  expect=ok   got=ok      test_g6_config.InitRed.test_T20_explicit_existing_path_is_registered
+OK  expect=ok   got=ok      test_g6_config.InitRed.test_T20_explicit_missing_path_is_refused
+OK  expect=ok   got=ok      test_g6_config.InitRed.test_T20_explicit_path_without_test_functions_is_refused
+OK  expect=ok   got=ok      test_g6_config.InitRed.test_T20_no_integration_dir_registers_nothing_and_says_so
+OK  expect=ok   got=ok      test_g6_config.InitRed.test_T20_whole_unit_scope_is_refused
+OK  expect=ok   got=ok      test_g6_config.MigrationRed.test_T20_configure_tests_needs_a_terminal
+OK  expect=ok   got=ok      test_g6_config.MigrationRed.test_T20_configure_tests_on_a_terminal_updates_config_and_ledger
+OK  expect=ok   got=ok      test_g6_config.MigrationRed.test_T20_configure_tests_refuses_a_missing_path
+OK  expect=ok   got=ok      test_g6_config.MigrationRed.test_T20_guard_blocks_the_agent
+OK  expect=ok   got=ok      test_g6_scope.ScopeChar.test_D5_unit_test_disappearing_is_still_weakening
+OK  expect=ok   got=ok      test_g6_scope.ScopeInvariant.test_D4_g5_records_without_integration_test_are_unchanged
+OK  expect=ok   got=ok      test_g6_scope.ScopeRed.test_D2_moving_integration_tests_out_of_g5_is_not_weakening
+OK  expect=ok   got=ok      test_g6_scope.ScopeRed.test_D3_mixed_run_without_integration_test_is_warned
+OK  expect=ok   got=ok      test_g6_scope.ScopeRed.test_T05_integration_run_cannot_stand_in_for_a_unit_test
+OK  expect=ok   got=ok      test_g6_scope.ScopeRed.test_T05_unit_command_running_integration_tests_fails_g5
+OK  expect=ok   got=ok      test_g6_applicability.NaRed.test_Cb_only_g2_confirmed_blocks
+OK  expect=ok   got=ok      test_g6_applicability.NaRed.test_Cc_only_g3_confirmed_blocks
+OK  expect=ok   got=ok      test_g6_applicability.NaRed.test_Cd_blank_reason_blocks
+OK  expect=ok   got=ok      test_g6_applicability.NaRed.test_Ce_unsubmitted_review_edit_blocks
+OK  expect=ok   got=ok      test_g6_applicability.NaRed.test_Cf_integration_spec_without_interface_is_required
+OK  expect=ok   got=ok      test_g6_applicability.NaRed.test_Cg2_external_endpoint_not_reviewed_blocks
+OK  expect=ok   got=ok      test_g6_applicability.NaRed.test_Cg_data_flow_to_another_component_blocks
+OK  expect=ok   got=ok      test_g6_applicability.NaRed.test_Ch_review_change_after_na_stales_only_g6
+OK  expect=ok   got=ok      test_g6_applicability.NaRed.test_T10_confirmed_single_component_is_na
+OK  expect=ok   got=ok      test_g6_applicability.NaRemovalRed.test_T11_interface_removed_without_justification_blocks
+OK  expect=ok   got=ok      test_g6_applicability.NaRemovalRed.test_T11_justified_removal_with_confirmed_reviews_is_na
+OK  expect=ok   got=ok      test_g6_applicability.NaRemovalRed.test_T11_justified_removal_without_review_confirmation_blocks
+OK  expect=ok   got=ok      test_g6_rework.ReworkRed.test_F3_partial_run_failure_splits_failing_and_unknown
+OK  expect=ok   got=ok      test_g6_rework.ReworkRed.test_F7_misconfigured_block_is_neutral
+OK  expect=ok   got=ok      test_g6_rework.ReworkRed.test_T12_scope_removed_by_change_request_is_out_of_scope_not_closed
+OK  expect=ok   got=ok      test_g6_rework.ReworkRed.test_T13_failure_defect_fix_reverify_closes
+OK  expect=ok   got=ok      test_g6_status.StatusRed.test_G1_not_evaluated_is_in_progress_with_gate_summary
+OK  expect=ok   got=ok      test_g6_status.StatusRed.test_G2_required_pass_is_partially_verified
+OK  expect=ok   got=ok      test_g6_status.StatusRed.test_G4_verify_runs_g1_to_g6
+OK  expect=ok   got=ok      test_g6_status.StatusRed.test_G6_trace_has_interface_rows_and_integration_results_from_g6
+OK  expect=ok   got=ok      test_g6_status.StatusRed.test_G7_preview_names_the_missing_input
+OK  expect=ok   got=ok      test_g6_compat.CompatAccept.test_T16_core_change_stales_every_pass_including_g6
+OK  expect=ok   got=ok      test_g6_compat.CompatAccept.test_T20_015_project_upgrades_and_migrates
+OK  expect=ok   got=ok      test_g6_compat.CompatInvariant.test_C1_C2_T17_same_g1_g5_decisions_and_manifests_without_interfaces
+OK  expect=ok   got=ok      test_g6_compat.CompatInvariant.test_T17_015_signed_evidence_verifies_with_this_core
+OK  expect=ok   got=ok      test_g6_compat.CompatRed.test_T14_g4_review_file_change_stales_g6
+OK  expect=ok   got=ok      test_g6_compat.CompatRed.test_T14_interface_test_and_review_changes_stale_the_right_gates
+OK  expect=ok   got=ok      test_g6_compat.CompatRed.test_T15_g6_keeps_g1_g5_records_and_evidence
+OK  expect=ok   got=ok      test_g6_encoding.EncodingRed.test_T19_cp949_output_and_korean_data_in_integration_run
+OK  expect=ok   got=ok      test_g6_encoding.EncodingRed.test_T19_subprocess_path_in_a_korean_path
+OK  expect=ok   got=ok      test_g6_tracer.TracerAccept.test_bad_spec_never_breaks_the_program
+OK  expect=ok   got=ok      test_g6_tracer.TracerAccept.test_function_calls_are_attributed_to_the_test_and_children_are_traced
+OK  expect=ok   got=ok      test_g6_tracer.TracerAccept.test_import_alone_is_not_execution
+OK  expect=ok   got=ok      test_g6_tracer.TracerAccept.test_project_sitecustomize_still_runs
+OK  expect=ok   got=ok      test_g6_tracer.TracerAccept.test_setprofile_fallback_records_the_same
+OK  expect=ok   got=ok      test_g6_review.ReviewDisplayRed.test_F12_gate_output_says_na_not_passed
+OK  expect=ok   got=ok      test_g6_review.ReviewG6Red.test_F1_collected_function_without_a_call_path_fails_g4
+OK  expect=ok   got=ok      test_g6_review.ReviewG6Red.test_F1_dunder_test_false_and_smoke_function
+OK  expect=ok   got=ok      test_g6_review.ReviewG6Red.test_F1_uncollected_static_function_does_not_cover_the_interface
+OK  expect=ok   got=ok      test_g6_review.ReviewG6Red.test_F2_mocked_provider_in_every_test_of_the_interface_fails_g6
+OK  expect=ok   got=ok      test_g6_review.ReviewG6Red.test_F4_directory_at_the_junit_path_is_a_recorded_failure
+OK  expect=ok   got=ok      test_g6_review.ReviewG6Red.test_F4_directory_in_the_trace_folder_is_a_recorded_result
+OK  expect=ok   got=ok      test_g6_review.ReviewG6Red.test_F4_g5_survives_a_directory_at_the_junit_path_too
+OK  expect=ok   got=ok      test_g6_review.ReviewG6Red.test_F6_autouse_fixture_running_the_provider_is_not_subprocess_proof
+OK  expect=ok   got=ok      test_g6_review.ReviewInitRed.test_F11_unnormalised_paths_are_refused
+OK  expect=ok   got=ok      test_g6_review.ReviewWiringRed.test_F10_trace_and_wiring_survive_malformed_verifies
+OK  expect=ok   got=ok      test_g6_review.ReviewWiringRed.test_F2_module_attribute_reference_is_not_a_call
+OK  expect=ok   got=ok      test_g6_review.ReviewWiringRed.test_F2_nested_def_shadowing_the_import_is_not_the_consumer
+OK  expect=ok   got=ok      test_g6_review.ReviewWiringRed.test_F2_parameter_default_shadowing_the_import
+OK  expect=ok   got=ok      test_g6_review.ReviewWiringRed.test_F3_unhashable_interface_id_in_review_is_review_required_not_a_crash
+OK  expect=ok   got=ok      test_g6_review.ReviewWiringRed.test_F7_class_based_tests_with_a_helper_method
+OK  expect=ok   got=ok      test_g6_review.ReviewWiringRed.test_F7_unittest_setup_alias_lambda_argument_and_star_import
+OK  expect=ok   got=ok      test_g6_review.ReviewWiringRed.test_F8_namespace_package_without_init
+OK  expect=ok   got=ok      test_g6_review.ReviewWiringRed.test_F9_provider_passed_into_the_consumer
+OK  expect=ok   got=ok      test_g6_review2.R2G6Red.test_N1_background_thread_running_the_provider_is_not_the_tests_evidence
+OK  expect=ok   got=ok      test_g6_review2.R2G6Red.test_N2_forked_ipc_child_is_another_process
+OK  expect=ok   got=ok      test_g6_review2.R2G6Red.test_N3_deeply_nested_trace_line_is_not_a_crash
+OK  expect=ok   got=ok      test_g6_review2.R2G6Red.test_N4_deleted_trace_is_not_junit_only_credit
+OK  expect=ok   got=ok      test_g6_review2.R2G6Red.test_N7_symlinked_junit_stays_hashed_as_in_015
+OK  expect=ok   got=ok      test_g6_review2.R2G6Red.test_N8_fixture_computing_the_result_in_setup_is_credited
+OK  expect=ok   got=ok      test_g6_review2.R2G6Red.test_N9_many_parametrised_cases_do_not_truncate_the_evidence
+OK  expect=ok   got=ok      test_g6_review2.R2PreexistingRed.test_P1_huge_integer_in_a_review_is_not_a_crash
+OK  expect=ok   got=ok      test_g6_review2.R2PreexistingRed.test_P2_non_string_interface_provider_is_not_a_crash
+OK  expect=ok   got=ok      test_g6_review2.R2WiringRed.test_N10_module_level_instance_method_is_a_call
+OK  expect=ok   got=ok      test_g6_review2.R2WiringRed.test_N10_star_reexport_in_package_init
+OK  expect=ok   got=ok      test_g6_review2.R2WiringRed.test_N11_relative_import_in_a_namespace_package
+OK  expect=ok   got=ok      test_g6_review2.R2WiringRed.test_N5a_module_level_def_shadowing_the_import
+OK  expect=ok   got=ok      test_g6_review2.R2WiringRed.test_N5b_local_reassignment_after_a_local_import
+OK  expect=ok   got=ok      test_g6_review2.R2WiringRed.test_N5c_setup_local_alias_resolves_in_setup_scope
+OK  expect=ok   got=ok      test_g6_review2.R2WiringRed.test_N5d_lambda_argument_that_is_never_called
+OK  expect=ok   got=ok      test_g6_review2.R2WiringRed.test_N5e_injection_into_a_non_consumer_call
+OK  expect=ok   got=ok      test_g6_review2.R2WiringRed.test_N6_project_http_module_does_not_hide_http_client
+OK  expect=ok   got=ok      test_g6_review2.R2WiringRed.test_N6_project_json_module_does_not_take_over_stdlib_json
+OK  expect=ok   got=ok      test_g6_review3.R3G6Accept.test_D43_provider_that_never_runs_in_the_whole_run_blocks
+OK  expect=ok   got=ok      test_g6_review3.R3G6Red.test_R12_parametrize_ids_with_double_colons
+OK  expect=ok   got=ok      test_g6_review3.R3G6Red.test_R2_api_server_started_in_a_function_fixture
+OK  expect=ok   got=ok      test_g6_review3.R3G6Red.test_R2_consumer_using_a_shared_thread_pool
+OK  expect=ok   got=ok      test_g6_review3.R3PreexistingRed.test_R10_huge_seq_in_the_ledger_is_an_integrity_failure_not_a_crash
+OK  expect=ok   got=ok      test_g6_review3.R3UnitRed.test_R13_tracer_creates_no_dummy_threads
+OK  expect=ok   got=ok      test_g6_review3.R3UnitRed.test_R8_oversized_trace_file_counts_as_truncated
+OK  expect=ok   got=ok      test_g6_review3.R3WiringRed.test_R11_only_the_callable_argument_of_pytest_raises_is_called
+OK  expect=ok   got=ok      test_g6_review3.R3WiringRed.test_R4_attribute_assignment_does_not_unbind_a_module
+OK  expect=ok   got=ok      test_g6_review3.R3WiringRed.test_R5_try_import_then_later_def_is_shadowed
+OK  expect=ok   got=ok      test_g6_review3.R3WiringRed.test_R5_try_import_with_fallback_keeps_the_import
+OK  expect=ok   got=ok      test_g6_review3.R3WiringRed.test_R6_src_package_init_with_pythonpath_src
+OK  expect=ok   got=ok      test_g6_review3.R3WiringRed.test_R7_cyclic_star_alias_is_not_a_crash
+OK  expect=ok   got=ok      test_g6_review3.R3WiringRed.test_R9_non_list_consumers_is_not_a_crash
+OK  expect=ok   got=ok      test_version_compat.GateDecisionInvariant.test_manifest_hashes_are_computed_identically
+OK  expect=ok   got=ok      test_version_compat.GateDecisionInvariant.test_same_history_gives_the_same_gate_decisions
+OK  expect=ok   got=ok      test_version_compat.OldEvidenceAccept.test_013_ledger_and_evidence_verify_under_014
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsAccept.test_gates_still_pass_after_upgrade
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsAccept.test_second_upgrade_is_a_no_op_for_settings
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsAccept.test_upgrade_from_014_release_then_014_uninstall
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsChar.test_repin_of_init_only_project_leaves_settings_alone
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsChar.test_repin_without_tty_or_without_yes_changes_nothing
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsChar.test_second_install_and_second_uninstall_change_nothing
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsChar.test_user_settings_survive_upgrade_and_uninstall
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsInProcessAccept.test_plan_and_transaction_in_process
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsInvariant.test_guard_still_blocks_agents_and_protects_the_running_core
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsRed.test_failed_repin_restores_settings_record_and_lock
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsRed.test_install_over_another_release_points_to_the_upgrade
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsRed.test_install_record_tracks_the_new_release
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsRed.test_interrupted_after_the_record_write_is_completed_on_rerun
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsRed.test_interrupted_upgrade_superset_is_completed_on_rerun
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsRed.test_invalid_settings_aborts_before_repin
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsRed.test_plan_is_shown_before_confirmation_and_backup_is_kept
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsRed.test_rules_follow_the_new_release_after_repin
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsRed.test_unwritable_settings_aborts_without_repinning
+OK  expect=ok   got=ok      test_upgrade_settings.UpgradeSettingsRed.test_user_rule_equal_to_a_devkit_rule_stays_user_owned
+OK  expect=ok   got=ok      test_upgrade_review.UpgradeReviewChar.test_plan_check_refuses_when_settings_change_while_the_prompt_is_open
+OK  expect=ok   got=ok      test_upgrade_review.UpgradeReviewInProcessChar.test_removal_step_failure_leaves_a_superset_and_a_rerun_finishes
+OK  expect=ok   got=ok      test_upgrade_review.UpgradeReviewInProcessRed.test_failed_settings_restore_keeps_devkit_ownership
+OK  expect=ok   got=ok      test_upgrade_review.UpgradeReviewRed.test_abbreviated_accept_option_is_rejected
+OK  expect=ok   got=ok      test_upgrade_review.UpgradeReviewRed.test_ctrl_c_while_waiting_for_the_ledger_rolls_everything_back
+OK  expect=ok   got=ok      test_upgrade_review.UpgradeReviewRed.test_devkit_allow_rules_the_user_removed_stay_removed
+OK  expect=ok   got=ok      test_upgrade_review.UpgradeReviewRed.test_failure_after_the_ledger_record_is_not_reported_as_rolled_back
+OK  expect=ok   got=ok      test_upgrade_review.UpgradeReviewRed.test_install_over_an_older_version_at_the_same_path_points_to_the_upgrade
+OK  expect=ok   got=ok      test_upgrade_review.UpgradeReviewRed.test_no_tty_is_refused_before_settings_are_read
+OK  expect=ok   got=ok      test_upgrade_review.UpgradeReviewRed.test_plan_check_covers_a_project_installed_while_the_prompt_was_open
+OK  expect=ok   got=ok      test_upgrade_review.UpgradeReviewRed.test_unreadable_settings_is_reported_not_a_crash
+OK  expect=ok   got=ok      test_upgrade_review.UpgradeReviewRed.test_upgrade_backups_are_covered_by_a_deny_rule
+OK  expect=ok   got=ok      test_upgrade_review2.UpgradeReview2Char.test_abbreviated_option_is_an_argument_error
+OK  expect=ok   got=ok      test_upgrade_review2.UpgradeReview2Char.test_interrupt_message_names_the_step
+OK  expect=ok   got=ok      test_upgrade_review2.UpgradeReview2Char.test_removing_one_previous_allow_rule_withholds_only_its_counterpart
+OK  expect=ok   got=ok      test_upgrade_review2.UpgradeReview2InProcessRed.test_a_concurrent_ledger_record_is_not_mistaken_for_our_re_pin
+OK  expect=ok   got=ok      test_upgrade_review2.UpgradeReview2Red.test_install_that_never_had_allow_rules_gets_them
+OK  expect=ok   got=ok      test_upgrade_review3.UpgradeReview3Char.test_a_decline_carries_over_two_release_changes_and_uninstall_restores
+OK  expect=ok   got=ok      test_upgrade_review3.UpgradeReview3Red.test_a_declined_rule_the_user_added_back_is_not_withheld_on_the_next_release
+OK  expect=ok   got=ok      test_upgrade_review3.UpgradeReview3Red.test_same_release_re_pin_after_a_decline_shows_no_change_block

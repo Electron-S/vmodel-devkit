@@ -1,0 +1,257 @@
+====================================================================================================
+A. pipeline (2 components, IF-001 parser->report, IF-002 report->EXTERNAL), path A
+====================================================================================================
+config integration_test: {"argv": ["{python}", "-m", "pytest", "-q", "-p", "no:cacheprovider", "tests/integration", "--junitxml={junit}"], "timeout_s": 300}
+config unit_test.argv:   ["{python}", "-m", "pytest", "-q", "-p", "no:cacheprovider", "--ignore=tests/integration", "--junitxml={junit}"]
+$ vmodel status WI-001   (exit 0)
+Project: /tmp/vmodel-test-v5sc67n6/한글 경로 sandbox/proj
+Validator: 0.2.0 (release) core f835ec913b6a integrity OK
+Ledger: OK (10 entries)
+
+WI-001 [IN_PROGRESS] G6 demo (profile STANDARD); defect checks: 0 error(s), 0 warning(s)
+  gates: G1-G5 PASSED (current), G6 not evaluated, G7 not implemented
+  G1 Requirements                     PASSED           R00003 @ 2026-11-09T09:44:10.483Z
+  G2 Architecture                     PASSED           R00005 @ 2026-11-09T09:44:11.105Z
+  G3 Detailed Design & Test Planning  PASSED           R00007 @ 2026-11-09T09:44:11.751Z
+  G4 Implementation                   PASSED           R00009 @ 2026-11-09T09:44:12.427Z
+  G5 Unit Verification                PASSED           R00010 @ 2026-11-09T09:44:13.381Z
+  G6 Integration Verification         IN_PROGRESS     
+      - not evaluated yet: no integration verification has run
+  G7 System Verification              NOT_IMPLEMENTED 
+      - extension gate, not implemented in the MVP
+  next: run 'vmodel gate WI-001 G6' (not evaluated yet: no integration verification has run)
+
+Implemented gates: G1-G6 (G6 integration verification is N/A only for a confirmed single-component work item without interfaces). G7 (system) is an extension gate, so a work item can reach PARTIALLY_VERIFIED at most. This is NOT a full V-Model completion.
+
+$ vmodel gate WI-001 G6   (exit 0)
+WI-001 G6 PASSED  record R00011  manifest 99d836afd41d
+  applicability: required
+  [pass   ] G6.PREREQ                    G5 PASSED for the current manifest hash
+  [pass   ] G6.APPLICABILITY             required: 2 interface(s), 3 integration test spec(s)
+  [pass   ] G6.CONFIG                    integration_test configured
+  [pass   ] G6.EXECUTION                 exit code 0, junit produced
+  [pass   ] G6.RESULTS                   3 passed, 0 skipped of 3
+  [pass   ] G6.SCOPE                     no unit or system test in this run
+  [pass   ] G6.TEST_MAPPING              3 integration test spec(s) passed
+  [pass   ] G6.IF_COVERAGE               2/2 interface(s) covered by passed integration tests (static call path or runtime trace)
+  [pass   ] G6.NO_WEAKENING              first G6 run; baseline recorded
+  [pass   ] G6.INPUTS_UNCHANGED          inputs unchanged during the run
+  evidence: .vmodel/evidence/WI-001/G6/20261109T094413860086Z-integration-cc90a8/record.json (cf3d62fd6a02)
+
+evidence record (signed): {"kind": "integration_test", "command": ["/usr/bin/python3", "-m", "pytest", "-q", "-p", "no:cacheprovider", "tests/integration", "--junitxml=/tmp/vmodel-test-v5sc67n6/한글 경로 sandbox/proj/.vmodel/evidence/WI-001/G6/20261109T094414839279Z-integration-37cdf7/junit.xml"], "command_source": "integration_test", "exit_code": 0, "junit_summary": {"tests": 3, "passed": 3, "failures": 0, "errors": 0, "skipped": 0}, "runtime_trace": {"active": true, "processes": 1, "methods": ["sys.monitoring"], "truncated": false, "ran_files": ["src/pipeline/parser.py", "src/pipeline/report.py", "tests/integration/test_pipeline.py"], "errors": [], "tests_traced": 3}}
+evidence files: junit.xml, stderr.bin, stdout.bin, trace-spec.json, trace/567897-76d60196.jsonl
+ledger interfaces: [{"id": "IF-001", "covered": true, "covered_by": ["TEST-010", "TEST-011"], "tests": {"TEST-010": {"status": "passed", "path": "static", "function": "tests/integration/test_pipeline.py::test_TEST_010_report_uses_real_parser"}, "TEST-011": {"status": "passed", "path": "static", "function": "tests/integration/test_pipeline.py::test_TEST_011_parser_error_reaches_report"}}}, {"id": "IF-002", "covered": true, "covered_by": ["TEST-012"], "tests": {"TEST-012": {"status": "passed", "path": "static", "function": "tests/integration/test_pipeline.py::test_TEST_012_cli_main_reads_file"}}}]
+executed_tests: {"TEST-010": "passed", "TEST-011": "passed", "TEST-012": "passed"}
+
+$ vmodel verify-evidence /tmp/vmodel-test-v5sc67n6/한글 경로 sandbox/proj/.vmodel/evidence/WI-001/G6/20261109T094414839279Z-integration-37cdf7/record.json   (exit 0)
+evidence OK
+
+$ vmodel audit   (exit 0)
+audit: validator 0.2.0 release core f835ec913b6a; 12 ledger entries; 3 evidence record(s) checked
+audit OK
+
+$ vmodel trace WI-001   (exit 0)
+Traceability WI-001 (results from R00010)
+REQ-001 [functional/active] 점수 레코드 파싱
+   AC: AC-001-1
+   ARCH: ARCH-001   DESIGN: DESIGN-001
+   CODE: src/pipeline/parser.py:parse
+   TEST: TEST-001(unit:passed), TEST-002(unit:passed), TEST-003(unit:passed), TEST-020(system:not run)
+REQ-002 [functional/active] 점수 요약 보고
+   AC: AC-002-1
+   ARCH: ARCH-002   DESIGN: DESIGN-002, DESIGN-003
+   CODE: src/pipeline/report.py:summarize, src/pipeline/report.py:main
+   TEST: TEST-004(unit:passed), TEST-005(unit:passed), TEST-006(unit:passed), TEST-007(unit:passed), TEST-021(system:not run)
+Interfaces (integration results from R00012):
+IF-001 parse: ARCH-001 -> ARCH-002 (covered: yes)
+   TEST: TEST-010(passed, static), TEST-011(passed, static)
+IF-002 report CLI: ARCH-002 -> EXTERNAL (covered: yes)
+   TEST: TEST-012(passed, static)
+Reverse (TEST -> REQ):
+   TEST-001 -> REQ-001
+   TEST-002 -> REQ-001
+   TEST-003 -> REQ-001
+   TEST-004 -> REQ-002
+   TEST-005 -> REQ-002
+   TEST-006 -> REQ-002
+   TEST-007 -> REQ-002
+   TEST-010 -> (none)
+   TEST-011 -> (none)
+   TEST-012 -> (none)
+   TEST-020 -> REQ-001
+   TEST-021 -> REQ-002
+Dangling references: none
+
+====================================================================================================
+B. pipeline, TEST-012 runs the CLI in a subprocess: runtime path declared at G4, proven at G6
+====================================================================================================
+$ vmodel gate WI-001 G4   (exit 4)
+WI-001 G4 REVIEW_REQUIRED  record R00009  manifest 07a28f5ede92
+  [pass   ] G4.FILES                     3 source / 3 test file(s)
+  [pass   ] G4.UNEXPECTED_CODE           no Python code outside the configured paths, no symlinks
+  [pass   ] G4.SYNTAX                    6 file(s) parsed by the validator (Python AST)
+  [pass   ] G4.LINT                      REDUCED SCOPE: no linter configured; user configured on_missing_lint=syntax-only (only the built-in syntax check ran)
+  [pass   ] G4.DESIGN_CONFORMANCE        3 design unit(s) implemented
+  [pass   ] G4.TEST_CODE                 7 unit and 3 integration test spec(s) implemented
+  [pass   ] G4.TEST_INTEGRITY            no result-reporting hooks in test or support code
+  [pass   ] G4.REQ_IMPLEMENTED           every functional requirement reaches implemented code
+  [pass   ] G4.INTERFACE_IMPLEMENTED     2 interface symbol(s) defined in their provider modules
+  [PENDING] G4.INTEGRATION_WIRING        runtime integration paths need the verifier's declaration (reviews/G4.json interfaces[].runtime_paths)
+            - TEST-012 (IF-002): tests/integration/test_pipeline.py::test_TEST_012_cli_subprocess has no static call path into the provider src/pipeline/report.py; runtime path (subprocess) not declared: vmodel:verifier declares it in reviews/G4.json interfaces[IF-002].runtime_paths as {"test": "TEST-012", "kind": "subprocess", "test_file_sha256": "sha256:365fdf12f4ca4d7be7c1f16bf895a661db3f9d7d034ceaa15415e528c7dafcd1"} (tests/integration/test_pipeline.py); G6 then needs runtime proof
+  [pass   ] G4.REVIEW                    approved by vmodel:verifier (AI review, not machine-verified); 2 interface(s) reviewed
+  review required by: vmodel:verifier
+
+$ vmodel wiring WI-001   (exit 0)
+IF-001: provider src/pipeline/parser.py; consumer src/pipeline/report.py
+  TEST-010 static            tests/integration/test_pipeline.py::test_TEST_010_report_uses_real_parser
+      reaches provider: True, consumer: True; mechanisms: -; test_file_sha256 sha256:365fdf12f4ca4d7be7c1f16bf895a661db3f9d7d034ceaa15415e528c7dafcd1
+  TEST-011 static            tests/integration/test_pipeline.py::test_TEST_011_parser_error_reaches_report
+      reaches provider: True, consumer: True; mechanisms: -; test_file_sha256 sha256:365fdf12f4ca4d7be7c1f16bf895a661db3f9d7d034ceaa15415e528c7dafcd1
+IF-002: provider src/pipeline/report.py; consumer EXTERNAL
+  TEST-012 runtime_candidate tests/integration/test_pipeline.py::test_TEST_012_cli_subprocess
+      reaches provider: False, consumer: True; mechanisms: subprocess; test_file_sha256 sha256:365fdf12f4ca4d7be7c1f16bf895a661db3f9d7d034ceaa15415e528c7dafcd1
+
+$ vmodel gate WI-001 G4   (exit 0)
+WI-001 G4 PASSED  record R00011  manifest 07a28f5ede92
+  [pass   ] G4.FILES                     3 source / 3 test file(s)
+  [pass   ] G4.UNEXPECTED_CODE           no Python code outside the configured paths, no symlinks
+  [pass   ] G4.SYNTAX                    6 file(s) parsed by the validator (Python AST)
+  [pass   ] G4.LINT                      REDUCED SCOPE: no linter configured; user configured on_missing_lint=syntax-only (only the built-in syntax check ran)
+  [pass   ] G4.DESIGN_CONFORMANCE        3 design unit(s) implemented
+  [pass   ] G4.TEST_CODE                 7 unit and 3 integration test spec(s) implemented
+  [pass   ] G4.TEST_INTEGRITY            no result-reporting hooks in test or support code
+  [pass   ] G4.REQ_IMPLEMENTED           every functional requirement reaches implemented code
+  [pass   ] G4.INTERFACE_IMPLEMENTED     2 interface symbol(s) defined in their provider modules
+  [pass   ] G4.INTEGRATION_WIRING        2 interface(s): every integration test function reaches its provider by a call path or a declared runtime path
+  [pass   ] G4.REVIEW                    approved by vmodel:verifier (AI review, not machine-verified); 2 interface(s) reviewed
+
+$ vmodel gate WI-001 G5   (exit 0)
+WI-001 G5 PASSED  record R00012  manifest 07a28f5ede92
+  [pass   ] G5.PREREQ                    G4 PASSED for the current manifest hash
+  [pass   ] G5.EXECUTION                 exit code 0, junit produced
+  [pass   ] G5.RESULTS                   7 passed, 0 skipped of 7
+  [pass   ] G5.TEST_MAPPING              7 unit test spec(s) passed
+  [pass   ] G5.SCOPE                     no integration or system test in this run
+  [pass   ] G5.REQ_COVERAGE              every functional requirement has a passed test
+  [pass   ] G5.NO_WEAKENING              first G5 run; baseline recorded
+  [pass   ] G5.INPUTS_UNCHANGED          inputs unchanged during the run
+  evidence: .vmodel/evidence/WI-001/G5/20261109T094420239418Z-unit-cb5631/record.json (857bf5abad15)
+
+G6 PASSED R00013
+IF-002: {"covered": true, "covered_by": ["TEST-012"], "TEST-012": {"function": "tests/integration/test_pipeline.py::test_TEST_012_cli_subprocess", "functions": [{"executed": true, "function": "tests/integration/test_pipeline.py::test_TEST_012_cli_subprocess", "path": "runtime"}], "patched_provider": [], "path": "runtime", "reaches_consumer": true, "reaches_provider": false, "runtime": {"consumer_ran": true, "provider_ran": true, "traced": true}, "status": "passed"}}
+runtime_trace: {"active": true, "errors": [], "methods": ["sys.monitoring"], "processes": 2, "ran_files": ["src/pipeline/parser.py", "src/pipeline/report.py", "tests/integration/test_pipeline.py"], "truncated": false}
+
+====================================================================================================
+C. integration failure -> DEFECT -> fix -> re-verification
+====================================================================================================
+seeded: report.summarize swallows the parser's ValueError (IF-001 error contract); unit tests still pass
+G4 PASSED
+G5 PASSED
+$ vmodel status WI-001   (exit 0)
+Project: /tmp/vmodel-test-utev330h/한글 경로 sandbox/proj
+Validator: 0.2.0 (release) core f835ec913b6a integrity OK
+Ledger: OK (14 entries)
+
+WI-001 [IN_PROGRESS] G6 demo C (profile STANDARD); defect checks: 0 error(s), 0 warning(s)
+  gates: G1-G5 PASSED (current), G6 FAILED, G7 not implemented
+  G1 Requirements                     PASSED           R00003 @ 2026-11-09T09:44:23.061Z
+  G2 Architecture                     PASSED           R00005 @ 2026-11-09T09:44:23.749Z
+  G3 Detailed Design & Test Planning  PASSED           R00007 @ 2026-11-09T09:44:24.501Z
+  G4 Implementation                   PASSED           R00012 @ 2026-11-09T09:44:27.003Z
+  G5 Unit Verification                PASSED           R00013 @ 2026-11-09T09:44:27.927Z
+  G6 Integration Verification         FAILED           R00014 @ 2026-11-09T09:44:28.911Z
+      x G6.EXECUTION fail: test command exit code 1
+          .F.                                                                      [100%]
+          =================================== FAILURES ===================================
+          __________________ test_TEST_011_parser_error_reaches_report ___________________
+              def test_TEST_011_parser_error_reaches_report():
+          >       with pytest.raises(ValueError):
+      x G6.RESULTS fail: 1 failed, 0 error(s) of 3
+          tests.integration.test_pipeline::test_TEST_011_parser_error_reaches_report [failed] Failed: DID NOT RAISE <class 'ValueError'>
+      x G6.TEST_MAPPING fail: integration test specs not verified by passing tests
+          TEST-011: failed
+      failing tests: TEST-011
+  G7 System Verification              NOT_IMPLEMENTED 
+      - extension gate, not implemented in the MVP
+  next: G6 FAILED: run /vmodel:rework (record a DEFECT for R00014, fix, re-evaluate)
+
+Implemented gates: G1-G6 (G6 integration verification is N/A only for a confirmed single-component work item without interfaces). G7 (system) is an extension gate, so a work item can reach PARTIALLY_VERIFIED at most. This is NOT a full V-Model completion.
+
+$ vmodel gate WI-001 G6   (exit 3)
+WI-001 G6 BLOCKED  (not recorded: precondition)
+  ! rework record missing: R00014 (G6 FAILED) must be referenced by a DEFECT in defects.json (found_in_records) with root_cause_phase, root_cause and fix_scope
+
+DEFECT-001 (gate G6, P4) cites R00014; fix restored the error propagation
+G4 PASSED
+G5 PASSED
+G6 PASSED
+$ vmodel status WI-001   (exit 0)
+Project: /tmp/vmodel-test-utev330h/한글 경로 sandbox/proj
+Validator: 0.2.0 (release) core f835ec913b6a integrity OK
+Ledger: OK (18 entries)
+
+WI-001 [PARTIALLY_VERIFIED] G6 demo C (profile STANDARD); defect checks: 0 error(s), 0 warning(s)
+  gates: G1-G6 PASSED (current), G7 not implemented
+  G1 Requirements                     PASSED           R00003 @ 2026-11-09T09:44:23.061Z
+  G2 Architecture                     PASSED           R00005 @ 2026-11-09T09:44:23.749Z
+  G3 Detailed Design & Test Planning  PASSED           R00007 @ 2026-11-09T09:44:24.501Z
+  G4 Implementation                   PASSED           R00016 @ 2026-11-09T09:44:30.006Z
+  G5 Unit Verification                PASSED           R00017 @ 2026-11-09T09:44:30.914Z
+  G6 Integration Verification         PASSED           R00018 @ 2026-11-09T09:44:31.841Z
+      - IF 2/2 covered (static call path or runtime trace, passed), 3 integration test(s) passed
+  G7 System Verification              NOT_IMPLEMENTED 
+      - extension gate, not implemented in the MVP
+  DEFECT-001 CLOSED [claimed fixed; verified by R00018, G6 PASSED] G6 root cause P4; failing tests (ledger): TEST-011
+  next: G1-G6 verified. G7+ are extension gates (not implemented); report PARTIALLY_VERIFIED.
+
+Implemented gates: G1-G6 (G6 integration verification is N/A only for a confirmed single-component work item without interfaces). G7 (system) is an extension gate, so a work item can reach PARTIALLY_VERIFIED at most. This is NOT a full V-Model completion.
+
+====================================================================================================
+D. single component, no interface: G6 N/A only after the G2 and G3 reviews confirm it
+====================================================================================================
+G2/G3 reviews WITHOUT integration_applicability:
+$ vmodel gate WI-001 G6   (exit 3)
+WI-001 G6 BLOCKED  record R00011  manifest 3cf7e2ffe9bc
+  applicability: unconfirmed
+  [pass   ] G6.PREREQ                    G5 PASSED for the current manifest hash
+  [BLOCKED] G6.APPLICABILITY             no interface and no integration test spec, but N/A is not confirmed (REQ-G6-15)
+            - G2: the review does not confirm integration_applicability.decision 'not_required'
+            - G3: the review does not confirm integration_applicability.decision 'not_required'
+  blocked reason: applicability_unconfirmed
+
+G2 re-reviewed with integration_applicability: PASSED
+G3 re-reviewed with integration_applicability: PASSED
+$ vmodel gate WI-001 G6   (exit 0)
+WI-001 G6 N/A  record R00016  manifest 9badc2833e59
+  applicability: N/A (not_applicable): no integration test was executed; recorded as PASSED only so the gate chain continues, never as a verification
+  [pass   ] G6.PREREQ                    G5 PASSED for the current manifest hash
+  [pass   ] G6.APPLICABILITY             N/A: one component (ARCH-001), no interface, no integration test spec; confirmed by the G2 (R00013) and G3 (R00015) reviews
+  [skip   ] G6.CONFIG                    not executed: not applicable (no integration test was run)
+  [skip   ] G6.EXECUTION                 not executed: not applicable (no integration test was run)
+  [skip   ] G6.RESULTS                   not executed: not applicable (no integration test was run)
+  [skip   ] G6.SCOPE                     not executed: not applicable (no integration test was run)
+  [skip   ] G6.TEST_MAPPING              not executed: not applicable (no integration test was run)
+  [skip   ] G6.IF_COVERAGE               not executed: not applicable (no integration test was run)
+  [pass   ] G6.NO_WEAKENING              first G6 run; baseline recorded
+  [pass   ] G6.INPUTS_UNCHANGED          inputs unchanged during the run
+
+$ vmodel status WI-001   (exit 0)
+Project: /tmp/vmodel-test-d6mnrbcm/한글 경로 sandbox/proj
+Validator: 0.2.0 (release) core f835ec913b6a integrity OK
+Ledger: OK (16 entries)
+
+WI-001 [PARTIALLY_VERIFIED] G6 demo D (profile STANDARD); defect checks: 0 error(s), 0 warning(s)
+  gates: G1-G5 PASSED (current), G6 N/A, G7 not implemented
+  G1 Requirements                     PASSED           R00003 @ 2026-11-09T09:44:33.184Z
+  G2 Architecture                     PASSED           R00013 @ 2026-11-09T09:44:37.013Z
+  G3 Detailed Design & Test Planning  PASSED           R00015 @ 2026-11-09T09:44:37.727Z
+  G4 Implementation                   PASSED           R00009 @ 2026-11-09T09:44:35.181Z
+  G5 Unit Verification                PASSED           R00010 @ 2026-11-09T09:44:36.069Z
+  G6 Integration Verification         N/A              R00016 @ 2026-11-09T09:44:37.968Z
+      - N/A: recorded PASSED R00016, no integration test executed (single component; no interface to integrate); external endpoints reviewed: 사용자 입력, 결과 출력
+  G7 System Verification              NOT_IMPLEMENTED 
+      - extension gate, not implemented in the MVP
+  next: G1-G5 PASSED, G6 N/A (no integration scope: single component; no interface to integrate; no integration test executed). G7+ are extension gates (not implemented); report PARTIALLY_VERIFIED.
+
+Implemented gates: G1-G6 (G6 integration verification is N/A only for a confirmed single-component work item without interfaces). G7 (system) is an extension gate, so a work item can reach PARTIALLY_VERIFIED at most. This is NOT a full V-Model completion.
+
