@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import signal
 import subprocess
 import sys
 import time
@@ -48,15 +49,21 @@ def pty_run(sb: Sandbox, args: list[str], driver) -> tuple[str, int]:
 
     try:
         driver(fd, read_until)
-    finally:
+    finally:  # drain; a child still waiting after 120 s (e.g. on an unexpected prompt) is killed, not awaited
+        deadline = time.time() + 120
         while True:
-            try:
-                chunk = os.read(fd, 4096)
-            except OSError:
+            ready, _, _ = select.select([fd], [], [], 0.5)
+            if ready:
+                try:
+                    chunk = os.read(fd, 4096)
+                except OSError:
+                    break
+                if not chunk:
+                    break
+                buf.extend(chunk)
+            elif time.time() > deadline:
+                os.kill(pid, signal.SIGKILL)
                 break
-            if not chunk:
-                break
-            buf.extend(chunk)
         _, status = os.waitpid(pid, 0)
     return bytes(buf).decode("utf-8", "replace"), os.waitstatus_to_exitcode(status)
 
@@ -133,7 +140,7 @@ class UpgradeReviewRed(Base):
         before = {k: v for k, v in self.snapshot(sb).items() if k != ".claude/settings.json"}
         os.chmod(path, 0)
         try:
-            out, code = pty_run(sb, ["lock", "--accept-current"], lambda fd, ru: None)
+            out, code = pty_run(sb, ["lock", "--accept-current"], maybe_answer(b"no\n"))
         finally:
             os.chmod(path, 0o644)
         self.assertNotIn("internal error", out)

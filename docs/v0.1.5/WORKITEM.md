@@ -164,3 +164,16 @@ TEST_RESULTS §12에 기록한다.
 | 의심 | 설치 기록 `added_*`에 `{}`·`0` 같은 비목록 값을 빈 목록으로 받음 | 고침: 없을 때만 빈 목록, 그 밖의 비목록은 오류 |
 | 의심 | 심볼릭 링크인 settings.json은 원자적 교체로 일반 파일이 됨 | 기록만(install부터 있던 동작) |
 | 테스트 품질 | 계획 대조·제거 단계 실패·복원 실패·중단 테스트 없음 | 추가(위 테스트 + `test_removal_step_failure_leaves_a_superset_and_a_rerun_finishes`) |
+
+재검토(같은 검토자, `c57f7c5`, 검토자의 실험 스크립트를 새 코드에 다시 실행): 지적 1·2·3·4·6·7·8·9·11은 실험으로 닫힘 확인, 5는 의도한 경우에 닫힘. guard·deny 규칙·Gate 판정·원장 형식 약화 없음. `allow_abbrev=False`에 기대는 호출자 없음(테스트·스크립트·스킬·에이전트의 옵션 전수 대조), `type: lock` 원장 기록을 읽는 코드 없음(원장 먼저 순서의 부작용 없음). 새 지적은 `tests/test_upgrade_review2.py`로 고정했고 `c57f7c5` 사본에서 Red 2건 실패·특성 3건 통과를 확인한 뒤 고쳤다(`test-results/v0.1.5/red-review2-c57f7c5.log`).
+
+| 지적 | 처리 |
+|---|---|
+| (부) allow 자리 규칙이 0.1.2 이전 기록(added_allow 없음, CLI allow 없음)을 "사용자가 지움"으로 오판해 CLI allow를 영영 추가하지 않고 사용자 탓으로 표시 | 고침: 이전 자리 규칙을 DevKit이 소유했고 지금 없을 때만 보류. `test_install_that_never_had_allow_rules_gets_them` |
+| 위 수정의 부작용(이 세션에서 발견): 소유권을 지운 뒤 다음 재고정이 보류한 규칙을 다시 허용 | 고침: 보류 결정을 설치 기록 `declined_allow`로 이어 간다. 기존 특성 테스트 `test_removing_one_previous_allow_rule_withholds_only_its_counterpart`(두 번째 실행 무변경)가 잡았다 |
+| (nit) "원장이 늘었나"를 개수로 판단해 다른 프로세스의 기록도 우리 재고정으로 봄 | 고침: 새 기록 중 우리 lock 기록(사유·새 core 해시 일치)이 있을 때만 되돌리지 않음. `test_a_concurrent_ledger_record_is_not_mistaken_for_our_re_pin`(프로세스 내 주입) |
+| (nit) 롤백 중 두 번째 Ctrl-C가 롤백을 끊음 | 고침: 롤백 동안 SIGINT 무시(주 스레드). 결정적 테스트 없음(코드 검토) |
+| (nit) 같은 릴리스 재고정에서 기록만 바뀌면 이유가 안 보임 | 고침: 보류 줄은 settings 변경이 없어도 출력, 기록만 바뀌면 그 사실 출력 |
+| 테스트 공백: Ctrl-C 테스트가 단계 이름 미확인, 축약 테스트가 종료 코드 미확인, 프롬프트가 뜨면 멈출 수 있는 테스트, 0.1.2 이전 기록·부분 제거 테스트 없음 | 추가·보강: `test_interrupt_message_names_the_step`, `test_abbreviated_option_is_an_argument_error`, `pty_run` 120초 뒤 강제 종료와 무응답 테스트의 "no" 응답, 위 두 테스트 |
+| 명세 충돌: §4.1(키 없으면 빈 목록)·AC-U1a(새 CLI allow 존재)와 allow 자리 규칙 | 정리: REQ-U3의 예외가 우선한다. DevKit이 소유했던 allow를 사용자가 지운 자리만 보류하고, 소유한 적이 없으면(키 없음 포함) AC-U1a대로 추가한다 |
+

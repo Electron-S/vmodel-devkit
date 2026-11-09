@@ -336,12 +336,12 @@ def _read_record(path: Path) -> tuple[dict, bytes]:
         raise SetupError(f".vmodel/install-record.json is not valid JSON; not touching anything: {exc}") from None
     if not isinstance(rec, dict):
         raise SetupError(".vmodel/install-record.json is not a JSON object; not touching anything")
-    for kind in RULE_KINDS:
-        owned = rec.get(f"added_{kind}")
+    for key in ("added_deny", "added_allow", "declined_allow"):
+        owned = rec.get(key)
         if owned is None:
-            continue  # 0.1.0/0.1.1 records have no added_allow
+            continue  # 0.1.0/0.1.1 records have no added_allow; declined_allow exists only when needed
         if not isinstance(owned, list) or not all(isinstance(r, str) for r in owned):
-            raise SetupError(f".vmodel/install-record.json added_{kind} is not a list of rules; not touching anything")
+            raise SetupError(f".vmodel/install-record.json {key} is not a list of rules; not touching anything")
     return rec, raw
 
 
@@ -369,10 +369,13 @@ def plan_settings_sync(root: Path) -> dict | None:
         "from_plugin_root": record.get("plugin_root"), "from_version": record.get("validator_version"),
         "to_plugin_root": str(plugin_root()), "to_version": VERSION,
     }
-    # Deny rules are the protection floor and are always (re)added. An allow rule is a grant: if the user removed the
-    # previous release's rule in the same position, the new release's counterpart is not granted again (review 5).
+    # Deny rules are the protection floor and are always (re)added. An allow rule is a grant: if the DevKit had added
+    # the previous release's rule in the same position and the user removed it, the new release's counterpart is not
+    # granted again (review 5). Records without added_allow (0.1.0/0.1.1) never owned one, so nothing was removed.
+    # The decision is kept in the record (declined_allow) so that later upgrades do not grant it either.
     prev_root = record.get("plugin_root")
     prev_allow = validator_allow_rules(Path(prev_root)) if isinstance(prev_root, str) and prev_root else None
+    declined = set(record.get("declined_allow") or [])
     plan["keep_removed_allow"] = []
     for kind in RULE_KINDS:
         current = perms.get(kind, [])
@@ -381,7 +384,8 @@ def plan_settings_sync(root: Path) -> dict | None:
         for i, r in enumerate(generated[kind]):
             if r in current:
                 continue
-            if kind == "allow" and prev_allow is not None and prev_allow[i] not in current:
+            if kind == "allow" and prev_allow is not None and (
+                    prev_allow[i] in declined or (prev_allow[i] in owned and prev_allow[i] not in current)):
                 plan["keep_removed_allow"].append(r)
                 continue
             add.append(r)
@@ -395,6 +399,7 @@ def plan_settings_sync(root: Path) -> dict | None:
     plan["record_change"] = bool(
         plan["settings_change"] or "upgrade_pending" in record
         or any(plan[f"owned_{kind}"] != (record.get(f"added_{kind}") or []) for kind in RULE_KINDS)
+        or (record.get("declined_allow") or []) != plan["keep_removed_allow"]
         or record.get("plugin_root") != plan["to_plugin_root"] or record.get("validator_version") != VERSION)
     return plan
 
@@ -441,6 +446,23 @@ def _restore(snapshot: dict[Path, bytes | None], lock_path: Path, settings_path:
 
 
 _UNSET: Any = object()
+
+
+class _no_interrupts:
+    """Ignore SIGINT while a rollback runs (main thread only; elsewhere a no-op)."""
+
+    def __enter__(self):
+        import signal
+        try:
+            self._prev = signal.signal(signal.SIGINT, signal.SIG_IGN)
+        except (ValueError, OSError, AttributeError):
+            self._prev = None
+        return self
+
+    def __exit__(self, *exc):
+        import signal
+        if self._prev is not None:
+            signal.signal(signal.SIGINT, self._prev)
 
 
 def upgrade_project(project: Project, reason: str, plan: dict | None = _UNSET) -> dict:
@@ -507,22 +529,27 @@ def upgrade_project(project: Project, reason: str, plan: dict | None = _UNSET) -
         lock = repin_lock(project, reason)
     except BaseException as exc:  # Ctrl-C while waiting for the ledger lock must roll back too (review 1)
         what = "interrupted" if isinstance(exc, KeyboardInterrupt) else f"{exc.__class__.__name__}: {exc}"
-        try:
-            entries_after: int | str = len(Ledger(project).entries())
-        except Exception as lexc:  # noqa: BLE001 - reported, never guessed
-            entries_after = f"unreadable ({lexc})"
-        if entries_after == entries_before:
-            problems = _restore(snapshot, lock_path, settings_path, record_path)
-            msg = f"upgrade failed at the {step} step ({what}). "
-            if problems:
-                msg += f"Could not restore {'; '.join(problems)}; copies of the previous files are in {backup}"
-            else:
-                msg += "Rolled back: .claude/settings.json, the install record and the lock are as before"
-            raise SetupError(msg) from exc
+        with _no_interrupts():  # a second Ctrl-C must not cut the rollback short
+            try:
+                new = Ledger(project).entries()[entries_before:]
+                ours = [e for e in new if e.record.get("type") == "lock" and e.record.get("reason") == reason
+                        and e.record.get("new_core_hash") == integ.core_hash]
+                entries_after: int | str = entries_before + len(new)
+            except Exception as lexc:  # noqa: BLE001 - reported, never guessed
+                ours, entries_after = None, f"unreadable ({lexc})"
+            # only our own lock record means the re-pin may be recorded; others' records do not (re-review)
+            if ours == []:
+                problems = _restore(snapshot, lock_path, settings_path, record_path)
+                msg = f"upgrade failed at the {step} step ({what}). "
+                if problems:
+                    msg += f"Could not restore {'; '.join(problems)}; copies of the previous files are in {backup}"
+                else:
+                    msg += "Rolled back: .claude/settings.json, the install record and the lock are as before"
+                raise SetupError(msg) from exc
         locked = lock_path.read_bytes() if lock_path.exists() else None
         raise SetupError(
             f"upgrade failed at the {step} step ({what}) after the ledger changed (entries: {entries_before} before, "
-            f"{entries_after} now): the re-pin may already be recorded, so nothing was rolled back. The lock is "
+            f"{entries_after} now): the re-pin is or may be recorded, so nothing was rolled back. The lock is "
             f"{'unchanged' if locked == snapshot[lock_path] else 'updated'}; .claude/settings.json keeps the previous "
             "and the new DevKit rules (no protection gap). Fix the cause and run 'vmodel lock --accept-current' "
             "again to finish") from exc
@@ -547,6 +574,10 @@ def upgrade_project(project: Project, reason: str, plan: dict | None = _UNSET) -
                             "keep_removed_allow": plan["keep_removed_allow"]})
             record.update({"validator_version": VERSION, "plugin_root": plan["to_plugin_root"],
                            "added_deny": plan["owned_deny"], "added_allow": plan["owned_allow"], "upgrades": history})
+            if plan["keep_removed_allow"]:
+                record["declined_allow"] = plan["keep_removed_allow"]
+            else:
+                record.pop("declined_allow", None)
             write_json(record_path, record)
         except BaseException as exc:  # the re-pin is recorded: never roll back from here, a re-run finishes
             what = "interrupted" if isinstance(exc, KeyboardInterrupt) else f"{exc.__class__.__name__}: {exc}"

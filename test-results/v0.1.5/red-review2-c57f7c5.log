@@ -1,0 +1,22 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/0261011d-4f01-41a9-be68-bcdcfd573881/scratchpad/plugin-c57f7c5/plugins/vmodel",
+    "release_manifest": null
+  },
+  "git_head": "c57f7c5",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "tests": 5,
+  "expectations_met": 5,
+  "violations": 0,
+  "seconds": 4.6
+}
+
+OK  expect=ok   got=ok      test_upgrade_review2.UpgradeReview2Char.test_abbreviated_option_is_an_argument_error
+OK  expect=ok   got=ok      test_upgrade_review2.UpgradeReview2Char.test_interrupt_message_names_the_step
+OK  expect=ok   got=ok      test_upgrade_review2.UpgradeReview2Char.test_removing_one_previous_allow_rule_withholds_only_its_counterpart
+OK  expect=FAIL got=FAIL    test_upgrade_review2.UpgradeReview2InProcessRed.test_a_concurrent_ledger_record_is_not_mistaken_for_our_re_pin
+      AssertionError: 'Rolled back' not found in "upgrade failed at the re-pin step (OSError: injected ledger failure) after the ledger changed (entries: 1 before, 2 now): the re-pin may already be recorded, so nothing was rolled back. The lock is unchanged; .claude/settings.json keeps the previous and the new DevKit rules (no protection gap). Fix the cause and run 'vmodel lock --accept-current' again t
+OK  expect=FAIL got=FAIL    test_upgrade_review2.UpgradeReview2Red.test_install_that_never_had_allow_rules_gets_them
+      AssertionError: 'you removed' unexpectedly found in 'yes\r\nThe DevKit permission rules in .claude/settings.json will follow this release:\r\n  validator 0.1.3 at /home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.1.3\r\n  -> validator 0.1.5 at /tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/0261011d-4f01-41a9-be68-bcdcfd573881/scratchpad/plugin-c57f7c5/plugins/vmodel\r\n  add deny: Edit(/.vmodel/
