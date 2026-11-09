@@ -2,9 +2,11 @@
 
     python scripts/e2e/e2e_run.py --work <new dir> --prompt-file p.txt [--model sonnet] [--budget 4]
     python scripts/e2e/e2e_run.py --work <existing dir> --continue --prompt-file p.txt   (new session, same project)
+    python scripts/e2e/e2e_run.py --work <new dir> --sample scorepipe --setup-only         (no model call)
 
-Creates a sandbox copy of samples/textstats (git repo, Korean path), installs VModel with the release validator,
-runs one headless session with --plugin-dir <release>, then measures the outcome with the release validator itself.
+Creates a sandbox copy of samples/<sample> (default textstats; git repo, Korean path), installs VModel with the
+release validator, runs one headless session with --plugin-dir <release>, then measures the outcome with the release
+validator itself. --setup-only stops after the install and prints the installed config (no model call).
 """
 from __future__ import annotations
 
@@ -34,9 +36,9 @@ def vm(env: dict, cwd: Path, *args: str) -> tuple[int, str]:
     return r.returncode, r.stdout.decode("utf-8", errors="replace") + r.stderr.decode("utf-8", errors="replace")
 
 
-def setup(work: Path) -> tuple[Path, dict]:
+def setup(work: Path, sample: str = "textstats") -> tuple[Path, dict]:
     proj = work / "한글 샘플 프로젝트"
-    shutil.copytree(REPO / "samples" / "textstats", proj, ignore=shutil.ignore_patterns("__pycache__", ".pytest_cache"))
+    shutil.copytree(REPO / "samples" / sample, proj, ignore=shutil.ignore_patterns("__pycache__", ".pytest_cache"))
     git = ["git", "-c", "user.name=vmodel-e2e", "-c", "user.email=e2e@example.invalid"]
     subprocess.run(git + ["init", "-q"], cwd=proj, check=True)
     subprocess.run(git + ["add", "-A"], cwd=proj, check=True)
@@ -98,21 +100,29 @@ def measure(work: Path, proj: Path, env: dict, summary: dict, tag: str) -> dict:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--work", required=True)
-    ap.add_argument("--prompt-file", required=True)
+    ap.add_argument("--prompt-file")
     ap.add_argument("--model", default="sonnet")
     ap.add_argument("--budget", type=float, default=4.0)
     ap.add_argument("--continue", dest="cont", action="store_true")
     ap.add_argument("--tag", default="run")
     ap.add_argument("--permission-mode", default="acceptEdits", choices=["acceptEdits", "auto"])
+    ap.add_argument("--sample", default="textstats", choices=["textstats", "scorepipe"])
+    ap.add_argument("--setup-only", action="store_true", help="install only, print the config (no model call)")
     args = ap.parse_args()
     work = Path(args.work)
-    prompt = Path(args.prompt_file).read_text("utf-8")
+    if not args.setup_only and not args.prompt_file:
+        ap.error("--prompt-file is required unless --setup-only")
     if args.cont:
         proj = work / "한글 샘플 프로젝트"
         env = {"VMODEL_HOME": str(work / "vmodel-home"), "VMODEL_GUARD_LOG": str(work / "guard-log.jsonl")}
     else:
         work.mkdir(parents=True, exist_ok=False)
-        proj, env = setup(work)
+        proj, env = setup(work, args.sample)
+    if args.setup_only:
+        print((proj / ".vmodel" / "config.json").read_text("utf-8"))
+        print(vm(env, proj, "status")[1])
+        return 0
+    prompt = Path(args.prompt_file).read_text("utf-8")
     vm_path = str(RELEASE / "bin" / "vmodel")
     allowed = ["Bash(vmodel *)", f"Bash({vm_path} *)", f'Bash("{vm_path}" *)', "Bash(*/bin/vmodel *)",
                'Bash(*/bin/vmodel" *)', "Bash(python3 -m pytest*)", "Bash(python -m pytest*)", "Bash(pytest*)",

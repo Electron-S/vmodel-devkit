@@ -6,14 +6,18 @@ S1-S3 are closed by D44 (test-level evidence only); the others by the fixes list
 """
 from __future__ import annotations
 
+import importlib
 import json
 import os
 import shutil
 import sys
+import tempfile
 import time
 import unittest
+from pathlib import Path
 
 from g6_base import RED, SandboxClass, file_sha256, justify_test_change, ledger_record, replace_function
+from helpers import PLUGIN
 
 INTEGRATION = "tests/integration/test_pipeline.py"
 
@@ -276,6 +280,55 @@ class R4StaticRed(R4Base):
             "    summarize = None\n", 1), encoding="utf-8")
         w = self.wiring()["interfaces"]["IF-001"]["tests"]
         self.assertEqual(w["TEST-010"]["path"], "static", f"{RED} {w['TEST-010']}")
+
+
+class R4WindowAccept(unittest.TestCase):
+    """Child-process lines re-read against the pytest process's test boundaries (new core only; found while fixing
+    H3: when those boundaries may be missing, a child's lines are not attributed at all)."""
+
+    def gates(self):
+        sys.path.insert(0, str(PLUGIN / "validator"))
+        try:
+            for m in [m for m in sys.modules if m == "vmodel_validator" or m.startswith("vmodel_validator.")]:
+                del sys.modules[m]
+            return importlib.import_module("vmodel_validator.gates")
+        finally:
+            sys.path.remove(str(PLUGIN / "validator"))
+
+    def setUp(self):
+        self.d = Path(tempfile.mkdtemp(prefix="vmodel-window-"))
+
+    def tearDown(self):
+        shutil.rmtree(self.d, ignore_errors=True)
+
+    def write(self, name: str, head: dict, lines: list[dict]) -> None:
+        (self.d / name).write_text("\n".join(json.dumps(x) for x in [head, *lines]) + "\n", encoding="utf-8")
+
+    X, Y = "t/test_i.py::test_TEST_010_a", "t/test_i.py::test_TEST_011_b"
+
+    def child(self) -> None:
+        self.write("2-c.jsonl", {"v": 2, "pid": 2, "method": "m", "spawned_in": [self.X, "setup"]},
+                   [{"t": self.X, "p": "setup", "m": "src/p.py", "f": "parse", "ts": 15.0},
+                    {"t": self.X, "p": "setup", "m": "src/p.py", "f": "later", "ts": 25.0}])
+
+    def phases(self, rt: dict) -> dict:
+        return {func: ph for _t, ph, _f, _m, func in rt["_events"] if _f == "2-c.jsonl"}
+
+    def test_child_lines_follow_the_test_window(self):
+        self.write("1-p.jsonl", {"v": 2, "pid": 1, "method": "m", "spawned_in": None},
+                   [{"b": self.X, "p": "call", "ts": 10.0}, {"b": self.Y, "p": "call", "ts": 20.0}])
+        self.child()
+        self.assertEqual(self.phases(self.gates().read_runtime_trace(self.d)), {"parse": "call", "later": "detached"})
+
+    def test_truncated_pytest_process_file_detaches_child_lines(self):
+        self.write("1-p.jsonl", {"v": 2, "pid": 1, "method": "m", "spawned_in": None},
+                   [{"b": self.X, "p": "call", "ts": 10.0}, {"truncated": True}])
+        self.child()
+        self.assertEqual(self.phases(self.gates().read_runtime_trace(self.d)), {"parse": "detached", "later": "detached"})
+
+    def test_no_pytest_process_file_detaches_child_lines(self):
+        self.child()
+        self.assertEqual(self.phases(self.gates().read_runtime_trace(self.d)), {"parse": "detached", "later": "detached"})
 
 
 if __name__ == "__main__":

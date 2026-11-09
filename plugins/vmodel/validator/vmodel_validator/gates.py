@@ -1858,15 +1858,18 @@ def read_runtime_trace(trace_dir: Path, prior_errors: list[str] | None = None, p
     boundaries: dict[str, list[tuple[float, str, str]]] = {}
     capped: set[str] = set()
     spawned_files = 0
+    windows_complete = oversized == 0  # a lost or truncated pytest-process file may have lost test boundaries
     for f in files:
         try:
             lines = f.read_bytes().decode("utf-8", "replace").splitlines()
         except OSError as exc:
             errors.append(f"{f.name}: {exc.__class__.__name__}")
+            windows_complete = False
             continue
         head = _trace_json(lines[0]) if lines else None
         if not isinstance(head, dict):
             errors.append(f"{f.name}: no header")
+            windows_complete = False
             continue
         procs += 1
         methods.add(str(head.get("method")))
@@ -1880,6 +1883,7 @@ def read_runtime_trace(trace_dir: Path, prior_errors: list[str] | None = None, p
             t, ts = r.get("t"), _ts(r.get("ts"))
             if r.get("truncated") is True:
                 truncated = True
+                windows_complete = windows_complete and spawned
             elif isinstance(r.get("b"), str):
                 if not spawned and ts is not None:
                     boundaries.setdefault(f.name, []).append((ts, r["b"], str(r.get("p") or "")))
@@ -1896,9 +1900,14 @@ def read_runtime_trace(trace_dir: Path, prior_errors: list[str] | None = None, p
                     tests.setdefault(t, set()).add(r["m"])
                     raw_events.append((t, str(r.get("p") or ""), f.name, r["m"], str(r.get("f")), ts, spawned))
     windows = _test_windows(boundaries)
+    if spawned_files and spawned_files == procs - oversized:
+        windows_complete = False  # no pytest-process file to take test boundaries from
     moved = {"detached": 0, "call": 0}
 
     def phase_of(t: str, ph: str, ts: float | None, spawned: bool) -> str:
+        if spawned and not windows_complete:  # boundaries may be missing: a child's line is not attributable
+            moved["detached"] += ph != "detached"
+            return "detached"
         w = windows.get(t)
         if not spawned or ts is None or w is None:
             return ph

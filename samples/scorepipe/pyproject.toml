@@ -1,0 +1,9 @@
+[project]
+name = "scorepipe"
+version = "0.0.1"
+description = "VModel DevKit sample project for G6 integration verification (Python + pytest)"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
