@@ -1,0 +1,24 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/43cdb556-8cbb-4e88-9bf3-ce8c6609a0de/scratchpad/red-ce59c33/plugins/vmodel",
+    "release_manifest": null
+  },
+  "git_head": "ce59c33",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "marker": "RED-TARGET",
+  "tests": 5,
+  "expectations_met": 5,
+  "violations": 0,
+  "seconds": 29.1
+}
+
+OK  expect=FAIL got=FAIL    test_g6_review7.R7FactoryRed.test_R4_factory_classmethod_counts_while_parse_is_mocked
+      AssertionError: 'PASSED' != 'BLOCKED'
+OK  expect=FAIL got=FAIL    test_g6_review7.R7ProviderDecoratorRed.test_R1_decorator_defined_in_the_provider_module
+      AssertionError: 'BLOCKED' != 'PASSED'
+OK  expect=ok   got=ok      test_g6_review7.R7WarmUpChar.test_R2_control_without_warm_up
+OK  expect=ok   got=ok      test_g6_review7.R7WarmUpChar.test_R2_fixture_server_warmed_up_in_setup
+OK  expect=FAIL got=FAIL    test_g6_review7.R7XdistRed.test_R3_xdist_workers_get_no_boundaries
+      AssertionError: 'BLOCKED' != 'PASSED'
