@@ -1,8 +1,8 @@
 {
   "name": "vmodel",
   "version": "0.2.0",
-  "core_hash": "sha256:b4712165a346b630e697d3e9d59166de7a6b5304b635eaa4421008c34626266e",
-  "created_at": "2026-11-09T23:49:48+00:00",
+  "core_hash": "sha256:2d3dd0aba0960598e895fea9ff3663ef3382e84b483b44af2f344f26d3beee2e",
+  "created_at": "2026-11-09T23:54:03+00:00",
   "files": {
     "README.md": "sha256:5add156517f36d20d887ee2ea596966549eadf8a9620ac63d6d632c700328b37",
     ".claude-plugin/plugin.json": "sha256:e99029bf316725dd8f89428e3e10c9c95a6abf1dd46e4b231b83a1fc80b46750",
@@ -24,7 +24,7 @@
     "validator/vmodel.py": "sha256:8eb280c727eff2b0f4b5bcaacb8197191468ffcd25d7d495db704743c9b40738",
     "validator/vmodel_validator/__init__.py": "sha256:2cebe360466f2438f2996b3512443b6d0ad36dddaeeb4970fdecf9536f713949",
     "validator/vmodel_validator/cli.py": "sha256:f4da84c5a98bea48ace97f23cf544c9dd1a7bf9f44e3cca1f3f7ae2e5cc0bc60",
-    "validator/vmodel_validator/gates.py": "sha256:fb1675445aa765a583ab2d98381d299b8cbbdd097b7030d3b3cc47f9bfb8611f",
+    "validator/vmodel_validator/gates.py": "sha256:8ff9b69c1ffbd36b5bbad4d9bbf2dde5bf251559451668a5844b18e207fd98f4",
     "validator/vmodel_validator/hashing.py": "sha256:71063153673dc4df8d8564a3caa9ca86afd75ea5dcc5a387a400c1f243883475",
     "validator/vmodel_validator/hook.py": "sha256:2e4b08cd5d1f5389d3c0fb42670429921f80c0da07529c110033ffed35667f44",
     "validator/vmodel_validator/integrity.py": "sha256:57e5856bd372b1873350e5e8849f93b375a4d5dfe10b3809cb359c4f65844e48",
