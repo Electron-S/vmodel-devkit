@@ -101,6 +101,21 @@ def replace_function(path: Path, name: str, new_source: str | None) -> None:
     path.write_text(text.rstrip("\n") + "\n", encoding="utf-8")
 
 
+def justify_test_change(sb: Sandbox, rel: str, affected: str = "TEST-012", reqs: tuple = ("REQ-002",)) -> None:
+    """A test file changed after a G5 PASS needs a test_changes entry (G5.NO_WEAKENING, unchanged rule)."""
+    since = [r for r in ledger_records(sb) if r.get("type") == "gate" and r.get("gate") == "G5"
+             and r.get("status") == "PASSED"][-1]["record_id"]
+    path = sb.wi_dir / "change-requests.json"
+    doc = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {"work_item": sb.wi, "change_requests": []}
+    n = len(doc["change_requests"]) + 1
+    doc["change_requests"].append({
+        "id": f"CR-{900 + n:03d}", "description": f"{rel} 변경", "reason": "통합 테스트 시나리오 변경",
+        "affected": [affected], "status": "applied",
+        "test_changes": [{"file": rel, "since_record": since, "reason": "시나리오 변경", "requirements": list(reqs),
+                          "impact": "통합 테스트 내용만 바뀜"}]})
+    path.write_text(json.dumps(doc, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
 def file_sha256(path: Path) -> str:
     import hashlib
     return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()

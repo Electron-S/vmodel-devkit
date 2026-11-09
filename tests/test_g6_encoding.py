@@ -5,7 +5,8 @@ from __future__ import annotations
 import json
 import unittest
 
-from g6_base import (RED, SUBPROCESS_TEST_012, SandboxClass, file_sha256, ledger_record, replace_function)
+from g6_base import (RED, SUBPROCESS_TEST_012, SandboxClass, file_sha256, justify_test_change, ledger_record,
+                     replace_function)
 
 
 class EncodingRed(SandboxClass):
@@ -17,6 +18,7 @@ class EncodingRed(SandboxClass):
                          "    sys.stdout.buffer.write('한글 출력 확인\\n'.encode('cp949'))\n"
                          "    sys.stdout.flush()\n"
                          "    assert summarize('김철수,90\\n이영희,95\\n')['top'] == '이영희'\n")
+        justify_test_change(self.sb, "tests/integration/test_pipeline.py", affected="TEST-010")
         self.regate("G4", "G5")
         res = self.g6()
         self.assertEqual(res["status"], "PASSED", f"{RED} {res}")
@@ -33,6 +35,7 @@ class EncodingRed(SandboxClass):
     def test_T19_subprocess_path_in_a_korean_path(self):
         t = self.sb.root / "tests/integration/test_pipeline.py"
         replace_function(t, "test_TEST_012_cli_main_reads_file", SUBPROCESS_TEST_012)
+        justify_test_change(self.sb, "tests/integration/test_pipeline.py")
         entries = self.sb.interface_review_entries()
         for e in entries:
             if e["id"] == "IF-002":

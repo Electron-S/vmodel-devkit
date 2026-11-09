@@ -4,7 +4,8 @@ from __future__ import annotations
 import json
 import unittest
 
-from g6_base import RED, SandboxClass, evidence_record, gate_view, ledger_record, replace_function
+from g6_base import (RED, SandboxClass, evidence_record, gate_view, justify_test_change, ledger_record,
+                     replace_function)
 from helpers import PLUGIN
 
 
@@ -97,6 +98,7 @@ class GateRed(SandboxClass):
                          "    f = tmp_path / 'scores.csv'\n"
                          "    f.write_text('a,1\\n', encoding='utf-8')\n"
                          "    assert main([str(f)]) == 0\n")
+        justify_test_change(self.sb, "tests/integration/test_pipeline.py")
         self.regate("G4", "G5")
         res = self.g6()
         self.assertEqual(res["status"], "FAILED", f"{RED} a skipped integration test verifies nothing: {res}")
