@@ -2117,7 +2117,7 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
                         data={"argv": cfg["argv"], **cfg_data}))
 
     # static analysis of the verified files, before running anything
-    wd, _ix = g6_wiring(ctx)
+    wd, ix = g6_wiring(ctx)
     g4_pass = last_with_status(ctx.entries, ctx.wi, "G4", "PASSED")
     rc = [c for c in (g4_pass.record.get("checks") if g4_pass else None) or []
           if isinstance(c, dict) and c.get("id") == "G4.REVIEW"]
@@ -2280,6 +2280,9 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
             return label in _p and (not _s or any(_is_symbol_function(func, x) for x in _s))
 
         sym_text = f" ({', '.join(sorted(syms))})" if syms else " (any function: the provider symbol is unknown)"
+        # review 9 Q1: what a patch can replace in the provider: its symbols and every def/class/method of its modules
+        prov_defined = {n for rel in prov_rels if rel in ix.modules
+                        for n in (*ix.modules[rel].functions, *ix.modules[rel].classes)}
         cons_rels = set(iv["consumer_modules"] or [])  # empty: EXTERNAL consumers only
         # D44: with an architecture consumer the connection is a consumer function on the provider's call stack (or on
         # the stack that started its thread / submitted its pool work item); a provider file that is also a consumer
@@ -2301,10 +2304,12 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
             # must be the test function or a fixture / setUp it requested, never an autouse or unrequested fixture
             own_fns = {fv["name"] for fv in tv["functions"]}
             anchors = {a for fv in tv["functions"] for a in (fv.get("anchors") or [fv["name"]])}
-            # review 8 P1: only a patch of an interface symbol (or its method) is a mock of the provider; a constant
-            # or helper of the provider module (a limit, a clock) is not (G4 still warns about every provider patch)
+            # review 8 P1 / review 9 Q1: a patch of an interface symbol or of any def/class/method defined in a
+            # provider module is a mock of the provider; a constant or an imported name there (a limit, a clock) is not
+            # (G4 still warns about every provider patch)
             patch_targets = sorted({t for fv in tv["functions"] for t in fv.get("patched_provider") or []
-                                    if isinstance(t, str) and _patches_symbol(t, syms)})
+                                    if isinstance(t, str) and (_patches_symbol(t, syms) or any(
+                                        ".".join(t.split(".")[-k:]) in prov_defined for k in (1, 2)))})
             patched = bool(patch_targets)
             if needs_edge:
                 linked = [a for e, fn, c, a in seen["edges"] if is_prov(e, fn) and c in cons_rels]
