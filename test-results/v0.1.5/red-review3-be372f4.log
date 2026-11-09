@@ -1,0 +1,20 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/0261011d-4f01-41a9-be68-bcdcfd573881/scratchpad/plugin-be372f4/plugins/vmodel",
+    "release_manifest": null
+  },
+  "git_head": "be372f4",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "tests": 3,
+  "expectations_met": 3,
+  "violations": 0,
+  "seconds": 1.9
+}
+
+OK  expect=ok   got=ok      test_upgrade_review3.UpgradeReview3Char.test_a_decline_carries_over_two_release_changes_and_uninstall_restores
+OK  expect=FAIL got=FAIL    test_upgrade_review3.UpgradeReview3Red.test_a_declined_rule_the_user_added_back_is_not_withheld_on_the_next_release
+      AssertionError: 'you removed' unexpectedly found in 'yes\r\nThe DevKit permission rules in .claude/settings.json will follow this release:\r\n  validator 0.1.5 at /tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/0261011d-4f01-41a9-be68-bcdcfd573881/scratchpad/plugin-be372f4/plugins/vmodel\r\n  -> validator 0.1.5 at /tmp/vmodel-test-g3xxgs42/release C/vmodel\r\n  add deny: Edit(//tmp/vmodel-test-
+OK  expect=FAIL got=FAIL    test_upgrade_review3.UpgradeReview3Red.test_same_release_re_pin_after_a_decline_shows_no_change_block
+      AssertionError: 'will follow this release' unexpectedly found in "yes\r\nThe DevKit permission rules in .claude/settings.json will follow this release:\r\n  validator 0.1.5 at /tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/0261011d-4f01-41a9-be68-bcdcfd573881/scratchpad/plugin-be372f4/plugins/vmodel\r\n  -> validator 0.1.5 at /tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/0261011d-4f01-41a

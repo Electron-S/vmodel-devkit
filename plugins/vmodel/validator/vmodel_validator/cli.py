@@ -384,7 +384,7 @@ def cmd_lock(args) -> int:
     if not _has_tty(action):  # user-only: refuse before reading anything (exit 3 like every user-only refusal)
         return 3
     plan = plan_settings_sync(p.root)  # read-only; refuses settings it cannot read or parse before asking
-    if plan is not None and (plan["settings_change"] or plan["keep_removed_allow"]):
+    if plan is not None and (plan["settings_change"] or (plan["keep_removed_allow"] and plan["record_change"])):
         out("The DevKit permission rules in .claude/settings.json will follow this release:")
         out(f"  validator {plan['from_version']} at {plan['from_plugin_root']}")
         out(f"  -> validator {plan['to_version']} at {plan['to_plugin_root']}")

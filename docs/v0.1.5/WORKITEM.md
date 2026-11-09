@@ -177,3 +177,11 @@ TEST_RESULTS §12에 기록한다.
 | 테스트 공백: Ctrl-C 테스트가 단계 이름 미확인, 축약 테스트가 종료 코드 미확인, 프롬프트가 뜨면 멈출 수 있는 테스트, 0.1.2 이전 기록·부분 제거 테스트 없음 | 추가·보강: `test_interrupt_message_names_the_step`, `test_abbreviated_option_is_an_argument_error`, `pty_run` 120초 뒤 강제 종료와 무응답 테스트의 "no" 응답, 위 두 테스트 |
 | 명세 충돌: §4.1(키 없으면 빈 목록)·AC-U1a(새 CLI allow 존재)와 allow 자리 규칙 | 정리: REQ-U3의 예외가 우선한다. DevKit이 소유했던 allow를 사용자가 지운 자리만 보류하고, 소유한 적이 없으면(키 없음 포함) AC-U1a대로 추가한다 |
 
+세 번째 확인(같은 검토자, `be372f4`, 릴리스 세 개 A→B→C 시나리오): `declined_allow`와 install·uninstall(0.1.4·0.1.5)·연속 업그레이드·0.1.2 이전 기록·동시 기록 판정은 실험으로 정상. 새 지적 2건은 `tests/test_upgrade_review3.py`로 고정했고 `be372f4` 사본에서 Red 2건 실패·특성 1건 통과를 확인한 뒤 고쳤다(`test-results/v0.1.5/red-review3-be372f4.log`). 수정은 검토자가 제안한 조건 그대로이고 범위가 작아 네 번째 검토는 하지 않았다.
+
+| 지적 | 처리 |
+|---|---|
+| (부) 사용자가 손으로 다시 넣은 규칙이 있어도 남은 `declined_allow`가 다음 릴리스에서 그 자리를 보류(거짓 "you removed" 표시) | 고침: 이전 자리 규칙이 지금도 없을 때만 보류. `test_a_declined_rule_the_user_added_back_is_not_withheld_on_the_next_release` |
+| (nit) 같은 릴리스 재고정에서 바뀌는 것이 없는데 변경 블록과 "update the rules" 확인 문구 | 고침: 보류 줄은 기록이 바뀔 때만 출력. `test_same_release_re_pin_after_a_decline_shows_no_change_block` |
+| 테스트 공백: 릴리스가 바뀌는 `declined_allow` 시나리오 | 추가: `test_a_decline_carries_over_two_release_changes_and_uninstall_restores` |
+

@@ -384,8 +384,9 @@ def plan_settings_sync(root: Path) -> dict | None:
         for i, r in enumerate(generated[kind]):
             if r in current:
                 continue
-            if kind == "allow" and prev_allow is not None and (
-                    prev_allow[i] in declined or (prev_allow[i] in owned and prev_allow[i] not in current)):
+            # withheld only while the previous rule is still gone (a rule the user added back is a fresh grant)
+            if kind == "allow" and prev_allow is not None and prev_allow[i] not in current and (
+                    prev_allow[i] in declined or prev_allow[i] in owned):
                 plan["keep_removed_allow"].append(r)
                 continue
             add.append(r)
