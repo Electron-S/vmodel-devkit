@@ -10,9 +10,15 @@ function); a forked child writes its own file; past the record limit a {"truncat
 and class bodies are not counted, so importing a module is not execution.
 
 Connections (D44): for a provider file named in the spec's "edges", each time one of its functions starts the tracer
-looks for a consumer file of that provider on the call stack (and on the stack that started the thread or submitted the
-pool work item it runs in) and writes one {"e": provider, "c": consumer} line per (test, phase, provider, consumer).
-Stack scans per (test, phase, provider) are capped ({"edge_scan_capped": ...} is written, so absence is not proof).
+looks for a consumer function of that provider on the call stack (and on the stack that started the thread or submitted
+the pool work item it runs in) and writes one {"e": provider, "f": function, "c": consumer} line per (test, phase,
+provider function, consumer). Stack scans per (test, phase, provider function) are capped ({"edge_scan_capped": ...} is
+written, so absence is not proof).
+
+Time (review 4): every line carries "ts" (wall clock). A process started during a test (it inherits
+PYTEST_CURRENT_TEST, header "spawned_in") keeps that test id for its whole life, so the validator re-reads its lines
+against the test boundaries ({"b": test, "p": phase, "ts"}) the pytest process writes whenever its main thread is seen
+in a new test or phase: a line written after that test ended is "detached", one written during its call is "call".
 
 Trust: this runs inside the processes under test, like the test runner itself (SPEC 5.7); the validator hashes the
 files after the run and records them in the signed evidence. Any problem here is swallowed: the traced program must
@@ -29,6 +35,7 @@ def _vmodel_trace_install():
         return
     import json
     import threading
+    import time
 
     with open(spec_path, encoding="utf-8") as fh:
         spec = json.load(fh)
@@ -60,7 +67,8 @@ def _vmodel_trace_install():
     unset = object()
 
     def open_out():
-        """One file per process; a forked child gets its own (it must not write into its parent's file)."""
+        """One file per process; a forked child gets its own (it must not write into its parent's file). spawned_in:
+        the test this process was started in (inherited PYTEST_CURRENT_TEST), None for the pytest process itself."""
         state["out"] = open(os.path.join(spec["out"], f"{os.getpid()}-{os.urandom(4).hex()}.jsonl"), "a",
                             encoding="utf-8", buffering=1)
         state["seen"] = set()
@@ -68,10 +76,23 @@ def _vmodel_trace_install():
         state["bytes"] = 0
         state["found"] = {}
         state["scans"] = {}
-        state["out"].write(json.dumps({"v": 1, "pid": os.getpid(), "ppid": os.getppid(),
+        state["last"] = None
+        born = env_context()
+        state["spawned"] = born[0] is not None
+        state["out"].write(json.dumps({"v": 2, "pid": os.getpid(), "ppid": os.getppid(),
                                        "python": sys.version.split()[0], "method": method,
+                                       "spawned_in": list(born) if born[0] is not None else None,
                                        "argv": [str(a) for a in getattr(sys, "orig_argv", sys.argv)][:20]},
                                       ensure_ascii=True) + "\n")
+
+    def env_context():
+        test = os.environ.get("PYTEST_CURRENT_TEST")
+        if not test or not test.endswith(")") or " (" not in test:
+            return None, None
+        node, phase = test[:-1].rsplit(" (", 1)
+        i = node.find(".py::")  # parameters dropped (they may contain '::'); a '[' in the path is not one (review 4)
+        cut = node.find("[", i + 5 if i >= 0 else 0)
+        return (node if cut < 0 else node[:cut]), phase
 
     open_out()
     if hasattr(os, "register_at_fork"):
@@ -81,13 +102,6 @@ def _vmodel_trace_install():
             except Exception:
                 state["out"] = None
         os.register_at_fork(after_in_child=_child)
-
-    def env_context():
-        test = os.environ.get("PYTEST_CURRENT_TEST")
-        if not test or not test.endswith(")") or " (" not in test:
-            return None, None
-        node, phase = test[:-1].rsplit(" (", 1)
-        return node.split("[", 1)[0], phase  # parameters dropped (they may contain '::'): evidence per function
 
     def this_thread():
         return getattr(threading, "_active", {}).get(threading.get_ident())  # looked up each time: fork rebuilds it
@@ -157,7 +171,7 @@ def _vmodel_trace_install():
         with lock:
             if key in seen or state["full"]:
                 return
-            line = json.dumps(obj, ensure_ascii=True) + "\n"
+            line = json.dumps({**obj, "ts": round(time.time(), 6)}, ensure_ascii=True) + "\n"
             if len(seen) >= limit or state["bytes"] + len(line) > byte_limit:
                 state["full"] = True
                 state["out"].write(json.dumps({"truncated": True}) + "\n")
@@ -166,9 +180,9 @@ def _vmodel_trace_install():
             state["bytes"] += len(line)
             state["out"].write(line)
 
-    def note_edges(test, phase, lab, frame):
+    def note_edges(test, phase, lab, func, frame):
         want = edges[lab]
-        k = (test, phase, lab)
+        k = (test, phase, lab, func)
         found = state["found"].setdefault(k, set())
         if found >= want:
             return
@@ -179,9 +193,10 @@ def _vmodel_trace_install():
         for c in (stack_consumers(frame.f_back if frame is not None else None) | inherited()) & want:
             if c not in found:
                 found.add(c)
-                write(("e", test, phase, lab, c), {"t": test, "p": phase, "e": lab, "c": c})
+                write(("e", test, phase, lab, func, c), {"t": test, "p": phase, "e": lab, "f": func, "c": c})
         if n + 1 == scan_limit and not found >= want:
-            write(("cap", test, phase, lab), {"edge_scan_capped": True, "t": test, "p": phase, "e": lab})
+            write(("cap", test, phase, lab, func), {"edge_scan_capped": True, "t": test, "p": phase, "e": lab,
+                                                    "f": func})
 
     def record(code, frame=None):
         """None: not watched; True: watched (recorded when it is a function)."""
@@ -191,10 +206,14 @@ def _vmodel_trace_install():
         if not code.co_flags & 0x1:  # CO_OPTIMIZED: functions only, not module or class bodies (import time)
             return True
         test, phase = context()
-        write((test, phase, lab, getattr(code, "co_qualname", code.co_name)),
-              {"t": test, "p": phase, "m": lab, "f": getattr(code, "co_qualname", code.co_name)})
+        if not state["spawned"] and test is not None and threading.get_ident() == threading.main_thread().ident \
+                and state["last"] != (test, phase):
+            state["last"] = (test, phase)  # a test boundary of the pytest process (child lines are judged by these)
+            write(("b", test, phase), {"b": test, "p": phase})
+        func = getattr(code, "co_qualname", code.co_name)
+        write((test, phase, lab, func), {"t": test, "p": phase, "m": lab, "f": func})
         if lab in edges:
-            note_edges(test, phase, lab, frame)
+            note_edges(test, phase, lab, func, frame)
         return True
 
     pool = {"patched": False}

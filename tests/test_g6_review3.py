@@ -148,7 +148,11 @@ class R3G6Red(SandboxClass):
                          "    url = f'http://127.0.0.1:{server.server_address[1]}/'\n"
                          "    with urllib.request.urlopen(url, data=b'a,1\\nb,2\\n', timeout=30) as resp:\n"
                          "        assert json.loads(resp.read()) == {'count': 2, 'total': 3, 'top': 'b'}\n")
-        r4, r5, code, r6 = self.to_g6(self.declare_012("api"))
+        entries = self.declare_012("api")
+        for e in entries:  # the handler serves summarize(): the verifier names it among IF-002's symbols (review 4 H4)
+            if e["id"] == "IF-002":
+                e["provider_symbols"] = ["main", "summarize"]
+        r4, r5, code, r6 = self.to_g6(entries)
         self.assertEqual((r4["status"], r5.get("status")), ("PASSED", "PASSED"), r4)
         self.assertEqual(r6.get("status"), "PASSED", f"{RED} handler threads belong to the test, in its call phase: {r6}")
 

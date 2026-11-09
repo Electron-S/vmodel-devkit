@@ -50,7 +50,9 @@ class TracerAccept(unittest.TestCase):
         for f in sorted(self.out.glob("*.jsonl")):
             lines = f.read_text(encoding="utf-8").splitlines()
             out += [json.loads(x) for x in lines[1:]]
-        return out
+        for r in out:
+            r.pop("ts", None)  # 0.2.0 review 4: lines carry a wall-clock time; compared without it
+        return [r for r in out if "b" not in r]  # and test boundary lines (the pytest process only)
 
     def test_function_calls_are_attributed_to_the_test_and_children_are_traced(self):
         code = ("import subprocess, sys, mod, other\nmod.f(); other.g(); mod.K().m()\n"

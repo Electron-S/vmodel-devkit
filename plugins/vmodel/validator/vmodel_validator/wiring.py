@@ -145,11 +145,15 @@ def _target_names(t: ast.AST) -> list[str]:
 
 def _merge(into: dict[str, tuple], branches: list[dict[str, tuple]]) -> None:
     """Alternative branches (if/else, try/except): a strong binding (import/def/class/alias) in any branch wins over a
-    plain value from another one (`except ImportError: main = None` is a fallback); among equals the first wins."""
+    plain value from another one (`except ImportError: main = None` is a fallback); among equals the first wins. A
+    branch that does not bind a name keeps the binding from before the statement, so `if cond: x = None` after an
+    import of x keeps the import (review 4 L2)."""
+    names = {k for b in branches for k in b}
     merged: dict[str, tuple] = {}
     for b in branches:
-        for k, v in b.items():
-            if k not in merged or v[-1] > merged[k][-1]:
+        for k in names:
+            v = b.get(k, into.get(k))
+            if v is not None and (k not in merged or v[-1] > merged[k][-1]):
                 merged[k] = v
     into.update(merged)
 
@@ -598,11 +602,22 @@ def _str_arg(call: ast.Call, i: int) -> str | None:
     return None
 
 
+def _root_name(node: ast.AST) -> str | None:
+    while isinstance(node, ast.Attribute):
+        node = node.value
+    return node.id if isinstance(node, ast.Name) else None
+
+
 def _patch(ix: Index, mod: Module, sc: Scope, call: ast.Call, b: tuple | None) -> tuple | None:
     is_mp = isinstance(call.func, ast.Attribute) and call.func.attr in ("setattr", "delattr") and \
         isinstance(call.func.value, ast.Name) and call.func.value.id == "monkeypatch"
+    # review 4 M6: pytest-mock (mocker.patch / mocker.patch.object) and the builtin setattr(obj, "name", value)
+    is_mocker = isinstance(call.func, ast.Attribute) and call.func.attr in ("patch", "object") and \
+        _root_name(call.func) == "mocker"
+    is_setattr = isinstance(call.func, ast.Name) and call.func.id in ("setattr", "delattr") and \
+        call.func.id not in sc.locals and call.func.id not in sc.imports
     qn = b[1] if b and b[0] == "ext" else None
-    if not (is_mp or (qn and (qn in PATCHERS or qn.endswith((".patch", ".patch.object"))))):
+    if not (is_mp or is_mocker or is_setattr or (qn and (qn in PATCHERS or qn.endswith((".patch", ".patch.object"))))):
         return None
     s = _str_arg(call, 0)
     if s is not None:
@@ -655,6 +670,13 @@ def analyze(ix: Index, mod: Module, fn: ast.AST, depth: int = 0, seen: set | Non
                 fm, ff = fixtures[p]
                 analyze(ix, fm, ff, depth + 1, seen, out)
     for node, _parent in _walk_own(roots):
+        if isinstance(node, ast.Assign):  # `module.symbol = fake` replaces a source symbol (review 4 M6)
+            for t in node.targets:
+                if isinstance(t, ast.Attribute):
+                    obj = _bind(ix, mod, sc, t.value)
+                    if obj and obj[0] == "src":
+                        out.patches.append({"target": ("src", obj[1], (*obj[2], t.attr)), "line": node.lineno})
+            continue
         if not isinstance(node, ast.Call):
             continue
         out.calls += 1

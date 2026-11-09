@@ -117,11 +117,13 @@ class EvidenceBase(SandboxClass):
         assert r5["status"] == "PASSED", json.dumps(r5, indent=1, ensure_ascii=False)[:3000]
         return r4, r5, self.g6()
 
-    def declare_012(self, kind: str) -> list[dict]:
+    def declare_012(self, kind: str, symbols: list | None = None) -> list[dict]:
         entries = self.sb.interface_review_entries()
         for e in entries:
             if e["id"] == "IF-002":
                 e["runtime_paths"] = [{"test": "TEST-012", "kind": kind, "test_file_sha256": file_sha256(self.itest)}]
+                if symbols:
+                    e["provider_symbols"] = symbols
         return entries
 
     def coverage(self, res: dict) -> dict:
@@ -198,7 +200,9 @@ class EvidenceCaseRed(EvidenceBase):
 
     def test_case_E_api_server_in_a_function_fixture(self):
         replace_function(self.itest, "test_TEST_012_cli_main_reads_file", FIXTURE_SERVER_012)
-        _r4, _r5, r6 = self.to_g6(self.declare_012("api"))
+        # the handler serves summarize(), not main(): the verifier names it among IF-002's provider symbols (review 4
+        # H4: the trace must show the interface's own symbols, the signature's main alone would not be run here)
+        _r4, _r5, r6 = self.to_g6(self.declare_012("api", ["main", "summarize"]))
         self.assertEqual(r6["status"], "PASSED", r6)
         lv = levels(ledger_record(self.sb, r6["record_id"]))
         self.assertEqual(lv["IF-002"], ("test_level", {"TEST-012": "test_level"}, ["TEST-012"]), f"{RED} {lv}")
@@ -231,12 +235,12 @@ class EvidenceCaseRed(EvidenceBase):
         _r4, _r5, r6 = self.to_g6(self.declare_012("subprocess"))
         self.assertEqual((r6["status"], r6.get("blocked_reason")), ("BLOCKED", "integration_evidence_insufficient"), r6)
         lv = levels(ledger_record(self.sb, r6["record_id"]))
-        # report.py (the IF-002 provider) ran in the pytest process for TEST-010/011, never in a TEST-012 child
-        self.assertEqual(lv.get("IF-002"), ("suite_level", {"TEST-012": "suite_level"}, []), f"{RED} {lv}")
+        # IF-002's symbol main() never ran (report.summarize ran for TEST-010/011, but that is not the IF-002 symbol)
+        self.assertEqual(lv.get("IF-002"), ("insufficient", {"TEST-012": "insufficient"}, []), f"{RED} {lv}")
         self.assertEqual(lv.get("IF-001", (None,))[0], "test_level", f"{RED} {lv}")
         text = self.gate_text()
         self.assertIn("IF-002", text, text)
-        self.assertIn("Suite-level Evidence Only", text, f"{RED} {text}")
+        self.assertIn("Insufficient Evidence", text, f"{RED} {text}")
         self.assertIn("1/2 interface(s) test-level verified", text, f"{RED} {text}")
 
     def test_case_F_provider_that_never_runs_is_insufficient(self):
@@ -322,7 +326,9 @@ class TracerBase(unittest.TestCase):
         out = []
         for f in sorted(self.out.glob("*.jsonl")):
             out += [json.loads(x) for x in f.read_text(encoding="utf-8").splitlines()[1:]]
-        return out
+        for r in out:
+            r.pop("ts", None)  # wall clock (review 4): compared without it
+        return [r for r in out if "b" not in r]  # test boundaries are checked separately
 
     def edges(self) -> list[tuple]:
         return [(r["t"], r["p"], r["e"], r["c"]) for r in self.records() if "e" in r and "c" in r]
@@ -362,7 +368,7 @@ class EvidenceTracerRed(TracerBase):
     def test_stack_scan_cap_is_recorded(self):
         res = self.run_py("import cons, prov\nfor i in range(5):\n    prov.f(i)\ncons.use()\n", edge_scan_limit=3)
         self.assertEqual(res.returncode, 0, res.stderr)
-        self.assertIn({"edge_scan_capped": True, "t": "t.py::test_TEST_001_a", "p": "call", "e": "prov"},
+        self.assertIn({"edge_scan_capped": True, "t": "t.py::test_TEST_001_a", "p": "call", "e": "prov", "f": "f"},
                       self.records(), RED)
         self.assertEqual(self.edges(), [])  # capped: absence is recorded as uncertain, never as proof
 

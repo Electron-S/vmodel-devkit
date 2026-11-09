@@ -141,7 +141,11 @@ class WiringRed(WiringBase):
 
     def test_T09_declared_api_path_passes_on_runtime_evidence(self):
         replace_function(self.itest, "test_TEST_012_cli_main_reads_file", API_TEST_012)
-        code, res = self.g4(interfaces=self.declare("TEST-012", "api"))
+        entries = self.declare("TEST-012", "api")
+        for e in entries:  # the handler serves summarize(): the verifier names it among IF-002's symbols (review 4 H4)
+            if e["id"] == "IF-002":
+                e["provider_symbols"] = ["main", "summarize"]
+        code, res = self.g4(interfaces=entries)
         self.assertEqual(res["status"], "PASSED", f"{RED} declared API path: {res}")
         self.assertEqual(self.sb.gate("G5")[1]["status"], "PASSED")
         res = self.sb.gate("G6")[1]
