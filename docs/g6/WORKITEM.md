@@ -133,7 +133,26 @@ REQ-G6-01~26은 설계 문서 §2가 정본이다. 아래는 바뀐 것과 새�
 기존 225개 중 의도적으로 바꾸는 기대값(설계 §6.1, 첫 단계에서 grep으로 재생성): `test_gates.py` 32~35·43행, `test_rework_flow.py` 47·65행, `test_defect_evidence.py` 126·130행, `test_defect_closure.py` 219행, `test_version_compat.py` 투영(G4 새 체크 2개 제외), `helpers.Sandbox.review()`(IF가 있으면 G4 리뷰에 `interfaces`). 각 변경 위치에 0.1.5 기대값과 근거 REQ를 주석으로 남긴다.
 
 ## 6. 진행 기록
-(구현 중 갱신)
+| 단계 | 커밋 | 결과 |
+|---|---|---|
+| 테스트 먼저 | `c6bc3ce` | 작업 항목, 픽스처 2개, G6 하네스 10개 모듈, `red_green.py --marker` |
+| RED 1차 | `c6bc3ce` | 75개 중 70 기대 충족, 위반 5: 도우미 `replace_function`이 `re.sub`로 역슬래시를 해석해 주입 소스가 문법 오류(같은 이유로 "엉뚱한 이유의 RED"가 섞일 수 있어 전부 다시 돌림), C2가 서로 다른 샌드박스의 manifest를 비교(workitem.json 생성 시각이 달라 항상 다름) |
+| 테스트 보정 1 | `aab3422` | 함수 교체를 함수형 치환으로, C2는 같은 프로젝트를 두 코어로 해시 |
+| RED 2차 | `aab3422` | 75개 중 72, 위반 3: G5 PASS 뒤 통합 테스트 파일을 바꾸는 시나리오가 기존 규칙 G5.NO_WEAKENING(test_changes 정당화)에 먼저 걸림 |
+| 테스트 보정 2 | `5430a1e` | `justify_test_change` 도우미(CR `test_changes`) |
+| 기존 225개 + 새 helpers, 0.1.5 대상 | `c6bc3ce` | 223 통과, 오류 2: `copy_plugin`이 읽기 전용 릴리스 사본을 복사해 쓰기 실패(테스트 환경 문제, helpers 변경과 무관) → `copy_plugin`이 사본을 쓰기 가능하게 바꿈 |
+| 구현 | `3239eba` | 스키마 → gates.json → wiring → tracer → gates(G4·G5·G6·결함) → status → cli·setup·hook → 지침 → 0.2.0 |
+| 구현 중 발견 | `3239eba` | (1) 계측이 class 본문을 함수 실행으로 셈 → CO_OPTIMIZED 함수만. (2) API 경로 테스트가 정적으로 분류됨: 분석이 테스트 안 중첩 class의 메서드 본문까지 걸어 들어감 → 중첩 def·class·lambda는 테스트가 이름으로 부를 때만 따라감. 같은 원인으로 "호출되지 않는 중첩 def에 provider 호출을 숨긴 placeholder"가 통과하던 우회를 막고 RED 테스트 추가(`test_T06_unused_nested_call_does_not_hide_a_placeholder`). (3) N/A next_action이 "G1-G5 verified"로 시작 → "G1-G5 PASSED, G6 N/A"(REQ-G6-17). (4) 기존 불변식 `hook.py`가 0.1.4와 바이트 동일 → configure-tests USER_ONLY 추가만 허용하도록 조정 |
+| RED 최종 | `3239eba`(깨끗한 worktree) | 76/76 기대 충족(위반 0, 표지 강제), 실패 사유 확인: G6 미구현 BLOCKED, G4가 placeholder·import-only 통과, G5가 통합 테스트 수용, init·configure-tests 옵션 없음 |
+| GREEN | `3239eba`(깨끗한 worktree) | 83/83(Accept 7 포함) |
+| 전체 하네스 1차 | 작업 트리(`3239eba` 직전) | 308개 중 307, 실패 1 = 위 (4) |
 
 ## 7. 독립 검토
 (검토 후 갱신)
+
+## 8. 실전 E2E 계획 (D8, 실행은 별도 승인)
+- 예산: sonnet 최대 2회, 회당 `--max-budget-usd 2`, 합계 $4 상한. `--permission-mode auto`, `--setting-sources project,local`, `--plugin-dir dist/vmodel-0.2.0`, `--dangerously-skip-permissions` 금지. 실행 전 모델 호출 없는 준비(setup)와 기대 판정 확인을 먼저 한다.
+- 시나리오 A (Provider/Consumer, G6 실패 → 결함 → 수정 → 재검증): 기존 코드가 있는 프로젝트(점수 파서 모듈과 그 통합 테스트가 이미 `tests/integration/`에 있어 `init`이 실제 경로를 등록 — D3 규칙을 그대로 지킴)에 "파서 결과를 소비하는 요약 보고 CLI를 추가해줘"를 요청한다. 파서의 오류 계약(형식 오류 줄 번호)과 소비 측 처리 사이의 불일치를 하나 미리 심어(D26 블라인드 시딩, 세션 프롬프트에 알리지 않음) 단위 테스트는 통과하고 IF 통합 테스트에서 드러나게 한다. 기대: G1~G5 PASSED → G6 FAILED(TEST_MAPPING·RESULTS) → DEFECT(gate G6, IF·TEST 연결) → 수정 → G4 재리뷰 → G5 → G6 PASSED, 결함 CLOSED. 관찰: placeholder·import-only 테스트를 쓰는지, 통합 테스트가 경로 A인지, verifier가 `interfaces` 항목을 쓰는지, guard 우회 0.
+- 시나리오 B (통합 대상 없음): `samples/textstats`(단일 컴포넌트)에 단일 함수 기능을 요청한다. 기대: IF 0, integration 명세 0, verifier가 G2·G3 리뷰에 `integration_applicability`를 기록 → G6 N/A, WI PARTIALLY_VERIFIED, 최종 보고가 N/A를 "통합 테스트 통과"로 쓰지 않음, G1~G5 기록·증거 보존.
+- 판정 기준(세션 뒤, 모델 호출 없음): 서명 원장과 증거로 Validator가 직접 확인(`vmodel status/audit/verify-evidence`), 트랜스크립트에서 guard 결정과 보고 문구 대조. 실패하면 결과를 그대로 기록하고 추가 실행은 다시 승인받는다.
+- 준비 작업(승인 후): 시나리오 A 표본 프로젝트와 시딩 계획 봉인, `scripts/e2e/e2e_run.py`에 표본 선택 옵션.
