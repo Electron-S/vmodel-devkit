@@ -516,7 +516,7 @@ def trace_view(project: Project, wi: str) -> dict:
     for iid, i in sorted(g.ifaces.items()):
         rec = recorded.get(iid) or {}
         tests = {}
-        for tid in sorted(t for t, x in g.tests.items() if iid in (x.get("verifies") or [])):
+        for tid in sorted(t for t, x in g.tests.items() if iid in _str_list(x.get("verifies"))):
             tv = (rec.get("tests") or {}).get(tid) or {}
             tests[tid] = {"level": g.tests[tid].get("level"), "result": g6_exec.get(tid, "not run"),
                           "path": tv.get("path"), "function": tv.get("function")}

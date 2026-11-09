@@ -3,8 +3,8 @@
 G6 puts this directory first on PYTHONPATH and VMODEL_TRACE_SPEC in the environment of the integration test command,
 so every Python process of the run (pytest and the processes it starts) imports this file at start-up. For the
 watched files (interface provider/consumer modules and integration test files) it records which functions started,
-together with the pytest test id that was current (PYTEST_CURRENT_TEST, inherited by child processes): one line per
-new (test, file, function). Module and class bodies are not counted, so importing a module is not execution.
+together with the pytest test id and phase that were current (PYTEST_CURRENT_TEST, inherited by child processes):
+one line per new (test, phase, file, function). Module and class bodies are not counted, so importing a module is not execution.
 
 Trust: this runs inside the processes under test, like the test runner itself (SPEC 5.7); the validator hashes the
 files after the run and records them in the signed evidence. Any problem here is swallowed: the traced program must
@@ -70,15 +70,16 @@ def _vmodel_trace_install():
             return None
         if not code.co_flags & 0x1:  # CO_OPTIMIZED: functions only, not module or class bodies (import time)
             return True
-        test = os.environ.get("PYTEST_CURRENT_TEST")
-        if test:
-            test = test.rsplit(" (", 1)[0]
-        key = (test, lab, getattr(code, "co_qualname", code.co_name))
+        test, phase = os.environ.get("PYTEST_CURRENT_TEST"), None
+        if test and test.endswith(")") and " (" in test:
+            test, phase = test[:-1].rsplit(" (", 1)
+        key = (test, phase, lab, getattr(code, "co_qualname", code.co_name))
         if key not in seen:
             with lock:
                 if key not in seen and len(seen) < limit:
                     seen.add(key)
-                    out.write(json.dumps({"t": key[0], "m": key[1], "f": key[2]}, ensure_ascii=True) + "\n")
+                    out.write(json.dumps({"t": key[0], "p": key[1], "m": key[2], "f": key[3]}, ensure_ascii=True)
+                              + "\n")
         return True
 
     if tool is not None:

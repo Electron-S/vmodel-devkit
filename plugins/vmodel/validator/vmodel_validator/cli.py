@@ -43,14 +43,18 @@ def _json(obj) -> None:
 
 
 def render_gate(res: dict) -> str:
-    lines = [f"{res['work_item']} {res['gate']} {res['status']}"
+    na = res.get("applicability") == "not_applicable"
+    shown = "N/A" if na and res["status"] == "PASSED" else res["status"]  # review F12: never a bare "G6 PASSED" for N/A
+    lines = [f"{res['work_item']} {res['gate']} {shown}"
              + (f"  record {res['record_id']}  manifest {short(res.get('manifest_hash'))}" if res.get("recorded")
                 else "  (not recorded: precondition)")]
     for r in res.get("reasons") or []:
         lines.append(f"  ! {r}")
-    if res.get("applicability") == "not_applicable":
+    if na and res["status"] == "PASSED":
         lines.append("  applicability: N/A (not_applicable): no integration test was executed; recorded as PASSED "
                      "only so the gate chain continues, never as a verification")
+    elif na:
+        lines.append("  applicability: not_applicable (nothing executed)")
     elif res.get("applicability"):
         lines.append(f"  applicability: {res['applicability']}")
     for c in res.get("checks") or []:
@@ -483,7 +487,7 @@ def cmd_wiring(args) -> int:
         out(f"{iid}: provider {', '.join(iv['provider_modules']) or '-'}; consumer {cons}")
         for tid, tv in iv["tests"].items():
             for v in tv["functions"] or [{"function": "(no test function)", "path": "missing"}]:
-                out(f"  {tid} {v['path']:<17} {v['function']}")
+                out(f"  {tid} {v['path']:<17} {v['function']}")  # every function counts at G4 (D42)
                 if v.get("file"):
                     out(f"      reaches provider: {v['reaches_provider']}, consumer: {v['reaches_consumer']}; "
                         f"mechanisms: {', '.join(v['mechanisms']) or '-'}; test_file_sha256 {v['test_file_sha256']}")

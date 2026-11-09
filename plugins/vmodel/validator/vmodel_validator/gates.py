@@ -1182,19 +1182,22 @@ def declared_runtime_paths(review: dict | None) -> dict[tuple[str, str], dict]:
     return out
 
 
-def _runtime_declaration_problem(decl: dict | None, tv: dict, sha: str) -> str | None:
-    best = tv["best"] or {}
+def _runtime_declaration_problem(decl: dict | None, fv: dict, sha: str) -> str | None:
+    """Is the verifier's runtime_paths entry valid for this test function (kind it uses, its file's current hash)?"""
     if decl is None:
         return "not declared"
-    if decl.get("kind") not in best.get("mechanisms", []):
+    if decl.get("kind") not in fv.get("mechanisms", []):
         return (f"declared kind {decl.get('kind')!r} is not a mechanism the test uses "
-                f"({', '.join(best.get('mechanisms') or []) or 'none'})")
+                f"({', '.join(fv.get('mechanisms') or []) or 'none'})")
     if decl.get("test_file_sha256") != sha:
-        return f"declared test_file_sha256 does not match the current {best.get('file')} ({sha}); re-review"
+        return f"declared test_file_sha256 does not match the current {fv.get('file')} ({sha}); re-review"
     return None
 
 
 def _integration_wiring(ctx: Ctx, wd: dict, review: dict | None, mhash: str) -> Check:
+    """REQ-G6-11'/29/30 (D42): every function carrying an integration TEST id must reach each interface it verifies by
+    a call path (A) or a runtime mechanism the verifier declared (B); judging only the best function would let an
+    uncollected or disabled copy stand in for the test that really runs (review F1)."""
     p = ctx.project
     declared = declared_runtime_paths(review)
     fails, pend, warns = [], [], []
@@ -1216,35 +1219,42 @@ def _integration_wiring(ctx: Ctx, wd: dict, review: dict | None, mhash: str) -> 
         if not iv["tests"]:
             fails.append(f"{iid}: no integration test spec verifies it")
         for tid, tv in sorted(iv["tests"].items()):
-            best = tv["best"]
-            if best is None:
+            if not tv["functions"]:
                 continue  # no function: G4.TEST_CODE reports it
-            fsha = sha(best["file"])
-            data[iid][tid] = {"path": tv["path"], "function": best["function"], "test_file_sha256": fsha,
-                              "reaches_provider": best["reaches_provider"], "reaches_consumer": best["reaches_consumer"],
-                              "mechanisms": best["mechanisms"], "patched_provider": best["patched_provider"]}
-            if tv["path"] == "static":
-                for v in tv["functions"]:
-                    if v["patched_provider"]:
-                        warns.append(f"{tid} ({iid}): {v['function']} patches the provider "
-                                     f"({', '.join(v['patched_provider'])}); the G4 review decides whether the "
+            best = tv["best"]
+            fviews = []
+            for fv in tv["functions"]:
+                fsha = sha(fv["file"])
+                path = fv["path"]
+                if path == "static":
+                    if fv["patched_provider"]:
+                        warns.append(f"{tid} ({iid}): {fv['function']} patches the provider "
+                                     f"({', '.join(fv['patched_provider'])}); the G4 review decides whether the "
                                      "interface is still exercised")
-            elif tv["path"] == "runtime_candidate":
-                why = _runtime_declaration_problem(declared.get((iid, tid)), tv, fsha)
-                if why is None:
-                    data[iid][tid]["path"] = "runtime_declared"
-                    continue
-                pend.append(f"{tid} ({iid}): no static call path into the provider {', '.join(iv['provider_modules'])}"
-                            f"{cons}; runtime path ({', '.join(best['mechanisms'])}) {why}: {REVIEWER} declares it in "
-                            f"reviews/G4.json interfaces[{iid}].runtime_paths as {{\"test\": \"{tid}\", \"kind\": "
-                            f"\"{best['mechanisms'][0]}\", \"test_file_sha256\": \"{fsha}\"}} ({best['file']}); G6 "
-                            "then needs runtime proof")
-            elif tv["path"] == "none":
-                fails.append(f"{tid} ({iid}): {best['function']} neither calls into the provider "
-                             f"{', '.join(iv['provider_modules'])}{cons} nor uses a runtime integration mechanism "
-                             "(subprocess, IPC, API, dynamic import); reaches provider: "
-                             f"{'yes' if best['reaches_provider'] else 'no'}, consumer: "
-                             f"{'yes' if best['reaches_consumer'] else 'no'}")
+                elif path == "runtime_candidate":
+                    why = _runtime_declaration_problem(declared.get((iid, tid)), fv, fsha)
+                    if why is None:
+                        path = "runtime_declared"
+                    else:
+                        pend.append(f"{tid} ({iid}): {fv['function']} has no static call path into the provider "
+                                    f"{', '.join(iv['provider_modules'])}{cons}; runtime path "
+                                    f"({', '.join(fv['mechanisms'])}) {why}: {REVIEWER} declares it in "
+                                    f"reviews/G4.json interfaces[{iid}].runtime_paths as {{\"test\": \"{tid}\", "
+                                    f"\"kind\": \"{fv['mechanisms'][0]}\", \"test_file_sha256\": \"{fsha}\"}} "
+                                    f"({fv['file']}); G6 then needs runtime proof")
+                elif path == "none":
+                    fails.append(f"{tid} ({iid}): {fv['function']} neither calls into the provider "
+                                 f"{', '.join(iv['provider_modules'])}{cons} nor uses a runtime integration mechanism "
+                                 "(subprocess, IPC, API, dynamic import); reaches provider: "
+                                 f"{'yes' if fv['reaches_provider'] else 'no'}, consumer: "
+                                 f"{'yes' if fv['reaches_consumer'] else 'no'}")
+                fviews.append({"function": fv["function"], "path": path, "test_file_sha256": fsha,
+                               "reaches_provider": fv["reaches_provider"], "reaches_consumer": fv["reaches_consumer"],
+                               "mechanisms": fv["mechanisms"], "patched_provider": fv["patched_provider"]})
+            data[iid][tid] = {"path": tv["path"], "function": best["function"], "functions": fviews,
+                              "test_file_sha256": sha(best["file"]), "reaches_provider": best["reaches_provider"],
+                              "reaches_consumer": best["reaches_consumer"], "mechanisms": best["mechanisms"],
+                              "patched_provider": best["patched_provider"]}
     out = {"interfaces": data}
     if fails:
         return Check("G4.INTEGRATION_WIRING", "mechanical", "fail",
@@ -1259,13 +1269,13 @@ def _integration_wiring(ctx: Ctx, wd: dict, review: dict | None, mhash: str) -> 
         return Check("G4.INTEGRATION_WIRING", "mechanical", "warn",
                      "interfaces reached; provider patching to be judged by the G4 review", warns, data=out)
     return Check("G4.INTEGRATION_WIRING", "mechanical", "pass",
-                 f"{len(wd['interfaces'])} interface(s): every integration test reaches its provider by a call path or "
-                 "a declared runtime path", data=out)
+                 f"{len(wd['interfaces'])} interface(s): every integration test function reaches its provider by a "
+                 "call path or a declared runtime path", data=out)
 
 
 def _review_interfaces(ctx: Ctx, review: Check, rv: dict | None, trees: dict[str, ast.AST], mhash: str) -> Check:
     """REQ-G6-12: an approving G4 review of a work item with interfaces reviews every IF."""
-    entries = {e.get("id"): e for e in _items(rv, "interfaces")}
+    entries = {e["id"]: e for e in _items(rv, "interfaces") if isinstance(e.get("id"), str)}
     pend, issues = [], []
     for iid, i in sorted(ctx.graph.ifaces.items()):
         e = entries.get(iid)
@@ -1669,11 +1679,34 @@ def integration_config_problems(cfg: Any) -> list[str]:
     return probs
 
 
-def read_runtime_trace(trace_dir: Path) -> dict:
-    """Summary of the tracer files (written inside the processes under test, hashed into the signed evidence)."""
-    procs, methods, errors = 0, set(), []
-    tests: dict[str, set[str]] = {}
+TRACE_FILE_LIMIT = 32 * 1024 * 1024
+
+
+def trace_files(trace_dir: Path) -> tuple[list[Path], list[str]]:
+    """Regular, non-symlink *.jsonl files up to the size limit; anything else planted in the folder is reported, not
+    read or hashed (a directory, FIFO or device there must not crash or hang the validator, review F4)."""
+    files, errors = [], []
     for f in sorted(trace_dir.glob("*.jsonl")) if trace_dir.is_dir() else []:
+        try:
+            if f.is_symlink() or not f.is_file():
+                errors.append(f"{f.name}: not a regular file (ignored)")
+            elif f.stat().st_size > TRACE_FILE_LIMIT:
+                errors.append(f"{f.name}: larger than {TRACE_FILE_LIMIT} bytes (ignored)")
+            else:
+                files.append(f)
+        except OSError as exc:
+            errors.append(f"{f.name}: {exc.__class__.__name__}")
+    return files, errors
+
+
+def read_runtime_trace(trace_dir: Path) -> dict:
+    """The tracer files (written inside the processes under test, hashed into the signed evidence). `_events` stays
+    in memory: (pytest node id, phase, process file, watched file, function)."""
+    files, errors = trace_files(trace_dir)
+    procs, methods = 0, set()
+    tests: dict[str, set[str]] = {}
+    events: list[tuple[str, str, str, str, str]] = []
+    for f in files:
         try:
             lines = f.read_bytes().decode("utf-8", "replace").splitlines()
             head = json.loads(lines[0]) if lines else None
@@ -1693,18 +1726,34 @@ def read_runtime_trace(trace_dir: Path) -> dict:
                 continue
             if isinstance(r, dict) and isinstance(r.get("t"), str) and isinstance(r.get("m"), str):
                 tests.setdefault(r["t"], set()).add(r["m"])
+                events.append((r["t"], str(r.get("p") or ""), f.name, r["m"], str(r.get("f"))))
     return {"active": procs > 0, "processes": procs, "methods": sorted(methods),
-            "tests": {t: sorted(v) for t, v in sorted(tests.items())}, "errors": errors[:20]}
+            "tests": {t: sorted(v) for t, v in sorted(tests.items())}, "errors": errors[:20], "_events": events}
 
 
-def trace_by_test(rt: dict) -> dict[str, set[str]]:
-    """TEST id -> files that ran functions during the pytest tests named with exactly that id."""
-    out: dict[str, set[str]] = {}
-    for nodeid, labels in (rt.get("tests") or {}).items():
+def trace_by_test(rt: dict) -> dict[str, dict]:
+    """TEST id -> what ran during the pytest tests named with exactly that id: `functions` (file::qualname, any
+    phase) with the processes they ran in, and `call` (file -> processes) for the test call phase."""
+    out: dict[str, dict] = {}
+    for nodeid, phase, proc, label, func in rt.get("_events") or []:
         ids = test_ids_in_text(nodeid.split("::")[-1].split("[")[0])
-        if len(ids) == 1:
-            out.setdefault(next(iter(ids)), set()).update(labels)
+        if len(ids) != 1:
+            continue
+        d = out.setdefault(next(iter(ids)), {"functions": {}, "call": {}})
+        d["functions"].setdefault(f"{label}::{func}", set()).add(proc)
+        if phase == "call":
+            d["call"].setdefault(label, set()).add(proc)
     return out
+
+
+def _junit_ran(cases: list[dict], fv: dict) -> bool:
+    """Fallback without any runtime trace: a passed JUnit case of this very function (pytest classname/name)."""
+    name = fv.get("name") or str(fv.get("function", "")).split("::")[-1]
+    leaf = name.split(".")[-1]
+    mod = fv["file"][:-3].replace("/", ".") if fv["file"].endswith(".py") else fv["file"]
+    want = f"{mod}.{name.split('.')[0]}" if "." in name else mod
+    return any(c["name"].split("[")[0] == leaf and (c["classname"] == want or c["classname"].endswith("." + want))
+               for c in cases if c["status"] == "passed")
 
 
 def _g6_no_weakening(ctx: Ctx, executed: dict[str, str]) -> Check:
@@ -1837,22 +1886,23 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
             junit_error = f"junit.xml unparseable: {exc}"
     else:
         junit_error = "junit.xml was not produced by the test run"
-    trace_files = {f"trace/{f.name}": f for f in sorted(trace_dir.glob("*.jsonl"))}
+    traced_files = {f"trace/{f.name}": f for f in trace_files(trace_dir)[0]}
     ev = runner.write_evidence(
         p, ctx.ledger, run_dir, wi=ctx.wi, gate="G6", kind="integration_test", run=run, exe=exe,
         git=runner.git_info(p.root), manifest_hash=mhash, core_hash=ctx.integrity.core_hash,
         extra={"command_source": "integration_test", **cfg_data,
                "junit_summary": {k: v for k, v in (junit_summary or {}).items() if k != "cases"} or None,
                "junit_error": junit_error, "verified_files": files, "environment": env_info,
-               "runtime_trace": {k: v for k, v in rt.items() if k != "tests"} | {"tests_traced": len(rt["tests"])}},
-        extra_files={"junit.xml": junit, "trace-spec.json": spec_path, **trace_files})
+               "runtime_trace": {k: v for k, v in rt.items() if k not in ("tests", "_events")}
+               | {"tests_traced": len(rt["tests"])}},
+        extra_files={"junit.xml": junit, "trace-spec.json": spec_path, **traced_files})
     evidence.append(ev)
     tail = [ln for ln in display_decode(run.stdout + run.stderr, limit=4000).splitlines() if ln.strip()][-40:]
 
     if run.error:
         checks.append(Check("G6.EXECUTION", "execution", "blocked", f"test command could not start: {run.error}",
                             data={"blocked_reason": "tool_unavailable", "evidence": ev["path"]}))
-        return checks, {**extra, "runtime_trace": rt}, evidence
+        return checks, {**extra, "runtime_trace": {k: v for k, v in rt.items() if k != "_events"}}, evidence
     if run.timed_out:
         checks.append(Check("G6.EXECUTION", "execution", "fail", f"timed out after {cfg['timeout_s']}s", tail,
                             data={"evidence": ev["path"]}, sig=["timeout"]))
@@ -1913,52 +1963,77 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
     fails, blocks, warns = [], [], []
     if_view = []
     for iid, iv in sorted(wd["interfaces"].items()):
-        prov, cons = set(iv["provider_modules"]), iv["consumer_modules"]
-        prov_rels = {m.rel for name, m in _ix.source.items() if name in prov}
-        cons_rels = None if cons is None else {m.rel for name, m in _ix.source.items() if name in set(cons)}
+        prov_rels = set(iv["provider_modules"])
+        cons_rels = None if iv["consumer_modules"] is None else set(iv["consumer_modules"])
         covered_by, tests_view = [], {}
         for tid, tv in sorted(iv["tests"].items()):
             st = executed.get(tid, "not executed")
-            best = tv["best"] or {}
-            labels = ran.get(tid, set())
-            traced = best.get("file") in labels
-            prov_ran = bool(labels & prov_rels)
-            cons_ran = True if cons_rels is None else bool(labels & cons_rels)
-            view = {"status": st, "path": tv["path"], "function": best.get("function"),
-                    "reaches_provider": best.get("reaches_provider", False),
-                    "reaches_consumer": best.get("reaches_consumer", False),
-                    "patched_provider": best.get("patched_provider", []),
-                    "runtime": {"traced": traced, "provider_ran": prov_ran, "consumer_ran": cons_ran}}
-            if tv["path"] == "static":
-                if st == "passed":
-                    covered_by.append(tid)
-                    if traced and not prov_ran:
-                        warns.append(f"{tid} ({iid}): statically reaches the provider, but no provider function ran "
-                                     "during the test (mocked or not called?): the provider did not run")
-            elif tv["path"] == "runtime_candidate":
-                why = review_note or _runtime_declaration_problem(declared.get((iid, tid)),
-                                                                   tv, sha256_file(p.root / best["file"]))
-                if why is not None:
-                    view["path"] = "runtime_undeclared"
-                    if review_note:
-                        blocks.append(f"{tid} ({iid}): {review_note}")
-                    else:
-                        fails.append(f"{tid} ({iid}): no static call path and no valid runtime path in the G4 review "
-                                     f"accepted by {g4_pass.id if g4_pass else '?'} ({why})")
-                    tests_view[tid] = view
+            seen = ran.get(tid, {"functions": {}, "call": {}})
+            call_files = seen["call"]
+            prov_ran = bool(set(call_files) & prov_rels)
+            cons_ran = True if cons_rels is None else bool(set(call_files) & cons_rels)
+            credit, fviews = None, []
+            for fv in tv["functions"]:
+                procs = seen["functions"].get(f"{fv['file']}::{fv['name']}")
+                traced = procs is not None
+                ran_it = traced or (not rt["active"] and _junit_ran(cases, fv))
+                r = {"function": fv["function"], "path": fv["path"], "executed": ran_it, "traced": traced}
+                fviews.append(r)
+                if not ran_it:
                     continue
-                view["path"] = "runtime"
-                if st == "passed" and prov_ran and cons_ran:
-                    covered_by.append(tid)
-                elif st == "passed":
-                    missing = [w for w, ok in (("provider", prov_ran), ("consumer", cons_ran)) if not ok]
-                    blocks.append(f"{tid} ({iid}): runtime path declared at G4, but the runtime trace shows no "
-                                  f"{' or '.join(missing)} function running during the test "
-                                  f"({'test traced' if traced else 'test not traced'}): insufficient evidence")
-            elif tv["path"] in ("none", "placeholder"):
-                fails.append(f"{tid} ({iid}): {best.get('function')} has no call path into the interface "
-                             f"({tv['path']})")
-            tests_view[tid] = view
+                if fv["path"] == "static":
+                    if not traced:
+                        warns.append(f"{tid} ({iid}): {fv['function']} ran without a runtime trace (credited on the "
+                                     "static call path and its JUnit case only)")
+                        credit = credit or ("static", fv)
+                    elif prov_ran and cons_ran:
+                        credit = credit or ("static", fv)
+                    else:
+                        warns.append(f"{tid} ({iid}): {fv['function']} statically reaches the provider, but no "
+                                     f"{'provider' if not prov_ran else 'consumer'} function ran during the test call "
+                                     "(mocked or not called?): the provider did not run, not counted")
+                elif fv["path"] == "runtime_candidate":
+                    why = review_note or _runtime_declaration_problem(declared.get((iid, tid)), fv,
+                                                                       sha256_file(p.root / fv["file"]))
+                    if why is not None:
+                        r["path"] = "runtime_undeclared"
+                        (blocks if review_note else fails).append(
+                            f"{tid} ({iid}): {review_note}" if review_note else
+                            f"{tid} ({iid}): {fv['function']} has no static call path and no valid runtime path in "
+                            f"the G4 review accepted by {g4_pass.id if g4_pass else '?'} ({why})")
+                        continue
+                    r["path"] = "runtime"
+                    kind = (declared.get((iid, tid)) or {}).get("kind")
+                    test_procs = procs or set()
+                    if kind in ("subprocess", "ipc"):  # proof must come from another process (review F6)
+                        p_ok = any(call_files[f] - test_procs for f in prov_rels if f in call_files)
+                    else:
+                        p_ok = prov_ran
+                    if st == "passed" and p_ok and cons_ran:
+                        credit = credit or ("runtime", fv)
+                    elif st == "passed":
+                        what = [w for w, ok in (("provider", p_ok), ("consumer", cons_ran)) if not ok]
+                        where = " in a process other than the test's" if kind in ("subprocess", "ipc") else ""
+                        blocks.append(f"{tid} ({iid}): runtime path ({kind}) declared at G4, but the runtime trace shows "
+                                      f"no {' or '.join(what)} function running{where} during the test call: "
+                                      "insufficient evidence")
+                else:
+                    fails.append(f"{tid} ({iid}): {fv['function']} has no call path into the interface "
+                                 f"({fv['path']})")
+            if st == "passed" and tv["functions"] and not any(x["executed"] for x in fviews):
+                fails.append(f"{tid} ({iid}): passed, but none of the analysed functions carrying {tid} ran "
+                             f"({', '.join(x['function'] for x in fviews)}): the passing case is another function")
+            best = (credit[1] if credit else tv["best"]) or {}
+            if st == "passed" and credit:
+                covered_by.append(tid)
+            tests_view[tid] = {"status": st,
+                               "path": credit[0] if credit else (fviews[0]["path"] if len(fviews) == 1 else tv["path"]),
+                               "function": best.get("function"), "functions": fviews,
+                               "reaches_provider": best.get("reaches_provider", False),
+                               "reaches_consumer": best.get("reaches_consumer", False),
+                               "patched_provider": best.get("patched_provider", []),
+                               "runtime": {"traced": bool(seen["functions"]), "provider_ran": prov_ran,
+                                           "consumer_ran": cons_ran}}
         covered = bool(covered_by)
         if not covered and not any(b.startswith(tuple(f"{t} ({iid})" for t in iv["tests"])) for b in blocks):
             fails.append(f"{iid}: not covered by a passed integration test that reaches its provider "
@@ -1993,7 +2068,7 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
         "integration_test_functions": {t: [v["function"] for v in vs] for t, vs in sorted(wd["tests"].items())},
         "interfaces": if_view,
         "basis_records": {"G4": g4_pass.id if g4_pass else None, "G5": g5_pass.id if g5_pass else None},
-        "runtime_trace": rt,
+        "runtime_trace": {k: v for k, v in rt.items() if k != "_events"},
         "junit": {k: v for k, v in (junit_summary or {}).items() if k != "cases"},
         "failed_cases": failed_cases[:50],
     })

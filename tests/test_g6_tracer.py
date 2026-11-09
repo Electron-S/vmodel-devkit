@@ -57,8 +57,9 @@ class TracerAccept(unittest.TestCase):
                 "subprocess.run([sys.executable, '-c', 'import mod; mod.f()'], check=True)\n")
         self.assertEqual(self.run_py(code, self.spec()), 0)
         recs = self.records()
-        self.assertIn({"t": "t.py::test_TEST_001_x", "m": "mod", "f": "f"}, recs)
-        self.assertIn({"t": "t.py::test_TEST_001_x", "m": "mod", "f": "K.m"}, recs)
+        # records carry the pytest phase since the review fix F6 (proof must come from the test call phase)
+        self.assertIn({"t": "t.py::test_TEST_001_x", "p": "call", "m": "mod", "f": "f"}, recs)
+        self.assertIn({"t": "t.py::test_TEST_001_x", "p": "call", "m": "mod", "f": "K.m"}, recs)
         self.assertFalse([r for r in recs if r["m"] != "mod"])  # other.py is not watched
         headers = [json.loads(f.read_text(encoding="utf-8").splitlines()[0]) for f in self.out.glob("*.jsonl")]
         self.assertEqual(len(headers), 2)  # parent and child
@@ -70,7 +71,7 @@ class TracerAccept(unittest.TestCase):
 
     def test_setprofile_fallback_records_the_same(self):
         self.assertEqual(self.run_py("import mod\nmod.f()\n", self.spec(force_setprofile=True)), 0)
-        self.assertEqual(self.records(), [{"t": "t.py::test_TEST_001_x", "m": "mod", "f": "f"}])
+        self.assertEqual(self.records(), [{"t": "t.py::test_TEST_001_x", "p": "call", "m": "mod", "f": "f"}])
         header = json.loads(next(self.out.glob("*.jsonl")).read_text(encoding="utf-8").splitlines()[0])
         self.assertEqual(header["method"], "setprofile")
 

@@ -8,6 +8,7 @@ from __future__ import annotations
 import ast
 import json
 import os
+import posixpath
 import shutil
 import subprocess
 import sys
@@ -76,11 +77,10 @@ def _count_test_functions(files: list[Path]) -> int:
 def integration_path_problems(root: Path, given: str, test_globs: list[str]) -> tuple[str, list[str]]:
     """Check a user-given integration test path: it must exist inside the project under the configured tests paths,
     hold at least one test function, and not be the unit command's whole scope. Nothing is ever created (D3)."""
-    rel = given.replace("\\", "/").strip().rstrip("/")
-    while rel.startswith("./"):
-        rel = rel[2:]
+    raw = given.replace("\\", "/").strip()
+    rel = posixpath.normpath(raw) if raw else ""  # tests/integration/.. and tests/. are tests (review F11)
     root = root.resolve()
-    if not rel or rel == "." or os.path.isabs(given) or rel == ".." or rel.startswith("../") or "/../" in rel:
+    if not rel or rel == "." or os.path.isabs(given) or rel == ".." or rel.startswith("../"):
         return rel, [f"integration test path {given!r} must be a relative path inside the project"]
     path = (root / rel).resolve()
     try:
