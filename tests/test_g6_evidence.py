@@ -15,10 +15,17 @@ execution plus an advisory per-test warning), on which these assertions fail at 
 from __future__ import annotations
 
 import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
 import unittest
+from pathlib import Path
 
 from g6_base import (RED, SUBPROCESS_TEST_012, SandboxClass, file_sha256, justify_test_change, ledger_record,
                      replace_function)
+from helpers import PLUGIN
 
 INTEGRATION = "tests/integration/test_pipeline.py"
 MOCKED = {
@@ -269,6 +276,125 @@ class EvidenceCaseChar(EvidenceBase):
         self.assertEqual(wiring["status"], "fail", wiring)
         self.assertTrue(any("TEST-010" in i for i in wiring["items"]), wiring)
 
+
+TRACER = PLUGIN / "validator" / "vmodel_validator" / "tracer"
+PROV = "def f(x=1):\n    if x == 'boom':\n        raise ValueError('boom')\n    return x\n"
+CONS = ("import threading\nfrom concurrent.futures import ThreadPoolExecutor\n\nimport prov\n\n"
+        "_POOL = ThreadPoolExecutor(max_workers=1)\n\n\n"
+        "def use(x=1):\n    return prov.f(x)\n\n\n"
+        "def spawn():\n    t = threading.Thread(target=prov.f, args=(2,))\n    t.start()\n    t.join()\n\n\n"
+        "def pooled(x=1):\n    return _POOL.submit(prov.f, x).result()\n\n\n"
+        "def unrelated():\n    return 0\n")
+
+
+class TracerBase(unittest.TestCase):
+    """The tracer on its own (D44 connection records), in both recording methods."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="vmodel-edge-")) / "연결 추적"
+        self.tmp.mkdir()
+        (self.tmp / "prov.py").write_text(PROV, encoding="utf-8")
+        (self.tmp / "cons.py").write_text(CONS, encoding="utf-8")
+        (self.tmp / "consimport.py").write_text("import prov\n\nDEFAULT = prov.f(9)\n", encoding="utf-8")
+        self.out = self.tmp / "trace"
+        self.out.mkdir()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp.parent, ignore_errors=True)
+
+    def run_py(self, code: str, setprofile: bool = False, **extra) -> subprocess.CompletedProcess:
+        for f in self.out.glob("*.jsonl"):
+            f.unlink()
+        spec = self.tmp / "spec.json"
+        spec.write_text(json.dumps({"out": str(self.out), "watch": {str(self.tmp / "prov.py"): "prov",
+                                                                   str(self.tmp / "cons.py"): "cons",
+                                                                   str(self.tmp / "consimport.py"): "consimport"},
+                                    "edges": {"prov": ["cons", "consimport"]}, "force_setprofile": setprofile,
+                                    **extra}),
+                        encoding="utf-8")
+        env = {k: v for k, v in os.environ.items() if not k.startswith(("PYTHON", "PYTEST", "VMODEL"))}
+        env.update({"PYTHONPATH": str(TRACER), "VMODEL_TRACE_SPEC": str(spec),
+                    "PYTEST_CURRENT_TEST": "t.py::test_TEST_001_a (call)"})
+        return subprocess.run([sys.executable, "-c", code], cwd=str(self.tmp), env=env, capture_output=True,
+                              timeout=120, text=True)
+
+    def records(self) -> list[dict]:
+        out = []
+        for f in sorted(self.out.glob("*.jsonl")):
+            out += [json.loads(x) for x in f.read_text(encoding="utf-8").splitlines()[1:]]
+        return out
+
+    def edges(self) -> list[tuple]:
+        return [(r["t"], r["p"], r["e"], r["c"]) for r in self.records() if "e" in r and "c" in r]
+
+
+SWITCH = "import os\nos.environ['PYTEST_CURRENT_TEST'] = 't.py::test_TEST_002_b (call)'\n"
+
+
+class EvidenceTracerRed(TracerBase):
+    """Each case runs in both recording methods (sys.monitoring on 3.12+, and the setprofile fallback)."""
+
+    def _consumer_calling_the_provider_is_recorded_once(self, sp):
+        res = self.run_py("import cons\nfor i in range(5):\n    cons.use(i)\n", sp)
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertEqual(self.edges(), [("t.py::test_TEST_001_a", "call", "prov", "cons")], f"{RED} {sp}")
+
+    def _direct_provider_call_is_not_a_connection(self, sp):
+        res = self.run_py("import cons, prov\nprov.f(); cons.unrelated()\n" + SWITCH + "cons.use()\n", sp)
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertIn({"t": "t.py::test_TEST_001_a", "p": "call", "m": "prov", "f": "f"}, self.records())
+        self.assertEqual(self.edges(), [("t.py::test_TEST_002_b", "call", "prov", "cons")], f"{RED} {sp}")
+
+    def _thread_started_by_the_consumer_carries_the_connection(self, sp):
+        res = self.run_py("import cons\ncons.spawn()\n", sp)
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertEqual(self.edges(), [("t.py::test_TEST_001_a", "call", "prov", "cons")], f"{RED} {sp}")
+
+    def _pool_work_item_belongs_to_the_submitting_test(self, sp):
+        """The worker is created by test 1; test 2's work item is test 2's, with the consumer on its submitting stack."""
+        res = self.run_py("import cons\nassert cons.pooled(1) == 1\n" + SWITCH + "assert cons.pooled(2) == 2\n", sp)
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertIn({"t": "t.py::test_TEST_002_b", "p": "call", "m": "prov", "f": "f"}, self.records(),
+                      f"{RED} {sp}")
+        self.assertEqual(sorted(self.edges()), [("t.py::test_TEST_001_a", "call", "prov", "cons"),
+                                                ("t.py::test_TEST_002_b", "call", "prov", "cons")], f"{RED} {sp}")
+
+    def test_stack_scan_cap_is_recorded(self):
+        res = self.run_py("import cons, prov\nfor i in range(5):\n    prov.f(i)\ncons.use()\n", edge_scan_limit=3)
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertIn({"edge_scan_capped": True, "t": "t.py::test_TEST_001_a", "p": "call", "e": "prov"},
+                      self.records(), RED)
+        self.assertEqual(self.edges(), [])  # capped: absence is recorded as uncertain, never as proof
+
+
+class EvidenceTracerChar(TracerBase):
+    def _import_time_consumer_call_is_not_a_connection(self, sp):
+        """A consumer module body calling the provider while it is imported is not a consumer function call."""
+        res = self.run_py("import consimport\n", sp)
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertIn({"t": "t.py::test_TEST_001_a", "p": "call", "m": "prov", "f": "f"}, self.records())
+        self.assertEqual(self.edges(), [])
+
+    def _traced_program_behaves_the_same(self, sp):
+        """Pool results, exceptions through futures, thread joins and return values are unchanged by the tracer."""
+        code = ("import cons\nassert cons.pooled(7) == 7\n"
+                "try:\n    cons.pooled('boom')\nexcept ValueError as e:\n    assert str(e) == 'boom'\n"
+                "else:\n    raise SystemExit(3)\ncons.spawn()\nassert cons.use(5) == 5\nprint('done')\n")
+        res = self.run_py(code, sp)
+        self.assertEqual((res.returncode, res.stdout.strip()), (0, "done"), res.stderr)
+
+
+def _per_method(cls):
+    """test_<case>_monitoring / test_<case>_setprofile for every _<case> (red_green counts methods, not subtests)."""
+    for name in [n for n, v in vars(cls).items() if n.startswith("_") and not n.startswith("__") and callable(v)
+                 and getattr(v, "__qualname__", "").startswith(cls.__name__ + "._")]:
+        for sp, tag in ((False, "monitoring"), (True, "setprofile")):
+            setattr(cls, f"test{name}_{tag}", lambda self, _f=getattr(cls, name), _sp=sp: _f(self, _sp))
+    return cls
+
+
+_per_method(EvidenceTracerRed)
+_per_method(EvidenceTracerChar)
 
 if __name__ == "__main__":
     unittest.main()

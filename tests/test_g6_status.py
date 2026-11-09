@@ -34,7 +34,7 @@ class StatusRed(SandboxClass):
         self.assertIn("G1-G6", st["mvp_note"])
         self.assertIn("NOT a full V-Model completion", st["mvp_note"])
         text = self.sb.vm("status")[1]
-        self.assertIn("IF 2/2 covered", text)
+        self.assertIn("IF 2/2 test-level verified", text)  # D44 wording (14b34af: "IF 2/2 covered")
         code, out = self.sb.vm("gate", "WI-001", "G6")
         self.assertIn("applicability: required", out)
 

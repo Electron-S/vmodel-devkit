@@ -20,8 +20,8 @@ If a command is denied, retry it as a single plain command; never stop because o
      condition. `verifies` lists the DESIGN id (and REQ ids where useful). Give concrete inputs in `procedure` and an
      exact `expected` result.
    - Integration tests: at least one per interface (`verifies: ["IF-..."]`), including the interface's error path.
-     They must exercise the real provider through its consumer (or the provider's public entry for an `EXTERNAL`
-     consumer); the validator runs them separately from the unit tests (G6). Use the integration level only for
+     They must exercise the real provider through its consumer, the consumer calling the provider during the test (or
+     the provider's public entry for an `EXTERNAL` consumer); the validator runs them separately from the unit tests (G6). Use the integration level only for
      interface verification, never to replace a unit test.
    - System tests: cover every acceptance criterion of every functional requirement (`acceptance_criteria`).
 4. Run `"<VM path>" lint <WI>` and fix every problem it reports in tests.json.

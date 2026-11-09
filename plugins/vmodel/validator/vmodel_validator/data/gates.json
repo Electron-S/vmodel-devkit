@@ -498,7 +498,7 @@
         {
           "id": "G6.IF_COVERAGE",
           "kind": "mechanical",
-          "desc": "every interface is covered by a passed integration test that reaches the provider (and ARCH consumer) by the validator's own static call analysis (path A) or, for a runtime path declared at G4, whose runtime trace shows provider (and consumer) code executing during that test (path B); declared path B without that trace -> BLOCKED integration_evidence_insufficient"
+          "desc": "every interface is test-level verified: a passed integration test whose function ran, with a call path into the interface (path A: the validator's own static call analysis; path B: a runtime path declared at G4), and whose own execution shows the connection in the runtime trace (path A: a provider function ran with an architecture consumer function on its call stack, or on the stack that started its thread / submitted its pool work item; EXTERNAL consumer: a provider function ran in that test; path B: the provider ran during the test call, in another process for subprocess/ipc, and the consumer ran in it). Evidence from other tests, the whole run (suite-level) or no trace never covers an interface -> BLOCKED integration_evidence_insufficient; no call path -> FAILED"
         },
         {
           "id": "G6.NO_WEAKENING",

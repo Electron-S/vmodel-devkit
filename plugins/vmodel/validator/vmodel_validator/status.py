@@ -4,8 +4,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from .gates import (GATE_ORDER, REVIEWER, Ctx, _items, _str_list, build_ctx, defect_trace, g6_applicability,
-                    gate_def, gate_state, gates_def, implemented_gates, integration_config_problems, integrity_for,
+from .gates import (EVIDENCE_LABELS, GATE_ORDER, REVIEWER, Ctx, _items, _str_list, build_ctx, defect_trace,
+                    g6_applicability, gate_def, gate_state, gates_def, implemented_gates, integration_config_problems, integrity_for,
                     last_eval, last_with_status, project_test_levels)
 from .hashing import short
 from .integrity import IntegrityReport
@@ -454,8 +454,11 @@ def render_status(st: dict) -> str:
                 lines.append("      - not evaluated yet: no integration verification has run")
             elif g.get("coverage") and g["status"] == "PASSED":
                 c = g["coverage"]
-                lines.append(f"      - IF {c['covered']}/{c['interfaces']} covered (static call path or runtime trace, "
-                             f"passed), {c['integration_tests_passed']} integration test(s) passed")
+                lines.append(f"      - IF {c['covered']}/{c['interfaces']} test-level verified (a passed integration test "
+                             f"whose own execution shows the connection), {c['integration_tests_passed']} integration "
+                             f"test(s) passed")
+                for t in c.get("not_counted") or []:
+                    lines.append(f"      - not counted: {t}")
             for n in g.get("notes") or []:
                 lines.append(f"      - {n}")
             for c in (g.get("changed_files") or [])[:10]:
@@ -519,10 +522,11 @@ def trace_view(project: Project, wi: str) -> dict:
         for tid in sorted(t for t, x in g.tests.items() if iid in _str_list(x.get("verifies"))):
             tv = (rec.get("tests") or {}).get(tid) or {}
             tests[tid] = {"level": g.tests[tid].get("level"), "result": g6_exec.get(tid, "not run"),
-                          "path": tv.get("path"), "function": tv.get("function")}
+                          "path": tv.get("path"), "function": tv.get("function"),
+                          "evidence_level": tv.get("evidence_level")}
         ifaces.append({"id": iid, "name": i.get("name"), "provider": i.get("provider"),
                        "consumers": _str_list(i.get("consumers")), "tests": tests, "covered": rec.get("covered"),
-                       "g6_record": last_g6.id if last_g6 else None})
+                       "verification": rec.get("verification"), "g6_record": last_g6.id if last_g6 else None})
     return {"work_item": wi, "rows": rows, "reverse": reverse, "dangling": g.dangling(),
             "results_from": last_g5.id if last_g5 else None,
             "integration_results_from": last_g6.id if last_g6 else None, "interfaces": ifaces,
@@ -542,8 +546,11 @@ def render_trace(tv: dict) -> str:
         lines.append(f"Interfaces (integration results from {tv.get('integration_results_from') or tv.get('g6') or 'no G6 run'}):")
     for i in tv.get("interfaces") or []:
         lines.append(f"{i['id']} {i['name']}: {i['provider']} -> {', '.join(i['consumers']) or '-'} "
-                     f"(covered: {'yes' if i['covered'] else 'no' if i['covered'] is False else 'not evaluated'})")
-        tests = [f"{t}({v['result']}{', ' + v['path'] if v.get('path') else ''})" for t, v in i["tests"].items()]
+                     f"(covered: {'yes' if i['covered'] else 'no' if i['covered'] is False else 'not evaluated'}"
+                     f"{', ' + EVIDENCE_LABELS.get(i['verification'], i['verification']) if i.get('verification') else ''})")
+        tests = [f"{t}({v['result']}{', ' + v['path'] if v.get('path') else ''}"
+                 f"{', ' + EVIDENCE_LABELS.get(v['evidence_level'], v['evidence_level']) if v.get('evidence_level') else ''})"
+                 for t, v in i["tests"].items()]
         lines.append(f"   TEST: {', '.join(tests) or '-'}")
     lines.append("Reverse (TEST -> REQ):")
     for t, reqs in tv["reverse"].items():
@@ -674,6 +681,11 @@ def report_markdown(project: Project, wi: str) -> str:
                f"{', '.join(g6.get('external_endpoints') or []) or 'none'}. N/A never verifies a defect fix."]
     elif g6.get("not_evaluated"):
         md += ["", "G6 is not evaluated yet: no integration verification has run."]
+    elif g6.get("coverage") and g6.get("status") == "PASSED":
+        c = g6["coverage"]
+        md += ["", f"G6: {c['covered']}/{c['interfaces']} interface(s) test-level verified (a passed integration test "
+               f"whose own execution shows the connection); {c['integration_tests_passed']} integration test(s) passed."]
+        md += [f"- not counted (below test level): {t}" for t in c.get("not_counted") or []]
     for wn in w.get("scope_warnings") or []:
         md += ["", f"Scope warning: {wn}"]
     md += ["", f"Next action: {w['next_action']}", "", "## Checks (latest evaluation per gate)", ""]
@@ -750,8 +762,10 @@ def report_markdown(project: Project, wi: str) -> str:
            "of requirements and designs is not machine-verified.",
            "- Hooks and permission rules are best-effort protection, not OS-level isolation; the final trust boundary "
            "is a re-verification on CI or by a separate user (`vmodel audit`, `vmodel verify`).",
-           "- G6 judges interface coverage from a static call analysis (Python, an approximation) or, for declared "
-           "runtime paths, a runtime trace written inside the processes under test (same trust limit as the test "
-           "runner); whether a test really exercises the interface's meaning is the G4 review's judgement.",
+           "- G6 counts an interface as verified only with test-level evidence: a static call analysis (Python, an "
+           "approximation) or a declared runtime path, plus a runtime trace of that test's own run showing the consumer "
+           "calling the provider (written inside the processes under test: same trust limit as the test runner). "
+           "Suite-level evidence is shown, never counted; whether a test exercises the interface's meaning is the G4 "
+           "review's judgement.",
            "- G7, LITE and STRICT profiles are not implemented in this DevKit version."]
     return "\n".join(md) + "\n"

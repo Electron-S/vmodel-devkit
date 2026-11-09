@@ -264,28 +264,10 @@ class ReviewG6Char(SandboxClass):
     itest = ReviewG6Red.itest
     to_g6 = ReviewG6Red.to_g6
 
-    # F2 (G6 side): static reach contradicted by the runtime trace is not coverage
-    def test_F2_mocked_provider_in_every_test_of_the_interface_is_flagged(self):
-        replace_function(self.itest, "test_TEST_010_report_uses_real_parser",
-                         "def test_TEST_010_report_uses_real_parser(monkeypatch):\n"
-                         "    monkeypatch.setattr('pipeline.report.parse', lambda text: [{'name': 'x', 'score': 1}])\n"
-                         "    assert summarize('ignored')['top'] == 'x'\n")
-        replace_function(self.itest, "test_TEST_011_parser_error_reaches_report",
-                         "def test_TEST_011_parser_error_reaches_report(monkeypatch):\n"
-                         "    def boom(text):\n        raise ValueError('x')\n"
-                         "    monkeypatch.setattr('pipeline.report.parse', boom)\n"
-                         "    with pytest.raises(ValueError):\n        summarize('kim,ninety')\n")
-        r4, r5, code, r6 = self.to_g6()
-        self.assertEqual((r4["status"], r5.get("status")), ("PASSED", "PASSED"), r4)
-        # D43 (third review): per-test runtime attribution is advisory. Both IF-001 tests mock the parser, but the parser
-        # runs in this run (TEST-012 drives main -> summarize -> parse), so G6 passes with a warning per mocked test;
-        # judging the mocks is the G4 review's job (patch warning there). This is the original design's behaviour
-        # (3239eba gives the same), so the test characterises it; c216910 gave FAILED and 08469ae BLOCKED.
-        self.assertEqual(r6["status"], "PASSED", r6)
-        cov = [c for c in r6["checks"] if c["id"] == "G6.IF_COVERAGE"][0]
-        self.assertEqual(cov["status"], "warn", f"mocked tests must be flagged: {cov}")
-        for tid in ("TEST-010", "TEST-011"):
-            self.assertTrue(any(tid in i and "did not run" in i for i in cov["items"]), cov)
+    # F2 (G6 side): moved. D43 made it "PASSED with a warning per mocked test" (the parser ran in TEST-012); D44 (final
+    # verification, 2026-11-09) does not count suite-level evidence, so both mocked IF-001 tests leave IF-001 unverified
+    # (BLOCKED). That expectation fails on this module's RED target 3239eba too, so it is no longer a characterisation:
+    # it lives in test_g6_evidence.EvidenceCaseRed.test_case_B_mock_only_tests_do_not_verify_the_interface.
 
 
 class ReviewDisplayRed(SandboxClass):

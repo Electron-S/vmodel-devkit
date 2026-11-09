@@ -188,7 +188,9 @@ class WiringRed(WiringBase):
         self.assertEqual(res["status"], "PASSED", res)  # IF-001 is still covered by TEST-011
         cov = self.check(res, "G6.IF_COVERAGE")
         self.assertEqual(cov["status"], "warn", cov)
-        self.assertTrue(any("TEST-010" in i and "did not run" in i for i in cov["items"]), cov)
+        # D44: the mocked TEST-010 is shown as suite-level evidence and not counted (14b34af: "... did not run in it")
+        self.assertTrue(any("TEST-010" in i and "Suite-level Evidence Only, not counted" in i for i in cov["items"]), cov)
+        self.assertEqual(ledger_record(self.sb, res["record_id"])["interfaces"][0]["covered_by"], ["TEST-011"])
 
 
 class WiringChar(WiringBase):

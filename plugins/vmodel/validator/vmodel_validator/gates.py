@@ -490,7 +490,12 @@ def _g6_state(ctx: Ctx, st: dict) -> None:
         levels = rec.get("executed_levels") or {}
         st["coverage"] = {"interfaces": len(ifs), "covered": sum(1 for i in ifs if i.get("covered")),
                           "integration_tests_passed": sum(1 for t, s in (rec.get("executed_tests") or {}).items()
-                                                          if s == "passed" and levels.get(t) == "integration")}
+                                                          if s == "passed" and levels.get(t) == "integration"),
+                          # D44: passed tests whose evidence is below test level are shown, never counted
+                          "not_counted": [f"{t} ({i.get('id')}): {EVIDENCE_LABELS.get(v.get('evidence_level'), '?')}"
+                                          for i in ifs for t, v in sorted((i.get("tests") or {}).items())
+                                          if isinstance(v, dict) and v.get("status") == "passed"
+                                          and v.get("evidence_level") not in (None, "test_level")]}
 
 
 def _gate_state(ctx: Ctx, gate: str, current_manifests: dict[str, dict] | None = None) -> dict:
@@ -1756,6 +1761,8 @@ def read_runtime_trace(trace_dir: Path) -> dict:
     tests: dict[str, set[str]] = {}
     ran_files: set[str] = set()  # watched files with a function run anywhere in the run, any test or none
     events: list[tuple[str, str, str, str, str]] = []
+    edges: list[tuple[str, str, str, str]] = []  # (test, phase, provider file, consumer file on the call stack)
+    capped: set[str] = set()
     for f in files:
         try:
             lines = f.read_bytes().decode("utf-8", "replace").splitlines()
@@ -1775,6 +1782,12 @@ def read_runtime_trace(trace_dir: Path) -> dict:
                 continue
             if r.get("truncated") is True:
                 truncated = True
+            elif r.get("edge_scan_capped") is True:
+                if isinstance(r.get("t"), str) and isinstance(r.get("e"), str):
+                    capped.add(r["t"])
+            elif isinstance(r.get("e"), str) and isinstance(r.get("c"), str):
+                if isinstance(r.get("t"), str):
+                    edges.append((r["t"], str(r.get("p") or ""), r["e"], r["c"]))
             elif isinstance(r.get("m"), str):
                 ran_files.add(r["m"])
                 if isinstance(r.get("t"), str):
@@ -1782,7 +1795,8 @@ def read_runtime_trace(trace_dir: Path) -> dict:
                     events.append((r["t"], str(r.get("p") or ""), f.name, r["m"], str(r.get("f"))))
     return {"active": procs > 0, "processes": procs, "methods": sorted(methods), "truncated": truncated,
             "ran_files": sorted(ran_files), "tests": {t: sorted(v) for t, v in sorted(tests.items())},
-            "errors": errors[:20], "_events": events}
+            "edges": len(edges), "edge_scan_capped": sorted(capped)[:20], "errors": errors[:20], "_events": events,
+            "_edges": edges}
 
 
 def trace_by_test(rt: dict) -> dict[str, dict]:
@@ -1790,17 +1804,32 @@ def trace_by_test(rt: dict) -> dict[str, dict]:
     phase) with the processes they ran in, `any` (files that ran in any phase) and `call` (file -> processes, call
     phase). The tracer attributes another thread to the test that started it (review N1)."""
     out: dict[str, dict] = {}
-    for nodeid, phase, proc, label, func in rt.get("_events") or []:
+
+    def entry(nodeid: str) -> dict | None:
         ids = test_ids_in_text(nodeid.split("[", 1)[0].split("::")[-1])  # parameters may contain '::'
         if len(ids) != 1:
+            return None
+        return out.setdefault(next(iter(ids)), {"functions": {}, "call": {}, "any": set(), "edges": set()})
+
+    for nodeid, phase, proc, label, func in rt.get("_events") or []:
+        d = entry(nodeid)
+        if d is None:
             continue
-        d = out.setdefault(next(iter(ids)), {"functions": {}, "call": {}, "any": set()})
         d["functions"].setdefault(f"{label}::{func}", set()).add(proc)
         if phase != "detached":  # a thread of this test still running after the test: not attributable
             d["any"].add(label)
         if phase == "call":
             d["call"].setdefault(label, set()).add(proc)
+    for nodeid, phase, provider, consumer in rt.get("_edges") or []:
+        d = entry(nodeid)
+        if d is not None and phase != "detached":
+            d["edges"].add((provider, consumer))
     return out
+
+
+EVIDENCE_LABELS = {"test_level": "Test-level Verified", "suite_level": "Suite-level Evidence Only",
+                   "insufficient": "Insufficient Evidence"}
+EVIDENCE_RANK = {"test_level": 2, "suite_level": 1, "insufficient": 0}
 
 
 def _g6_no_weakening(ctx: Ctx, executed: dict[str, str]) -> Check:
@@ -1908,7 +1937,15 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
     trace_dir = run_dir / "trace"
     trace_dir.mkdir()
     spec_path = run_dir / "trace-spec.json"
-    write_json(spec_path, {"out": str(trace_dir), "watch": {str((p.root / r).resolve()): r for r in sorted(watch_rels)}})
+    edge_map: dict[str, set[str]] = {}  # D44: provider file -> consumer files whose call into it is recorded
+    for iv in wd["interfaces"].values():
+        if iv["consumer_modules"]:
+            for prov in iv["provider_modules"]:
+                if prov in watch_rels:
+                    edge_map.setdefault(prov, set()).update(c for c in iv["consumer_modules"]
+                                                            if c in watch_rels and c != prov)
+    write_json(spec_path, {"out": str(trace_dir), "watch": {str((p.root / r).resolve()): r for r in sorted(watch_rels)},
+                           "edges": {k: sorted(v) for k, v in sorted(edge_map.items()) if v}})
     argv = _substitute(cfg["argv"], {"{python}": p.python_exe(), "{junit}": str(junit)})
     exe = runner.executable_info(argv[0])
     if exe["resolved"]:
@@ -1940,7 +1977,7 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
         extra={"command_source": "integration_test", **cfg_data,
                "junit_summary": {k: v for k, v in (junit_summary or {}).items() if k != "cases"} or None,
                "junit_error": junit_error, "verified_files": files, "environment": env_info,
-               "runtime_trace": {k: v for k, v in rt.items() if k not in ("tests", "_events")}
+               "runtime_trace": {k: v for k, v in rt.items() if k not in ("tests", "_events", "_edges")}
                | {"tests_traced": len(rt["tests"])}},
         extra_files={"junit.xml": junit, "trace-spec.json": spec_path, **traced_files})
     evidence.append(ev)
@@ -1949,7 +1986,7 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
     if run.error:
         checks.append(Check("G6.EXECUTION", "execution", "blocked", f"test command could not start: {run.error}",
                             data={"blocked_reason": "tool_unavailable", "evidence": ev["path"]}))
-        return checks, {**extra, "runtime_trace": {k: v for k, v in rt.items() if k != "_events"}}, evidence
+        return checks, {**extra, "runtime_trace": {k: v for k, v in rt.items() if not k.startswith("_")}}, evidence
     if run.timed_out:
         checks.append(Check("G6.EXECUTION", "execution", "fail", f"timed out after {cfg['timeout_s']}s", tail,
                             data={"evidence": ev["path"]}, sig=["timeout"]))
@@ -2009,24 +2046,35 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
     ran = trace_by_test(rt)
     fails, blocks, warns = [], [], []
     if_view = []
+    levels_data: dict[str, dict] = {}
+    ran_all = set(rt.get("ran_files") or [])
+    capped = set(rt.get("edge_scan_capped") or [])
     if not rt["active"]:  # the validator injected its tracer: no trace at all is missing evidence (review N4)
         blocks.append("no runtime trace was written although the validator injected its tracer (Python started with "
                       "-I/-E/-S, PYTHONPATH replaced, or the trace removed): which test functions ran and whether the "
                       "providers ran cannot be shown")
+    empty = {"functions": {}, "call": {}, "any": set(), "edges": set()}
     for iid, iv in sorted(wd["interfaces"].items()):
         prov_rels = set(iv["provider_modules"])
-        cons_rels = None if iv["consumer_modules"] is None else set(iv["consumer_modules"])
+        cons_rels = set(iv["consumer_modules"] or [])  # empty: EXTERNAL consumers only
+        # D44: with an architecture consumer the connection is a consumer function on the provider's call stack (or on
+        # the stack that started its thread / submitted its pool work item); a provider file that is also a consumer
+        # file cannot show one, so there the provider running in the test is the most that can be observed
+        needs_edge = bool(cons_rels) and not (prov_rels & cons_rels)
+        prov_anywhere = bool(ran_all & prov_rels)
         covered_by, tests_view = [], {}
-        unbacked: list[str] = []  # declared path B claims without runtime backing: warn if covered, else block
-        static_credit: set[str] = set()
+        credited: list[str] = []  # passed tests with a call path whose function ran: their level decides
+        not_counted: list[tuple[str, str, str]] = []  # (test, level, reason)
         for tid, tv in sorted(iv["tests"].items()):
             st = executed.get(tid, "not executed")
-            seen = ran.get(tid, {"functions": {}, "call": {}, "any": set()})
+            seen = ran.get(tid, empty)
             call_files = seen["call"]
-            prov_any = bool(seen["any"] & prov_rels)
-            cons_any = True if cons_rels is None else bool(seen["any"] & cons_rels)
-            cons_call = True if cons_rels is None else bool(set(call_files) & cons_rels)
-            credit, fviews = None, []
+            prov_here = bool(seen["any"] & prov_rels)
+            cons_here = (not cons_rels) or bool(seen["any"] & cons_rels)
+            connected = any(e in prov_rels and c in cons_rels for e, c in seen["edges"]) if needs_edge \
+                else (prov_here and cons_here)
+            cons_call = (not cons_rels) or bool(set(call_files) & cons_rels)
+            pick, fviews = None, []  # (level, reason, path, function view) of the best credited function
             for fv in tv["functions"]:
                 procs = seen["functions"].get(f"{fv['file']}::{fv['name']}")
                 r = {"function": fv["function"], "path": fv["path"], "executed": procs is not None}
@@ -2034,16 +2082,21 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
                 if procs is None:
                     continue
                 if fv["path"] == "static":
-                    # path A (D43): the static call path of a function that ran. Whether the provider ran *for this
-                    # test* is advisory: threads, pools and event loops make per-test attribution unreliable. The
-                    # run-wide check below (the provider ran at all) is part of the decision.
-                    credit = credit or ("static", fv)
-                    static_credit.add(tid)
-                    if st == "passed" and not (prov_any and cons_any):
-                        what = "provider" if not prov_any else "consumer"
-                        warns.append(f"{tid} ({iid}): {fv['function']} statically reaches the interface, but no {what} "
-                                     f"function was attributed to this test: the {what} did not run in it (mocked? "
-                                     "or run in a shared thread/pool); the G4 review judges mocking")
+                    # path A: the static call path of a function that ran, and in this test's own execution the
+                    # consumer called the provider (EXTERNAL consumer: the provider ran in it)
+                    cand = ("test_level", None) if connected else \
+                        ("insufficient", "the provider ran in this test but was not called from the consumer (no "
+                                         "consumer function on its call stack, the stack that started its thread or "
+                                         "submitted its pool work item): running both is not a connection")\
+                        if prov_here and cons_here and needs_edge else \
+                        ("insufficient", "the consumer did not run in this test") if prov_here and not cons_here else \
+                        ("suite_level", "the provider ran in this run, but not in this test's own execution (mocked "
+                                        "here? run by another test, a session/module fixture, or a thread this test "
+                                        "did not start)") if prov_anywhere else \
+                        ("insufficient", "the provider never ran in this integration run (mocked everywhere, or a "
+                                         "data-only interface)")
+                    if cand[0] != "test_level" and tid in capped:
+                        cand = (cand[0], cand[1] + "; the call-stack scan limit was reached, so this is not certain")
                 elif fv["path"] == "runtime_candidate":
                     why = review_note or _runtime_declaration_problem(declared.get((iid, tid)), fv,
                                                                        sha256_file(p.root / fv["file"]))
@@ -2060,16 +2113,21 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
                         p_ok = any(call_files[f] - procs for f in prov_rels if f in call_files)
                     else:
                         p_ok = bool(set(call_files) & prov_rels)
-                    if st == "passed" and p_ok and cons_call:
-                        credit = credit or ("runtime", fv)
-                    elif st == "passed":
-                        what = [w for w, ok in (("provider", p_ok), ("consumer", cons_call)) if not ok]
-                        where = " in a process other than the test's" if kind in ("subprocess", "ipc") else ""
-                        unbacked.append(f"{tid} ({iid}): runtime path ({kind}) declared at G4, but the runtime trace "
-                                        f"shows no {' or '.join(what)} function running{where} during the test call")
+                    where = " in a process other than the test's" if kind in ("subprocess", "ipc") else ""
+                    cand = ("test_level", None) if p_ok and cons_call else \
+                        ("insufficient", f"runtime path ({kind}) declared at G4 and the provider ran{where} during the "
+                                         "test call, but no consumer function ran in it") if p_ok else \
+                        ("suite_level", f"runtime path ({kind}) declared at G4, but no provider function ran{where} "
+                                        "during this test's call; it ran elsewhere in the run") if prov_anywhere else \
+                        ("insufficient", f"runtime path ({kind}) declared at G4, but no provider function ran{where} "
+                                         "during this test's call or anywhere in the run (the child not traced: "
+                                         "-I/-E/-S, replaced PYTHONPATH or environment?)")
                 else:
                     fails.append(f"{tid} ({iid}): {fv['function']} has no call path into the interface "
                                  f"({fv['path']})")
+                    continue
+                if pick is None or EVIDENCE_RANK[cand[0]] > EVIDENCE_RANK[pick[0]]:
+                    pick = (cand[0], cand[1], r["path"], fv)
             if st == "passed" and tv["functions"] and not any(x["executed"] for x in fviews) and rt["active"]:
                 msg = (f"{tid} ({iid}): passed, but none of the analysed functions carrying {tid} ran "
                        f"({', '.join(x['function'] for x in fviews)})")
@@ -2077,55 +2135,65 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
                     blocks.append(msg + "; the runtime trace was truncated, so this is not certain")
                 else:
                     fails.append(msg + ": the passing case is another function")
-            best = (credit[1] if credit else tv["best"]) or {}
-            if st == "passed" and credit:
-                covered_by.append(tid)
-            tests_view[tid] = {"status": st,
-                               "path": credit[0] if credit else (fviews[0]["path"] if len(fviews) == 1 else tv["path"]),
+            level, reason, path_used = pick[:3] if pick else ("insufficient", None, None)
+            if not rt["active"]:
+                level, reason = "insufficient", "no runtime trace"
+            elif st != "passed":
+                level, reason = "insufficient", f"the test {st}"
+            elif pick is None:
+                reason = "no analysed function of this test with a call path ran"
+            else:
+                credited.append(tid)
+                if level == "test_level":
+                    covered_by.append(tid)
+                else:
+                    if rt["truncated"]:
+                        reason += "; the runtime trace was truncated"
+                    not_counted.append((tid, level, reason))
+            best = (pick[3] if pick else None) or tv["best"] or {}
+            tests_view[tid] = {"status": st, "path": path_used or (fviews[0]["path"] if len(fviews) == 1 else tv["path"]),
                                "function": best.get("function"), "functions": fviews,
+                               "evidence_level": level, "evidence_reason": reason,
                                "reaches_provider": best.get("reaches_provider", False),
                                "reaches_consumer": best.get("reaches_consumer", False),
                                "patched_provider": best.get("patched_provider", []),
-                               "runtime": {"traced": bool(seen["functions"]), "provider_ran": prov_any,
-                                           "consumer_ran": cons_any}}
-        ran_all = set(rt.get("ran_files") or [])
-        never_ran = False
-        if covered_by and set(covered_by) <= static_credit and rt["active"]:
-            # D43: covered only by static paths, so the provider (and ARCH consumer) must have run somewhere in the run
-            missing = [(w, rels) for w, rels in (("provider", prov_rels), ("consumer", cons_rels or set()))
-                       if rels and not (ran_all & rels)]
-            if missing:
-                what = "; ".join(f"no {w} function ({', '.join(sorted(rels))})" for w, rels in missing)
-                blocks.append(f"{iid}: {what} ran anywhere in the integration run although its tests reach it "
-                              "statically: the interface never ran (all mocked, or a data-only interface?); "
-                              "insufficient evidence")
-                covered_by, never_ran = [], True
+                               "runtime": {"traced": bool(seen["functions"]), "provider_ran": prov_here,
+                                           "consumer_ran": cons_here, "consumer_called_provider": connected
+                                           if needs_edge else None}}
         covered = bool(covered_by)
+        verification = "test_level" if covered else max(
+            (lv for t, lv, _r in not_counted), key=EVIDENCE_RANK.get, default="insufficient")
         if covered:
-            warns.extend(f"{u} (not counted; {iid} is covered by {', '.join(covered_by)})" for u in unbacked)
-        else:
-            blocks.extend(f"{u}: insufficient evidence" for u in unbacked)
-        if not covered and rt["active"] and not never_ran and \
-                not any(b.startswith(tuple(f"{t} ({iid})" for t in iv["tests"])) for b in blocks):
+            warns.extend(f"{t} ({iid}): {EVIDENCE_LABELS[lv]}, not counted ({why}); {iid} is test-level verified by "
+                         f"{', '.join(covered_by)}" for t, lv, why in not_counted)
+        elif credited:
+            blocks.extend(f"{t} ({iid}): {EVIDENCE_LABELS[lv]}: {why}" for t, lv, why in not_counted)
+            blocks.append(f"{iid}: {EVIDENCE_LABELS[verification]}: no passed integration test shows the connection "
+                          "in its own execution, so the interface is not verified at test level")
+        elif rt["active"] and not any(b.startswith(tuple(f"{t} ({iid})" for t in iv["tests"])) for b in blocks):
             fails.append(f"{iid}: not covered by a passed integration test that reaches its provider "
                          f"({', '.join(iv['provider_modules']) or 'no module'})")
+        levels_data[iid] = {"verification": verification, "covered_by": covered_by,
+                            "tests": {t: v["evidence_level"] for t, v in tests_view.items()}}
         if_view.append({"id": iid, "provider": iv["provider"], "consumers": iv["consumers"],
                         "provider_modules": iv["provider_modules"], "consumer_modules": iv["consumer_modules"],
-                        "covered": covered, "covered_by": covered_by, "tests": tests_view})
+                        "covered": covered, "covered_by": covered_by, "verification": verification,
+                        "tests": tests_view})
     n_cov = sum(1 for v in if_view if v["covered"])
+    head = f"{n_cov}/{len(if_view)} interface(s) test-level verified"
+    data = {"levels": levels_data}
     if fails:
-        checks.append(Check("G6.IF_COVERAGE", "mechanical", "fail", "interfaces not verified", fails + blocks + warns))
+        checks.append(Check("G6.IF_COVERAGE", "mechanical", "fail", f"interfaces not verified ({head})",
+                            fails + blocks + warns, data=data))
     elif blocks:
         checks.append(Check("G6.IF_COVERAGE", "mechanical", "blocked",
-                            "insufficient runtime evidence for interface coverage (REQ-G6-32/33)", blocks + warns,
-                            data={"blocked_reason": "integration_evidence_insufficient"}))
+                            f"{head}; insufficient runtime evidence for the rest (REQ-G6-32/33, D44)", blocks + warns,
+                            data={"blocked_reason": "integration_evidence_insufficient", **data}))
     elif warns:
-        checks.append(Check("G6.IF_COVERAGE", "mechanical", "warn",
-                            f"{n_cov}/{len(if_view)} interface(s) covered; runtime cross-check warnings", warns))
+        checks.append(Check("G6.IF_COVERAGE", "mechanical", "warn", f"{head}; some tests not counted", warns, data=data))
     else:
         checks.append(Check("G6.IF_COVERAGE", "mechanical", "pass",
-                            f"{n_cov}/{len(if_view)} interface(s) covered by passed integration tests "
-                            "(static call path or runtime trace)"))
+                            f"{head} (passed integration tests whose own execution shows the connection)", data=data))
     checks.append(_g6_no_weakening(ctx, executed))
     checks.append(_inputs_unchanged(ctx, "G6", files))
     roots = test_roots(p)
@@ -2139,7 +2207,7 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
         "integration_test_functions": {t: [v["function"] for v in vs] for t, vs in sorted(wd["tests"].items())},
         "interfaces": if_view,
         "basis_records": {"G4": g4_pass.id if g4_pass else None, "G5": g5_pass.id if g5_pass else None},
-        "runtime_trace": {k: v for k, v in rt.items() if k != "_events"},
+        "runtime_trace": {k: v for k, v in rt.items() if not k.startswith("_")},
         "junit": {k: v for k, v in (junit_summary or {}).items() if k != "cases"},
         "failed_cases": failed_cases[:50],
     })

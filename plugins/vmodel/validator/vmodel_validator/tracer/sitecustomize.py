@@ -1,13 +1,18 @@
-"""VModel DevKit runtime tracer for G6 (0.2.0, REQ-G6-31). Part of the Validator Core.
+"""VModel DevKit runtime tracer for G6 (0.2.0, REQ-G6-31, D44). Part of the Validator Core.
 
 G6 puts this directory first on PYTHONPATH and VMODEL_TRACE_SPEC in the environment of the integration test command,
 so every Python process of the run (pytest and the processes it starts) imports this file at start-up. For the
 watched files (interface provider/consumer modules and integration test files) it records which functions started,
 together with the pytest test id (parameters dropped) and phase. The main thread follows PYTEST_CURRENT_TEST (inherited
-by child processes); another thread belongs to the test that started it, in that test's live phase ("detached" once
-another test runs). One line per new (test, phase, file,
+by child processes); another thread belongs to the test that started it, and a thread-pool work item to the test that
+submitted it, in that test's live phase ("detached" once another test runs). One line per new (test, phase, file,
 function); a forked child writes its own file; past the record limit a {"truncated": true} line is written. Module
 and class bodies are not counted, so importing a module is not execution.
+
+Connections (D44): for a provider file named in the spec's "edges", each time one of its functions starts the tracer
+looks for a consumer file of that provider on the call stack (and on the stack that started the thread or submitted the
+pool work item it runs in) and writes one {"e": provider, "c": consumer} line per (test, phase, provider, consumer).
+Stack scans per (test, phase, provider) are capped ({"edge_scan_capped": ...} is written, so absence is not proof).
 
 Trust: this runs inside the processes under test, like the test runner itself (SPEC 5.7); the validator hashes the
 files after the run and records them in the signed evidence. Any problem here is swallowed: the traced program must
@@ -32,8 +37,12 @@ def _vmodel_trace_install():
         return os.path.normcase(os.path.realpath(p))
 
     watch = {norm(k): v for k, v in spec["watch"].items()}
+    edges = {k: frozenset(v) for k, v in (spec.get("edges") or {}).items() if isinstance(v, list)}
+    consumers = frozenset(c for v in edges.values() for c in v)
     limit = int(spec.get("limit", 100000))
     byte_limit = int(spec.get("byte_limit", 24 * 1024 * 1024))  # below the validator's per-file reading limit
+    scan_limit = int(spec.get("edge_scan_limit", 2000))
+    stack_depth = int(spec.get("stack_depth", 256))
     mon = getattr(sys, "monitoring", None)
     tool = None
     if mon is not None and not spec.get("force_setprofile"):
@@ -45,8 +54,10 @@ def _vmodel_trace_install():
             except (ValueError, RuntimeError):
                 continue
     method = "sys.monitoring" if tool is not None else "setprofile"
-    state = {"out": None, "seen": set(), "full": False, "bytes": 0}
+    state = {"out": None, "seen": set(), "full": False, "bytes": 0, "found": {}, "scans": {}}
     lock = threading.Lock()
+    local = threading.local()  # the thread-pool work item running in this thread: (owner test, consumer labels)
+    unset = object()
 
     def open_out():
         """One file per process; a forked child gets its own (it must not write into its parent's file)."""
@@ -55,6 +66,8 @@ def _vmodel_trace_install():
         state["seen"] = set()
         state["full"] = False
         state["bytes"] = 0
+        state["found"] = {}
+        state["scans"] = {}
         state["out"].write(json.dumps({"v": 1, "pid": os.getpid(), "ppid": os.getppid(),
                                        "python": sys.version.split()[0], "method": method,
                                        "argv": [str(a) for a in getattr(sys, "orig_argv", sys.argv)][:20]},
@@ -76,31 +89,25 @@ def _vmodel_trace_install():
         node, phase = test[:-1].rsplit(" (", 1)
         return node.split("[", 1)[0], phase  # parameters dropped (they may contain '::'): evidence per function
 
+    def this_thread():
+        return getattr(threading, "_active", {}).get(threading.get_ident())  # looked up each time: fork rebuilds it
+
     def context():
-        """The test a running function belongs to. The main thread follows pytest's current test. Another thread
-        belongs to the test that started it (owner), in that test's live phase; once the owner is no longer the
-        current test its records are "detached"; a thread started outside any test belongs to none."""
-        main = threading.main_thread()
-        ident = threading.get_ident()  # no current_thread(): it would create a _DummyThread for raw threads
-        if ident == main.ident:
+        """The test a running function belongs to. The main thread follows pytest's current test. A pool work item
+        belongs to the test that submitted it, another thread to the test that started it (owner), in that test's live
+        phase; once the owner is no longer the current test its records are "detached"; a thread started outside any
+        test belongs to none."""
+        if threading.get_ident() == threading.main_thread().ident:  # no current_thread(): no _DummyThread
             return env_context()
-        th = getattr(threading, "_active", {}).get(ident)  # looked up each time: fork rebuilds it
-        owner = getattr(th, "_vmodel_owner", None) if th is not None else None
+        owner = getattr(local, "owner", unset)
+        if owner is unset:
+            th = this_thread()
+            owner = getattr(th, "_vmodel_owner", None) if th is not None else None
         if owner is None:
             return None, None
         test, phase = env_context()
         return owner, (phase if test == owner else "detached")
 
-    original_start = threading.Thread.start
-
-    def start(self, *args, **kwargs):
-        try:
-            self._vmodel_owner = context()[0]
-        except Exception:
-            pass
-        return original_start(self, *args, **kwargs)
-
-    threading.Thread.start = start
     labels = {}
 
     def label_of(filename):
@@ -116,7 +123,67 @@ def _vmodel_trace_install():
             labels[filename] = lab
             return lab
 
-    def record(code):
+    def inherited():
+        """Consumer labels on the stack that started this thread or submitted the pool work item it runs."""
+        if threading.get_ident() == threading.main_thread().ident:
+            return frozenset()
+        via = getattr(local, "via", unset)
+        if via is unset:
+            th = this_thread()
+            via = getattr(th, "_vmodel_via", None) if th is not None else None
+        return via or frozenset()
+
+    def stack_consumers(frame):
+        found = set()
+        n = 0
+        while frame is not None and n < stack_depth:
+            code = frame.f_code
+            if code.co_flags & 0x1:  # a consumer *function* (a module body importing is not a call, as in record())
+                lab = label_of(code.co_filename)
+                if lab in consumers:
+                    found.add(lab)
+            frame = frame.f_back
+            n += 1
+        return found
+
+    def via_here(frame):
+        return frozenset(stack_consumers(frame)) | inherited() if consumers else frozenset()
+
+    def write(key, obj):
+        """One line per new key; past the limits one truncation line (the validator must not read absence as proof)."""
+        seen = state["seen"]
+        if key in seen or state["out"] is None:
+            return
+        with lock:
+            if key in seen or state["full"]:
+                return
+            line = json.dumps(obj, ensure_ascii=True) + "\n"
+            if len(seen) >= limit or state["bytes"] + len(line) > byte_limit:
+                state["full"] = True
+                state["out"].write(json.dumps({"truncated": True}) + "\n")
+                return
+            seen.add(key)
+            state["bytes"] += len(line)
+            state["out"].write(line)
+
+    def note_edges(test, phase, lab, frame):
+        want = edges[lab]
+        k = (test, phase, lab)
+        found = state["found"].setdefault(k, set())
+        if found >= want:
+            return
+        n = state["scans"].get(k, 0)
+        if n >= scan_limit:
+            return
+        state["scans"][k] = n + 1
+        for c in (stack_consumers(frame.f_back if frame is not None else None) | inherited()) & want:
+            if c not in found:
+                found.add(c)
+                write(("e", test, phase, lab, c), {"t": test, "p": phase, "e": lab, "c": c})
+        if n + 1 == scan_limit and not found >= want:
+            write(("cap", test, phase, lab), {"edge_scan_capped": True, "t": test, "p": phase, "e": lab})
+
+    def record(code, frame=None):
         """None: not watched; True: watched (recorded when it is a function)."""
         lab = label_of(code.co_filename)
         if lab is None:
@@ -124,28 +191,72 @@ def _vmodel_trace_install():
         if not code.co_flags & 0x1:  # CO_OPTIMIZED: functions only, not module or class bodies (import time)
             return True
         test, phase = context()
-        key = (test, phase, lab, getattr(code, "co_qualname", code.co_name))
-        seen = state["seen"]
-        if key not in seen and state["out"] is not None:
-            with lock:
-                if key in seen or state["full"]:
-                    return True
-                line = json.dumps({"t": key[0], "p": key[1], "m": key[2], "f": key[3]}, ensure_ascii=True) + "\n"
-                if len(seen) >= limit or state["bytes"] + len(line) > byte_limit:
-                    state["full"] = True  # the validator must not read absence as "did not run"
-                    state["out"].write(json.dumps({"truncated": True}) + "\n")
-                    return True
-                seen.add(key)
-                state["bytes"] += len(line)
-                state["out"].write(line)
+        write((test, phase, lab, getattr(code, "co_qualname", code.co_name)),
+              {"t": test, "p": phase, "m": lab, "f": getattr(code, "co_qualname", code.co_name)})
+        if lab in edges:
+            note_edges(test, phase, lab, frame)
         return True
+
+    pool = {"patched": False}
+
+    def patch_pool():
+        """Work items carry the submitting test and the consumer labels on the submitting stack (patched once the
+        thread pool module is in use: its first worker starts inside submit, so the first item has the worker's)."""
+        if pool["patched"]:
+            return
+        mod = sys.modules.get("concurrent.futures.thread")
+        item = getattr(mod, "_WorkItem", None) if mod is not None else None
+        if item is None:
+            return
+        pool["patched"] = True
+        original_init, original_run = item.__init__, item.run
+
+        def init(self, *args, **kwargs):
+            try:
+                self._vmodel_ctx = (context()[0], via_here(sys._getframe(1)))
+            except Exception:
+                pass
+            original_init(self, *args, **kwargs)
+
+        def run(self, *args, **kwargs):
+            ctx = getattr(self, "_vmodel_ctx", None)
+            if ctx is None:
+                return original_run(self, *args, **kwargs)
+            prev = (getattr(local, "owner", unset), getattr(local, "via", unset))
+            local.owner, local.via = ctx
+            try:
+                return original_run(self, *args, **kwargs)
+            finally:
+                for name, value in zip(("owner", "via"), prev):
+                    if value is unset:
+                        try:
+                            delattr(local, name)
+                        except AttributeError:
+                            pass
+                    else:
+                        setattr(local, name, value)
+
+        item.__init__, item.run = init, run
+
+    original_start = threading.Thread.start
+
+    def start(self, *args, **kwargs):
+        try:
+            self._vmodel_owner = context()[0]
+            self._vmodel_via = via_here(sys._getframe(1))
+            patch_pool()
+        except Exception:
+            pass
+        return original_start(self, *args, **kwargs)
+
+    threading.Thread.start = start
 
     if tool is not None:
         disable = mon.DISABLE
 
         def on_start(code, offset):
             try:
-                return None if record(code) else disable
+                return None if record(code, sys._getframe(1)) else disable  # frame 1: the function starting
             except Exception:
                 return disable
 
@@ -155,7 +266,7 @@ def _vmodel_trace_install():
         def on_call(frame, event, arg):
             if event == "call":
                 try:
-                    record(frame.f_code)
+                    record(frame.f_code, frame)
                 except Exception:
                     pass
 

@@ -12,8 +12,11 @@ Checklist
 - Write a test for every unit-level spec in tests.json; the function name contains the id token
   (`def test_TEST_007_top_n_orders_by_count():`). Assert the spec's expected result exactly.
 - Write a test for every integration-level spec in the integration folder (`integration_test` in config, normally
-  `tests/integration/`). Call the consumer/provider API directly so the real provider runs; no placeholder,
-  import-only or provider-mocking tests. A subprocess/IPC/API test must keep the inherited `PYTHONPATH` (no `-I`/`-E`)
+  `tests/integration/`). Call the consumer API in the test so that the consumer itself calls the real provider during
+  that test (for an `EXTERNAL` consumer call the provider's public entry); no placeholder, import-only or
+  provider-mocking tests, and no test that calls the provider and hands its result to the consumer (that is not a
+  connection). Work the consumer does in a thread it starts or a thread pool it submits to counts; a server or process
+  started by a session/module-scoped fixture does not count for later tests. A subprocess/IPC/API test must keep the inherited `PYTHONPATH` (no `-I`/`-E`)
   so the validator's runtime trace can see the provider run; the verifier declares such runtime paths at G4.
 - Do not weaken, skip or delete tests. If a spec is wrong, fix the spec (P3) through rework.
 - Keep the code clean for the static analyser (unused imports, undefined names).

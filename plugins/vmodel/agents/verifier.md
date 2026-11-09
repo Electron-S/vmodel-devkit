@@ -60,7 +60,9 @@ and not the unit tests. `"<VM path>" wiring <WI>` shows the validator's classifi
 static call path that uses a subprocess / IPC / HTTP API / dynamic import is a runtime path: if, after reading it, you
 are convinced it drives the real provider, add to that IF's entry `runtime_paths: [{"test": "TEST-nnn", "kind":
 "subprocess"|"ipc"|"api"|"dynamic_import", "test_file_sha256": "<from wiring>", "entry": "<how it runs>", "note": "..."}]`.
-Your declaration is not proof: G6 still requires the provider to show up in its runtime trace.
+Your declaration is not proof: G6 still requires the provider to show up in that test's runtime trace. G6 counts only
+test-level evidence: the consumer calling the real provider in the test's own run (suite-level evidence, e.g. the
+provider run by another test, never covers an interface).
 G4 after a failure (defects.json has entries): check each DEFECT against what actually failed, not against the author's
 explanation. `"<VM path>" status <WI> --json` shows the failed gate's checks and `failing_tests`, and per defect
 `failing_tests` and `unlinked_failing_tests` (taken from the signed ledger). The root cause must explain every failing
