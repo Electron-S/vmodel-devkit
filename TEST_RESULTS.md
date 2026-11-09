@@ -621,7 +621,7 @@ T01 `test_g6_gate` T01, T02 T02, T03 `test_g6_config` T03, T04 gate T04·T04b, T
 |---|---|---|
 | WSL2 Ubuntu 24.04, Python 3.12.3, pytest 9.0.3 (깨끗한 detached worktree) | `14b34af` | **360/360 통과**, skip 0, 1051초 (`wsl-harness-14b34af.log`) |
 | 같음 | `08469ae`, `c216910` | 346/346, 327/327 |
-| Windows 11, Python 3.13.14 venv, cp949, 한글·공백 경로 | `5e64974`(코드 = `14b34af`) | WINDOWS_FINAL |
+| Windows 11, Python 3.13.14 venv, cp949, 한글·공백 경로 | `5e64974`(코드 = `14b34af`) | **360 실행, 실패 0**, skip 48, G6 모듈 122개 실제 실행·통과 (`windows-harness-5e64974.log`) |
 | 같음 | `54eac4c`(코드 = `08469ae`), `c216910`, `3239eba` | 346 실행·실패 0·skip 48 / 327 실행·실패 1(아래)·skip 46 / 308 실행·실패 0·skip 46 |
 - Windows `c216910`의 실패 1과 WSL 부하 중 1회 실패는 같은 원인이었다: `test_g6_scope` D4가 G5.EXECUTION의 pytest 출력 꼬리(소요 시간 포함)를 비교했다. 테스트 결함이며 고쳤다(`54eac4c`). 제품 결함 아님.
 - Windows skip은 pty가 필요한 사용자 전용 경로(재고정, `configure-tests`, unblock 등), 권한이 필요한 심볼릭 링크, ruff 없음이다.
