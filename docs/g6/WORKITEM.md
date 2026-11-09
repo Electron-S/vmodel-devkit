@@ -56,7 +56,7 @@ REQ-G6-01~26은 설계 문서 §2가 정본이다. 아래는 바뀐 것과 새�
 - **REQ-G6-30 (경로 B 선언)** G4 리뷰 `interfaces[]` 항목에 `runtime_paths: [{"test": "TEST-xxx", "kind": "subprocess"|"ipc"|"api"|"dynamic_import", "test_file_sha256": "sha256:…", "entry", "note"}]`를 둔다. G4는 선언이 (a) 그 IF를 `verifies`에 가진 integration TEST, (b) Validator가 그 함수에서 찾은 실행 경로 종류, (c) 그 함수가 있는 테스트 파일의 현재 sha256과 맞을 때만 인정한다. 안 맞으면 pending(재리뷰). `vmodel wiring WI`가 verifier에게 함수 위치·분류·해시를 보여 준다(읽기 전용).
 - **REQ-G6-31 (실행 계측)** G6은 통합 명령을 Validator Core의 계측 모듈(`tracer/sitecustomize.py`)을 `PYTHONPATH`로 주입해 실행한다. 실행 중 생긴 모든 Python 프로세스(하위 프로세스 포함)가 감시 대상 파일(IF provider·consumer 설계 단위 모듈, integration 테스트 파일)의 함수 실행을 그때의 pytest 테스트 ID(`PYTEST_CURRENT_TEST`)와 함께 기록한다. 계측 파일은 실행 폴더 `trace/`에 남고 서명된 record.json에 해시와 요약이 들어간다. 계측 실패는 테스트를 깨지 않는다.
 - **REQ-G6-32 (경로 B 판정)** 경로 B로 IF가 덮이려면 모두 필요하다: 선언이 현재 G4 PASS가 인정한 리뷰(`G4.REVIEW` `review_sha256` = 지금 `reviews/G4.json`)에 있음, 선언 해시 = 지금 테스트 파일 해시, Validator가 다시 찾은 실행 경로 종류와 일치, 그 테스트 함수가 이번 실행에서 실제로 돌았고 passed, 계측이 그 테스트의 **호출 단계**에서 provider 모듈 함수 실행과(ARCH consumer가 있으면) consumer 모듈 함수 실행을 기록, 선언 종류가 subprocess·ipc면 provider 실행이 테스트 함수와 **다른 프로세스**에서 일어남(검토 F6). 선언은 있지만 실행 증거가 부족하면 G6은 BLOCKED(`integration_evidence_insufficient`, 중립 차단)이고 PASS하지 않는다. AI 리뷰 문장만으로 IF를 덮지 않는다.
-- **REQ-G6-33 (경로 A 교차 확인, 검토 F1·F2로 강화)** G6은 계측이 실행을 본 분석 대상 함수만 IF 근거로 쓴다(계측이 아예 없으면 그 함수의 JUnit 케이스로 대신). 경로 A 함수가 실행됐는데 그 테스트의 호출 단계에서 provider(또는 ARCH consumer) 함수 실행이 없으면 그 테스트는 근거가 아니고 경고("목 대체 의심")다. IF에 근거가 하나도 없으면 IF_COVERAGE FAILED. 데이터 타입만 주고받는 IF는 provider 함수가 실행되는 테스트가 따로 필요하다(한계).
+- **REQ-G6-33 (실행 확인, 검토 1·2회차로 확정)** G6은 계측이 실행을 본 분석 대상 함수만 IF 근거로 쓴다. 경로 A 함수는 그 테스트 동안(setup·call·teardown 어느 단계든, 그 테스트가 시작한 스레드 포함) provider(와 ARCH consumer) 함수가 실제로 돌아야 근거다. 근거가 없는 주장(경로 A 정적 도달·경로 B 선언)은 같은 IF가 다른 테스트로 덮였으면 경고, 아니면 BLOCKED(`integration_evidence_insufficient`)다. 계측이 아예 없으면(Python을 `-I`/`-E`로 시작, trace 삭제 등) BLOCKED이고 JUnit만으로 인정하지 않는다. 계측이 상한에 걸려 잘렸으면 "실행되지 않음" 판단은 BLOCKED로 바꾼다. 데이터 타입만 주고받는 IF(dataclass·Enum)는 provider 함수 실행이 기록되지 않아 BLOCKED가 된다(한계: provider 함수를 실행하는 테스트가 필요).
 - **REQ-G6-34 (D7, OUT_OF_SCOPE)** 결함 표시 상태에 OUT_OF_SCOPE를 더한다(D37의 6종 + 1). 조건: 결함의 종료 Gate(인용한 실패 중 가장 하위)가 G6이고, G6이 지금 PASSED + `applicability: not_applicable`(현재 manifest, STALE 아님). 표시에는 제거된 IF·TEST ID와 그것을 `removed_ids`에 둔 CR·DEFECT ID와 사유, 과거 FAILED 기록을 함께 보인다. CLOSED로 치지 않고 `verified_by`는 비운다. 결함 저장 형식은 그대로다(스키마 enum에 G6·P6·IF만 추가).
 
 ## 3. 아키텍처·영향 분석
@@ -169,6 +169,27 @@ REQ-G6-01~26은 설계 문서 §2가 정본이다. 아래는 바뀐 것과 새�
 검토자가 맞다고 확인한 것: 설정 속임수(unit argv 재사용, 전체 tests, 0 tests, junit 없음, skip, `-k` 제외)는 실패, 시작 실패는 `tool_unavailable`, `integration_test` 없음·잘못됨은 실행 없이 `misconfigured`, 에이전트 PYTHONPATH·PYTEST_ADDOPTS 제거, 리뷰 교체는 G6 STALE·인정된 리뷰만 사용, N/A 조건 전부와 우회 없음, N/A의 결함 검증 제외·OUT_OF_SCOPE, 중립 차단의 3회 규칙 제외, IF 없는 WI·`integration_test` 없는 G5의 0.1.5 경로 유지.
 
 ### 7.2 2회차 (`c216910`)
+1회차 수정의 재검토. 1회차 12건 중 닫힘 6(F1·F3·F9·F10·F11·F12), 부분 5(F2·F4·F6·F7·F8), 문서화 1(F5). 새 지적 11건(주요 10)과 0.1.x부터 있던 내부 오류 2건. 전부 `tests/test_g6_review2.py`로 직접 재현했다(RED 대상 = `git archive c216910 plugins/vmodel`). 처음 RED에서 2건(N1, N5c)은 내 테스트 잘못으로 재현되지 않아(목 테스트가 스레드 주기보다 짧음, 함수 제거 순서 때문에 새 클래스가 지워짐) 테스트를 고쳐 다시 재현했다. 수정 `08469ae`.
+
+| 지적 | 처리 |
+|---|---|
+| N1 주요: conftest의 백그라운드 스레드가 provider를 돌리면 목 테스트가 근거가 됨 | 계측이 다른 스레드를 그 스레드를 시작한 테스트·단계에 귀속(`threading.Thread.start` 감쌈). import 때 시작한 스레드는 어느 테스트에도 속하지 않음 |
+| N2 주요: fork 자식이 부모 trace 파일에 씀 → "다른 프로세스" 판정 오류, forkserver는 다른 테스트에 귀속 | `os.register_at_fork`로 자식이 자기 파일을 엶. forkserver는 서버를 시작한 테스트의 환경을 물려받아 귀속이 틀릴 수 있다(한계, 문서화) |
+| N3 주요: 깊게 중첩된 trace 줄로 내부 오류 | 줄 길이 상한, RecursionError·MemoryError 포함 무시하고 오류로 기록 |
+| N4 주요: trace를 지우면 JUnit만으로 인정 | 계측이 아예 없으면 BLOCKED, JUnit 대체 인정 제거 |
+| N5 주요: 호출되지 않는 참조(모듈 수준 def가 import를 가림, 지역 재대입, setUp 지역 별칭, 호출되지 않는 lambda, 비consumer 호출로 주입) | 모듈 수준 바인딩은 문장 순서, 지역에서 import와 대입이 겹치면 지역 값, setUp 별칭은 setUp 범위, lambda·callable은 pytest.raises/warns·assertRaises 등 호출자에 넘긴 것만, 주입은 consumer 호출에만 |
+| N6 주요: 프로젝트 파일이 `json`·`http` 이름을 점유 | 점유 이름을 프로젝트 루트 기준 경로, 최상위 소스 루트(예 `src/`) 기준 경로, 두 부분 이상인 일반 패키지 이름(테스트는 pytest 이름)으로 제한 |
+| N7 주요: 심볼릭 링크 junit이 해시되지 않음(1회차 F4 수정의 회귀) | 링크를 거친 정규 파일은 0.1.x처럼 내용으로 해시, 디렉터리·FIFO만 기록 |
+| N8 주요: fixture·setup_method에서 provider가 돌면 G6 FAILED, REQ-G6-33과 모순 | 경로 A 실행 확인은 어느 단계든 인정, 근거 없는 주장은 FAILED가 아니라 경고/BLOCKED(REQ-G6-33 갱신) |
+| N9 주요: 계측 상한 2만에서 조용히 잘림 → 거짓 FAILED | 노드 ID 매개변수 제거, 상한 10만, 절단 표지, 잘렸으면 BLOCKED |
+| N10 주요: 모듈 수준 인스턴스(`cli = _Cli()`), `__init__`의 star 재내보내기 | 둘 다 추적 |
+| N11 주요: 네임스페이스 패키지의 `from . import mod` | 경로 기준으로 해석 |
+| P1(0.1.x부터): 자릿수 한도를 넘는 정수가 든 리뷰로 G4 내부 오류 | `load_json`이 ValueError·RecursionError를 산출물 오류로 |
+| P2(0.1.x부터): provider·component가 목록이면 trace·report 내부 오류 | 문자열이 아닌 값 방어(`dangling`, `downstream`) |
+
+1회차의 F2 G6 기대값(모든 IF-001 테스트가 목이면 FAILED)은 N8 결정에 따라 BLOCKED로 바꿨다(`test_F2_mocked_provider_in_every_test_of_the_interface_fails_g6`, 근거 주석).
+
+### 7.3 3회차 (`08469ae`)
 (진행 중)
 
 ## 8. 실전 E2E 계획 (D8, 실행은 별도 승인)

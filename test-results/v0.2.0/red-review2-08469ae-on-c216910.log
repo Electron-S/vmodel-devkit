@@ -1,0 +1,54 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/407947ea-d932-4fb4-a68a-ceeeb447c64f/scratchpad/rel-c216910/plugins/vmodel",
+    "release_manifest": null
+  },
+  "git_head": "08469ae",
+  "worktree_dirty": false,
+  "python": "3.12.3",
+  "marker": "RED-TARGET",
+  "tests": 19,
+  "expectations_met": 19,
+  "violations": 0,
+  "seconds": 29.2
+}
+
+OK  expect=FAIL got=FAIL    test_g6_review2.R2G6Red.test_N1_background_thread_running_the_provider_is_not_the_tests_evidence
+      AssertionError: 'PASSED' == 'PASSED' : RED-TARGET a conftest thread ran the provider, not the tests
+OK  expect=FAIL got=FAIL    test_g6_review2.R2G6Red.test_N2_forked_ipc_child_is_another_process
+      AssertionError: 'BLOCKED' != 'PASSED'
+OK  expect=FAIL got=FAIL    test_g6_review2.R2G6Red.test_N3_deeply_nested_trace_line_is_not_a_crash
+      AssertionError: 2 == 2 : RED-TARGET internal error instead of a gate result: {'raw': 'ator/vmodel_validator/gates.py", line 1876, in eval_g6\n    rt = read_runtime_trace(trace_dir)\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/407947ea-d932-4fb4-a68a-ceeeb447c64f/scratchpad/rel-c216910/plugins/vmodel/validator/vmodel_validator/gates.py", line 1
+OK  expect=FAIL got=FAIL    test_g6_review2.R2G6Red.test_N4_deleted_trace_is_not_junit_only_credit
+      AssertionError: 'PASSED' == 'PASSED' : RED-TARGET no runtime trace: nothing proves the provider ran
+OK  expect=FAIL got=FAIL    test_g6_review2.R2G6Red.test_N7_symlinked_junit_stays_hashed_as_in_015
+      AssertionError: 0 != 1 : RED-TARGET junit.xml content changed after the run but evidence verifies: evidence OK
+OK  expect=FAIL got=FAIL    test_g6_review2.R2G6Red.test_N8_fixture_computing_the_result_in_setup_is_credited
+      AssertionError: 'FAILED' != 'PASSED'
+OK  expect=FAIL got=FAIL    test_g6_review2.R2G6Red.test_N9_many_parametrised_cases_do_not_truncate_the_evidence
+      AssertionError: 'FAILED' != 'PASSED'
+OK  expect=FAIL got=FAIL    test_g6_review2.R2PreexistingRed.test_P1_huge_integer_in_a_review_is_not_a_crash
+      ValueError: Exceeds the limit (4300 digits) for integer string conversion: value has 5001 digits; use sys.set_int_max_str_digits() to increase the limit
+OK  expect=FAIL got=FAIL    test_g6_review2.R2PreexistingRed.test_P2_non_string_interface_provider_is_not_a_crash
+      TypeError: unhashable type: 'list'
+OK  expect=FAIL got=FAIL    test_g6_review2.R2WiringRed.test_N10_module_level_instance_method_is_a_call
+      AssertionError: 'none' != 'static'
+OK  expect=FAIL got=FAIL    test_g6_review2.R2WiringRed.test_N10_star_reexport_in_package_init
+      AssertionError: 'none' != 'static'
+OK  expect=FAIL got=FAIL    test_g6_review2.R2WiringRed.test_N11_relative_import_in_a_namespace_package
+      AssertionError: 'none' != 'static'
+OK  expect=FAIL got=FAIL    test_g6_review2.R2WiringRed.test_N5a_module_level_def_shadowing_the_import
+      AssertionError: 'static' == 'static' : RED-TARGET the later def shadows the import
+OK  expect=FAIL got=FAIL    test_g6_review2.R2WiringRed.test_N5b_local_reassignment_after_a_local_import
+      AssertionError: 'static' == 'static' : RED-TARGET main is reassigned
+OK  expect=FAIL got=FAIL    test_g6_review2.R2WiringRed.test_N5c_setup_local_alias_resolves_in_setup_scope
+      AssertionError: 'static' == 'static' : RED-TARGET setUp's local main is a lambda
+OK  expect=FAIL got=FAIL    test_g6_review2.R2WiringRed.test_N5d_lambda_argument_that_is_never_called
+      AssertionError: 'static' == 'static' : RED-TARGET sorted([]) never calls the key
+OK  expect=FAIL got=FAIL    test_g6_review2.R2WiringRed.test_N5e_injection_into_a_non_consumer_call
+      AssertionError: 'static' == 'static' : RED-TARGET main handed to the provider of IF-001
+OK  expect=FAIL got=FAIL    test_g6_review2.R2WiringRed.test_N6_project_http_module_does_not_hide_http_client
+      AssertionError: Tuples differ: ('none', []) != ('runtime_candidate', ['api'])
+OK  expect=FAIL got=FAIL    test_g6_review2.R2WiringRed.test_N6_project_json_module_does_not_take_over_stdlib_json
+      AssertionError: 'static' == 'static' : RED-TARGET json is the stdlib json

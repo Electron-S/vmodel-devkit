@@ -291,7 +291,7 @@ D39의 결정안에 대한 사용자 결정이다. 확정 설계(요구사항 RE
 5. D5 정적 도달 + 실제 통합 증거: 설계 §4.6의 "하위 프로세스·동적 import는 도달 아님"을 버리고 두 경로로 나눴다.
    - 경로 A(정적): 테스트 함수의 **호출식**에서 시작한 소스 모듈 import 폐포에 provider(와 ARCH consumer)가 있어야 한다. import·참조만으로는 도달이 아니고, 테스트 안의 중첩 def·class·lambda 본문은 테스트가 이름으로 부를 때만 따라간다(호출 없는 함수는 placeholder로 G4 FAILED).
    - 경로 B(실행 경로): 정적 호출 경로는 없지만 subprocess·IPC·API·동적 import 호출이 있는 테스트. G4는 verifier 리뷰의 `interfaces[].runtime_paths`(TEST, 종류, 테스트 파일 sha256)가 Validator가 찾은 종류·현재 해시와 맞을 때만 인정하고, 아니면 REVIEW_REQUIRED다. G6은 Validator Core의 계측 모듈(`tracer/sitecustomize.py`)을 `PYTHONPATH`로 실행 중 모든 Python 프로세스에 넣어, 그 테스트(`PYTEST_CURRENT_TEST`) 동안 provider(와 consumer) 함수가 실행됐는지 기록하고 해시를 서명 증거에 넣는다. 선언은 있는데 실행 증거가 없으면 BLOCKED(`integration_evidence_insufficient`, 중립)이고 PASS하지 않는다. AI 리뷰 문장만으로는 IF를 덮지 않는다.
-   - 경로 A도 계측을 받는다. G6은 계측이 실행을 본 분석 대상 함수만 근거로 쓰고(계측이 아예 없으면 그 함수의 JUnit 케이스), 그 테스트의 호출 단계에서 provider 함수 실행이 없으면 근거가 아니다(경고). IF에 근거가 없으면 FAILED. 처음 구현은 경고만 했고 "실행되지 않은 함수"도 근거로 썼다(독립 검토 F1·F2, `docs/g6/WORKITEM.md` §7).
+   - 경로 A도 실행 확인을 받는다(REQ-G6-33). G6은 계측이 실행을 본 분석 대상 함수만 근거로 쓰고, 그 테스트 동안(어느 단계든, 그 테스트가 시작한 스레드 포함) provider가 실제로 돌아야 근거다. 근거 없는 주장은 IF가 다른 테스트로 덮이면 경고, 아니면 BLOCKED. 계측이 없으면 BLOCKED(JUnit만으로 인정하지 않음). 처음 구현은 경고만 했고 "실행되지 않은 함수"도 근거로 썼다(검토 1회차 F1·F2). 2회차 구현은 호출 단계만 인정하고 FAILED를 냈는데 fixture·setup_method 테스트를 거짓으로 떨어뜨려(N8) 어느 단계든 인정·BLOCKED로 바꿨다(`docs/g6/WORKITEM.md` §7).
    - 별도 프로세스라는 이유로 G7로 보내지 않는다. 판정 대상은 인터페이스다.
 6. D6 버전 0.2.0. 0.1.5 태그·릴리스 사본은 그대로다.
 7. D7 범위 삭제된 G6 결함: 설계 기본값(기존 상태 + 주석)을 버리고 표시 상태 OUT_OF_SCOPE를 더했다(D37의 6종 + 1). 결함의 종료 Gate가 G6이고 G6이 지금 N/A(현재 manifest)일 때다. `scope_removal`에 실패 기록의 IF·통합 TEST ID와 그것을 `removed_ids`에 둔 CR/DEFECT와 사유를 보인다. CLOSED가 아니고 `verified_by`·`verification_history`는 N/A 기록을 세지 않는다. 결함 저장 형식은 enum(G6, P6, IF)만 넓혔다.
@@ -301,9 +301,10 @@ D39의 결정안에 대한 사용자 결정이다. 확정 설계(요구사항 RE
 - G5 실행부(`eval_g5`)는 고치지 않았다. 설계 §4.5의 `_execute_suite` 분리 대신 G6이 같은 runner 함수를 따로 호출한다(G5 무변경 우선). G5에 더한 것은 `integration_test`가 설정됐을 때만 도는 G5.SCOPE와 NO_WEAKENING의 integration 수준 ID 제외뿐이다.
 - G6 manifest에 `reviews/G4.json`을 더했다(경로 B 선언의 근거). G4 PASS가 인정한 리뷰와 지금 파일이 다르면 경로 B 선언을 쓰지 않는다.
 - 리뷰 스키마의 새 키(`integration_applicability`, `interfaces`)는 형태만 느슨하게 두고 내용은 그 키를 쓰는 Gate 코드가 검사한다. 잘못된 항목이 G2·G3 판정을 바꾸지 않게(설계 §1.2), G4에서는 REVIEW_REQUIRED가 되게 하기 위해서다.
-- G6.IF_COVERAGE 안에서는 실패 항목이 있으면 FAILED(재작업·결함 필요), 실패 없이 증거 부족만 있으면 BLOCKED다. 선언된 경로 B는 같은 IF가 다른 테스트로 덮였더라도 모두 실행 증거를 요구한다. 경로 B 증거는 pytest 호출 단계의 것만 세고, subprocess·ipc 선언이면 테스트 함수와 다른 프로세스의 것이어야 한다(검토 F6).
+- G6.IF_COVERAGE 안에서는 실패 항목이 있으면 FAILED(재작업·결함 필요), 실패 없이 증거 부족만 있으면 BLOCKED다. 근거 없는 주장(경로 A·B)은 같은 IF가 다른 테스트로 덮이면 경고, 아니면 BLOCKED다(경로 A와 B를 같은 규칙으로). 경로 B 증거는 pytest 호출 단계의 것만 세고, subprocess·ipc 선언이면 테스트 함수와 다른 프로세스의 것이어야 한다(검토 F6). 계측은 다른 스레드를 그 스레드를 시작한 테스트에 귀속하고(N1), fork 자식은 자기 파일을 쓴다(N2).
 - G4는 TEST ID를 가진 함수 **하나하나**를 판정한다(가장 좋은 함수 하나만 보면 수집되지 않거나 꺼진 사본이 실제 테스트를 대신할 수 있었다, 검토 F1).
-- 정적 분석은 모듈을 파일 경로로 식별하고 함수 지역 범위를 먼저 본다. 호출은 소스 모듈의 최상위 def/class(또는 그 클래스 메서드)로 풀릴 때만 센다. 사용자 지시의 DI는 "소스 호출의 인자로 넘긴 소스 def/class"로 경로 A에서 인정하고, 경로 B 종류는 subprocess·ipc·api·dynamic_import다(검토 F2·F7·F8·F9).
+- 정적 분석은 모듈을 파일 경로로 식별하고 함수 지역 범위를 먼저 본다(모듈 수준은 문장 순서). 호출은 소스 모듈의 최상위 def/class(또는 그 클래스 메서드, 모듈 수준 인스턴스의 메서드)로 풀릴 때만 센다. 사용자 지시의 DI는 "consumer 호출의 인자로 넘긴 소스 def/class"로 경로 A에서 인정하고, 경로 B 종류는 subprocess·ipc·api·dynamic_import다. 파일이 점유하는 import 이름은 프로젝트 루트 기준, 최상위 소스 루트 기준, 두 부분 이상인 일반 패키지 이름으로 제한해 표준 라이브러리 이름을 빼앗지 않는다(검토 F2·F7·F8·F9, N5·N6·N10·N11).
+- 계측 한계로 문서화한 것: forkserver 자식은 서버를 시작한 테스트의 환경을 물려받아 귀속이 틀릴 수 있고, 테스트 사이에 재사용되는 스레드 풀 작업자는 처음 만든 테스트에 귀속된다(이후 테스트의 실행이 보이지 않아 BLOCKED가 될 수 있음, 보수적). 데이터 전용 IF는 BLOCKED.
 - placeholder 탐지는 integration 수준 테스트에만 한다(unit 테스트 G4 판정 불변, REQ-G6-13).
 - 계측 한계(SPEC §5.7과 같은 같은 프로세스 신뢰 경계): 테스트 코드는 계측 파일을 위조할 수 있다(검토 F5에서 재현, 환경 변수를 훑어 찾으면 된다). G4.TEST_INTEGRITY의 `VMODEL_TRACE` 문자열 검사는 우발적 언급만 잡고 의도적 위조는 막지 못한다. 기존 증거 신뢰 모델(최종 신뢰 경계는 CI·별도 사용자 재검증)을 그대로 따른다. `-I`/`-E`로 시작한 Python, 세션 범위 fixture가 띄운 하위 프로세스(처음 테스트에 귀속), pytest가 아닌 러너는 경로 B를 증명하지 못해 BLOCKED가 된다(보수적).
 - 읽기 전용 `vmodel wiring WI`: verifier가 경로 B를 선언할 때 쓰는 분류·해시를 보인다.

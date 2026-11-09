@@ -127,8 +127,10 @@ class ScopeInvariant(unittest.TestCase):
                 s["wf"].write_text(s["good"], encoding="utf-8")
                 sb.regate_g4()
                 sb.gate("G5")
+                # G5.EXECUTION items are the tail of pytest's output (timings vary run to run): status only
                 return [(r["status"], r.get("failure_signature"),
-                         tuple((c["id"], c["status"], tuple(c.get("items") or [])) for c in r["checks"]),
+                         tuple((c["id"], c["status"], () if c["id"] == "G5.EXECUTION" else tuple(c.get("items") or []))
+                               for c in r["checks"]),
                          tuple(sorted(r["executed_tests"].items())), tuple(sorted(r["test_files"])))
                         for r in ledger_records(sb) if r.get("type") == "gate" and r["gate"] == "G5"]
             finally:
