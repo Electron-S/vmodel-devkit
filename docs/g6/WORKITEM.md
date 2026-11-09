@@ -287,6 +287,12 @@ R1(클로저 래퍼)·R3·R4 닫힘, R2 문서화대로 BLOCKED. 새 거짓 PASS
 ### 7.9 9회차 (`31ccb0d`, P1 수정만)
 P1 닫힘, 7회차 R4 시나리오 BLOCKED 유지, 크래시 없음. 새 지적 Q1(MEDIUM, 거짓 PASS): P1에서 규칙을 인터페이스 심볼로 좁히자 provider 내부 구현 도우미(`_parse_impl`)를 stub한 테스트가 test-level로 통과(Case B 변형). `tests/test_g6_review9.py`로 재현(RED 대상 `31ccb0d`) 후 수정: provider 모듈에 정의된 def/class/메서드를 patch하면 provider 목, 상수·import한 이름은 무해(P1 유지).
 
+### 7.10 10회차 (`3a08592`, Q1 수정만)
+Q1 닫힘(BLOCKED), P1 PASSED 유지, 7회차 R4 BLOCKED·R1 PASSED 유지. 새 거짓 PASS·거짓 BLOCKED·크래시 없음. 검토자가 짚은 설계상 결과: provider 모듈 안에 정의된 시계 같은 도우미(`def _now()`)를 patch한 테스트도 test-level로 세지 않는다(이번 결정의 대가, D44 한계).
+
+### 7.11 검토 회차 요약
+4~10회차: 지적 HIGH 4(4회차) → 3(5회차) → 1(6회차) → 0(7~10회차). 7회차 이후 남은 것은 거짓 BLOCKED(중립) 쪽이 대부분이고, 거짓 PASS는 9회차 Q1 하나였으며 10회차에서 닫혔다. 고치지 않고 문서화한 것: 5회차 N4/N5, 7회차 R2, 8회차 P2, 4회차 L3/L4.
+
 ## 8. 실전 E2E 계획 (D8, 실행은 별도 승인)
 - 예산: sonnet 최대 2회, 회당 `--max-budget-usd 2`, 합계 $4 상한. `--permission-mode auto`, `--setting-sources project,local`, `--plugin-dir dist/vmodel-0.2.0`, `--dangerously-skip-permissions` 금지. 실행 전 모델 호출 없는 준비(setup)와 기대 판정 확인을 먼저 한다.
 - 시나리오 A (Provider/Consumer, G6 실패 → 결함 → 수정 → 재검증): 기존 코드가 있는 프로젝트(점수 파서 모듈과 그 통합 테스트가 이미 `tests/integration/`에 있어 `init`이 실제 경로를 등록 — D3 규칙을 그대로 지킴)에 "파서 결과를 소비하는 요약 보고 CLI를 추가해줘"를 요청한다. 파서의 오류 계약(형식 오류 줄 번호)과 소비 측 처리 사이의 불일치를 하나 미리 심어(D26 블라인드 시딩, 세션 프롬프트에 알리지 않음) 단위 테스트는 통과하고 IF 통합 테스트에서 드러나게 한다. 기대: G1~G5 PASSED → G6 FAILED(TEST_MAPPING·RESULTS) → DEFECT(gate G6, IF·TEST 연결) → 수정 → G4 재리뷰 → G5 → G6 PASSED, 결함 CLOSED. 관찰: placeholder·import-only 테스트를 쓰는지, 통합 테스트가 경로 A인지, verifier가 `interfaces` 항목을 쓰는지, guard 우회 0.
