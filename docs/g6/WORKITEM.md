@@ -55,8 +55,8 @@ REQ-G6-01~26은 설계 문서 §2가 정본이다. 아래는 바뀐 것과 새�
 - **REQ-G6-29 (D5, import-only·빈 테스트)** 정적 도달은 호출식으로만 성립한다. `assert True`, `pass`, docstring만 있는 함수, import 후 모듈·심볼을 참조만 하는 함수는 IF를 덮지 못한다(G4 fail, G6 IF_COVERAGE fail).
 - **REQ-G6-30 (경로 B 선언)** G4 리뷰 `interfaces[]` 항목에 `runtime_paths: [{"test": "TEST-xxx", "kind": "subprocess"|"ipc"|"api"|"dynamic_import", "test_file_sha256": "sha256:…", "entry", "note"}]`를 둔다. G4는 선언이 (a) 그 IF를 `verifies`에 가진 integration TEST, (b) Validator가 그 함수에서 찾은 실행 경로 종류, (c) 그 함수가 있는 테스트 파일의 현재 sha256과 맞을 때만 인정한다. 안 맞으면 pending(재리뷰). `vmodel wiring WI`가 verifier에게 함수 위치·분류·해시를 보여 준다(읽기 전용).
 - **REQ-G6-31 (실행 계측)** G6은 통합 명령을 Validator Core의 계측 모듈(`tracer/sitecustomize.py`)을 `PYTHONPATH`로 주입해 실행한다. 실행 중 생긴 모든 Python 프로세스(하위 프로세스 포함)가 감시 대상 파일(IF provider·consumer 설계 단위 모듈, integration 테스트 파일)의 함수 실행을 그때의 pytest 테스트 ID(`PYTEST_CURRENT_TEST`)와 함께 기록한다. 계측 파일은 실행 폴더 `trace/`에 남고 서명된 record.json에 해시와 요약이 들어간다. 계측 실패는 테스트를 깨지 않는다.
-- **REQ-G6-32 (경로 B 판정)** 경로 B로 IF가 덮이려면 모두 필요하다: 선언이 현재 G4 PASS가 인정한 리뷰(`G4.REVIEW` `review_sha256` = 지금 `reviews/G4.json`)에 있음, 선언 해시 = 지금 테스트 파일 해시, Validator가 다시 찾은 실행 경로 종류와 일치, 그 테스트가 이번 실행에서 passed, 계측이 그 테스트 동안 provider 모듈 함수 실행과(ARCH consumer가 있으면) consumer 모듈 함수 실행을 기록. 선언은 있지만 실행 증거가 부족하면 G6은 BLOCKED(`integration_evidence_insufficient`, 중립 차단)이고 PASS하지 않는다. AI 리뷰 문장만으로 IF를 덮지 않는다.
-- **REQ-G6-33 (경로 A 교차 확인)** 경로 A로 덮인 IF라도, 계측이 그 테스트 함수 실행을 기록했는데 provider 함수 실행이 없으면 IF_COVERAGE는 warn("정적으로는 닿지만 실행되지 않음: 목 대체 의심")이다. 판정은 바꾸지 않는다(데이터 타입 IF 등 오탐 가능).
+- **REQ-G6-32 (경로 B 판정)** 경로 B로 IF가 덮이려면 모두 필요하다: 선언이 현재 G4 PASS가 인정한 리뷰(`G4.REVIEW` `review_sha256` = 지금 `reviews/G4.json`)에 있음, 선언 해시 = 지금 테스트 파일 해시, Validator가 다시 찾은 실행 경로 종류와 일치, 그 테스트 함수가 이번 실행에서 실제로 돌았고 passed, 계측이 그 테스트의 **호출 단계**에서 provider 모듈 함수 실행과(ARCH consumer가 있으면) consumer 모듈 함수 실행을 기록, 선언 종류가 subprocess·ipc면 provider 실행이 테스트 함수와 **다른 프로세스**에서 일어남(검토 F6). 선언은 있지만 실행 증거가 부족하면 G6은 BLOCKED(`integration_evidence_insufficient`, 중립 차단)이고 PASS하지 않는다. AI 리뷰 문장만으로 IF를 덮지 않는다.
+- **REQ-G6-33 (경로 A 교차 확인, 검토 F1·F2로 강화)** G6은 계측이 실행을 본 분석 대상 함수만 IF 근거로 쓴다(계측이 아예 없으면 그 함수의 JUnit 케이스로 대신). 경로 A 함수가 실행됐는데 그 테스트의 호출 단계에서 provider(또는 ARCH consumer) 함수 실행이 없으면 그 테스트는 근거가 아니고 경고("목 대체 의심")다. IF에 근거가 하나도 없으면 IF_COVERAGE FAILED. 데이터 타입만 주고받는 IF는 provider 함수가 실행되는 테스트가 따로 필요하다(한계).
 - **REQ-G6-34 (D7, OUT_OF_SCOPE)** 결함 표시 상태에 OUT_OF_SCOPE를 더한다(D37의 6종 + 1). 조건: 결함의 종료 Gate(인용한 실패 중 가장 하위)가 G6이고, G6이 지금 PASSED + `applicability: not_applicable`(현재 manifest, STALE 아님). 표시에는 제거된 IF·TEST ID와 그것을 `removed_ids`에 둔 CR·DEFECT ID와 사유, 과거 FAILED 기록을 함께 보인다. CLOSED로 치지 않고 `verified_by`는 비운다. 결함 저장 형식은 그대로다(스키마 enum에 G6·P6·IF만 추가).
 
 ## 3. 아키텍처·영향 분석
@@ -148,7 +148,28 @@ REQ-G6-01~26은 설계 문서 §2가 정본이다. 아래는 바뀐 것과 새�
 | 전체 하네스 1차 | 작업 트리(`3239eba` 직전) | 308개 중 307, 실패 1 = 위 (4) |
 
 ## 7. 독립 검토
-(검토 후 갱신)
+### 7.1 1회차 (`3239eba`, 별도 컨텍스트, 작업 트리 읽기 전용, 사본에서 재현)
+지적 12건(주요 7, 부 4, nit 1). 사용자 전역 규칙에 따라 검토자 말을 그대로 받지 않고, 지적마다 `tests/test_g6_review.py`의 테스트로 **직접 재현**한 뒤(RED 대상 = 검토한 빌드 `git archive 3239eba plugins/vmodel`) 고쳤다. RED 19개 모두 목표 assertion으로 실패(`red-review-c216910-on-3239eba.log`), 수정본 GREEN.
+
+| 지적 | 판정 | 처리 (`c216910`) |
+|---|---|---|
+| F1 주요: 실행되지 않은 함수로 IF 인정(수집되지 않는 파일, `__test__ = False` + smoke 함수) | 재현 | G4는 TEST ID를 가진 함수 하나하나가 경로 A·B여야 함. G6은 계측이 실행을 본 분석 대상 함수만 인정(계측이 아예 없을 때만 JUnit classname/name 대조) |
+| F2 주요: 참조·가림 이름을 호출로 인정(`report.__name__.endswith`, 중첩 def·매개변수 기본값이 import를 가림) | 재현 | 정적 분석 재작성: 함수 지역 범위 우선, 호출은 소스 모듈의 최상위 def/class(또는 그 클래스 메서드)로 풀릴 때만. 경로 A도 계측이 있으면 호출 단계에서 provider가 돌아야 인정(못 돌면 경고 + 불인정; 모든 테스트가 그러면 FAILED) |
+| F3 주요: 리뷰 `interfaces[].id`가 리스트면 G4 내부 오류 | 재현 | 문자열 id만 사용 → REVIEW_REQUIRED |
+| F4 주요: trace 폴더·junit 경로에 디렉터리를 심으면 G6(그리고 같은 runner를 쓰는 G5) 내부 오류 | 재현(G5 경로는 0.1.x부터 있던 문제를 같이 발견) | trace는 정규·비심볼릭 파일만 읽고 해시(크기 상한), 증거의 비정규 파일은 해시하지 않고 `not_regular_file`로 기록. 결과는 기록된 FAILED/PASSED |
+| F5 부: 테스트 코드가 계측 줄을 위조해 경로 B 증명 | 재현(검토자) | 코드 수정 없음. 같은 프로세스 신뢰 경계(SPEC §5.7)의 한계로 문서화하고, G4.TEST_INTEGRITY의 `VMODEL_TRACE` 문자열 검사는 "우발적 언급만 잡는다"고 정정 |
+| F6 부: 경로 B 증거가 선언한 경로와 무관(autouse fixture가 provider 실행) | 재현 | 계측이 pytest 단계를 기록, 증거는 호출 단계만, subprocess·ipc는 테스트 함수와 다른 프로세스에서 provider 실행 필요 |
+| F7 주요(오판): 클래스 테스트의 self 도우미, unittest setUp 별칭, 인자 lambda, star import가 "none" | 재현 | self 메서드·setUp/setup_method(별칭 포함)·인자 lambda·star import·모듈 수준 인스턴스 추적 |
+| F8 주요(오판): `__init__.py` 없는 패키지, `src.` 접두 import | 재현 | 모듈을 파일 경로로 식별, 경로의 고유한 점 접미사 전부로 해석(겹치면 일반 import 이름 소유자만) |
+| F9 부(오판): 의존성 주입(provider를 consumer 호출 인자로 넘김) | 재현 | 소스 호출의 인자로 넘긴 소스 def/class를 도달로 인정(경로 A). 사용자 지시의 "DI"는 정적 경로로, 동적 import는 경로 B 종류로 둔다 |
+| F10 부: `verifies`가 리스트가 아니면 trace·wiring 내부 오류 | 재현 | 방어적 목록 처리 |
+| F11 부: `tests/integration/..`, `tests/.`를 경로로 받음 | 재현 | 정규화 후 검사 |
+| F12 nit: N/A인데 머리줄이 "G6 PASSED" | 재현 | 머리줄 "G6 N/A", N/A 평가가 실패하면 "recorded as PASSED" 문구를 쓰지 않음 |
+
+검토자가 맞다고 확인한 것: 설정 속임수(unit argv 재사용, 전체 tests, 0 tests, junit 없음, skip, `-k` 제외)는 실패, 시작 실패는 `tool_unavailable`, `integration_test` 없음·잘못됨은 실행 없이 `misconfigured`, 에이전트 PYTHONPATH·PYTEST_ADDOPTS 제거, 리뷰 교체는 G6 STALE·인정된 리뷰만 사용, N/A 조건 전부와 우회 없음, N/A의 결함 검증 제외·OUT_OF_SCOPE, 중립 차단의 3회 규칙 제외, IF 없는 WI·`integration_test` 없는 G5의 0.1.5 경로 유지.
+
+### 7.2 2회차 (`c216910`)
+(진행 중)
 
 ## 8. 실전 E2E 계획 (D8, 실행은 별도 승인)
 - 예산: sonnet 최대 2회, 회당 `--max-budget-usd 2`, 합계 $4 상한. `--permission-mode auto`, `--setting-sources project,local`, `--plugin-dir dist/vmodel-0.2.0`, `--dangerously-skip-permissions` 금지. 실행 전 모델 호출 없는 준비(setup)와 기대 판정 확인을 먼저 한다.

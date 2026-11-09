@@ -1,0 +1,165 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.1.5",
+    "release_manifest": {
+      "version": "0.1.5",
+      "core_hash": "sha256:37071459bd445eb9873c102d3b20a605478feb0b1dc9943f0130f670c2bbf5e8"
+    }
+  },
+  "git_head": "c216910",
+  "worktree_dirty": false,
+  "python": "3.12.3",
+  "marker": "RED-TARGET",
+  "tests": 76,
+  "expectations_met": 76,
+  "violations": 0,
+  "seconds": 135.7
+}
+
+OK  expect=FAIL got=FAIL    test_g6_gate.GateDefinitionRed.test_B14_g6_is_mechanical_without_ai_review
+      AssertionError: False is not true : RED-TARGET G6 is implemented in 0.2.0
+OK  expect=FAIL got=FAIL    test_g6_gate.GateRed.test_B10_inputs_changed_during_run
+      AssertionError: [] is not true : RED-TARGET (check missing) G6.INPUTS_UNCHANGED not in {
+OK  expect=FAIL got=FAIL    test_g6_gate.GateRed.test_B11_g5_stale_blocks_without_record
+      AssertionError: False is not true : RED-TARGET ['G6 (Integration Verification) is an extension gate and is not implemented in this DevKit version']
+OK  expect=FAIL got=FAIL    test_g6_gate.GateRed.test_B13_agent_environment_is_scrubbed
+      AssertionError: 'BLOCKED' != 'PASSED'
+OK  expect=FAIL got=FAIL    test_g6_gate.GateRed.test_T01_real_provider_consumer_integration_passes
+      AssertionError: 'BLOCKED' != 'PASSED'
+OK  expect=FAIL got=FAIL    test_g6_gate.GateRed.test_T02_integration_failure_fails_g6
+      AssertionError: 'BLOCKED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g6_gate.GateRed.test_T04_unit_command_reused_as_integration_command_is_rejected
+      AssertionError: 'BLOCKED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g6_gate.GateRed.test_T04b_whole_test_tree_as_integration_command_is_rejected
+      AssertionError: 'BLOCKED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g6_gate.GateRed.test_T07_integration_command_that_skips_an_interface_test
+      AssertionError: 'BLOCKED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g6_gate.GateRed.test_T07b_skipped_integration_test_fails
+      AssertionError: 'BLOCKED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g6_gate.GateRed.test_T18_exit_0_without_junit_is_not_a_pass
+      AssertionError: 'BLOCKED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g6_gate.GateRed.test_T18_forged_results_are_not_evidence
+      AssertionError: 'NOT_IMPLEMENTED' != 'IN_PROGRESS'
+OK  expect=FAIL got=FAIL    test_g6_gate.GateRed.test_T18_timeout_fails_and_start_failure_blocks
+      AssertionError: 'BLOCKED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g6_gate.GateRed.test_T18_zero_tests_with_exit_0_is_not_a_pass
+      AssertionError: 'BLOCKED' != 'FAILED'
+OK  expect=ok   got=ok      test_g6_wiring.WiringChar.test_E1_helper_and_fixture_reach_is_accepted
+OK  expect=FAIL got=FAIL    test_g6_wiring.WiringRed.test_E2_interface_symbol_missing_from_provider
+      AssertionError: 'PASSED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g6_wiring.WiringRed.test_E3_patched_provider_warns_at_g4_and_g6
+      AssertionError: [] is not true : RED-TARGET (check missing) G4.INTEGRATION_WIRING not in {
+OK  expect=FAIL got=FAIL    test_g6_wiring.WiringRed.test_E4_review_must_cover_every_interface
+      AssertionError: 'PASSED' != 'REVIEW_REQUIRED'
+OK  expect=FAIL got=FAIL    test_g6_wiring.WiringRed.test_T06_assert_true_placeholder_fails_g4
+      AssertionError: 'PASSED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g6_wiring.WiringRed.test_T06_pass_and_docstring_placeholder_fails_g4
+      AssertionError: 'PASSED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g6_wiring.WiringRed.test_T06_unused_nested_call_does_not_hide_a_placeholder
+      AssertionError: 'PASSED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g6_wiring.WiringRed.test_T07_interface_test_function_missing_fails_test_code
+      AssertionError: 'PASSED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g6_wiring.WiringRed.test_T08_import_only_test_does_not_reach_the_interface
+      AssertionError: 'PASSED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g6_wiring.WiringRed.test_T09_declared_api_path_passes_on_runtime_evidence
+      AssertionError: 'BLOCKED' != 'PASSED'
+OK  expect=FAIL got=FAIL    test_g6_wiring.WiringRed.test_T09_declared_path_without_provider_execution_blocks_g6
+      AssertionError: Tuples differ: ('BLOCKED', None) != ('BLOCKED', 'integration_evidence_insufficient')
+OK  expect=FAIL got=FAIL    test_g6_wiring.WiringRed.test_T09_declared_subprocess_path_passes_g4_and_g6_on_runtime_evidence
+      AssertionError: 'BLOCKED' != 'PASSED'
+OK  expect=FAIL got=FAIL    test_g6_wiring.WiringRed.test_T09_stale_test_hash_in_declaration_needs_rereview
+      AssertionError: 'PASSED' != 'REVIEW_REQUIRED'
+OK  expect=FAIL got=FAIL    test_g6_wiring.WiringRed.test_T09_subprocess_test_needs_a_declared_runtime_path
+      AssertionError: 'PASSED' != 'REVIEW_REQUIRED'
+OK  expect=ok   got=ok      test_g6_config.ConfigChar.test_A5_015_config_without_integration_test_is_valid
+OK  expect=FAIL got=FAIL    test_g6_config.ConfigRed.test_A2_integration_argv_without_junit_is_misconfigured
+      AssertionError: Tuples differ: ('BLOCKED', None) != ('BLOCKED', 'misconfigured')
+OK  expect=FAIL got=FAIL    test_g6_config.ConfigRed.test_A3_invalid_integration_test_object_is_misconfigured_not_a_crash
+      AssertionError: Tuples differ: (3, 'BLOCKED', None) != (3, 'BLOCKED', 'misconfigured')
+OK  expect=FAIL got=FAIL    test_g6_config.ConfigRed.test_T03_missing_integration_test_blocks_without_running_anything
+      AssertionError: Tuples differ: ('BLOCKED', None) != ('BLOCKED', 'misconfigured')
+OK  expect=FAIL got=FAIL    test_g6_config.InitRed.test_T20_existing_integration_dir_is_registered_and_excluded_from_unit
+      AssertionError: 'integration_test' not found in {'schema': 'vmodel.config/1', 'project_id': '431e8f1a1f3c40fc807a516adad51ac4', 'default_profile': 'STANDARD', 'language': 'python', 'python': '/usr/bin/python3', 'paths': {'source': ['src/**/*.py'], 'tests': ['tests/**/*.py'], 'build_config': ['pyproject.toml', 'setup.cfg', 'setup.py', 'pytest.ini', 'tox.ini', 'requirements*.txt', 'conftest.py', 'te
+OK  expect=FAIL got=FAIL    test_g6_config.InitRed.test_T20_explicit_existing_path_is_registered
+      AssertionError: 2 != 0 : RED-TARGET usage: vmodel [-h]
+OK  expect=FAIL got=FAIL    test_g6_config.InitRed.test_T20_explicit_missing_path_is_refused
+      AssertionError: 'does not exist' not found in 'usage: vmodel [-h]\n              {init,install,uninstall,new-wi,next-id,lint,hash,gate,verify,status,trace,impact,report,audit,verify-evidence,review-submit,unblock,lock,hook,version,guide}\n              ...\nvmodel: error: unrecognized arguments: --integration-tests tests/it\n' : RED-TARGET usage: vmodel [-h]
+OK  expect=FAIL got=FAIL    test_g6_config.InitRed.test_T20_explicit_path_without_test_functions_is_refused
+      AssertionError: 'no test function' not found in 'usage: vmodel [-h]\n              {init,install,uninstall,new-wi,next-id,lint,hash,gate,verify,status,trace,impact,report,audit,verify-evidence,review-submit,unblock,lock,hook,version,guide}\n              ...\nvmodel: error: unrecognized arguments: --integration-tests tests/it\n' : RED-TARGET usage: vmodel [-h]
+OK  expect=FAIL got=FAIL    test_g6_config.InitRed.test_T20_no_integration_dir_registers_nothing_and_says_so
+      AssertionError: 'integration_test: not configured' not found in 'initialised /tmp/vmodel-test-lk02nrg9/한글 경로 sandbox/proj\n  python: /usr/bin/python3\n  lint: none (on_missing_lint=syntax-only)\n  validator 0.1.5 core 37071459bd44 pinned\n  signing key: /tmp/vmodel-test-lk02nrg9/vmodel home/keys/b4256cfacad44f5eab7ec6d090b141e1.key\n' : RED-TARGET init must say G6 needs it: initialised /tmp/vmodel
+OK  expect=FAIL got=FAIL    test_g6_config.InitRed.test_T20_whole_unit_scope_is_refused
+      AssertionError: 'same scope' not found in 'usage: vmodel [-h]\n              {init,install,uninstall,new-wi,next-id,lint,hash,gate,verify,status,trace,impact,report,audit,verify-evidence,review-submit,unblock,lock,hook,version,guide}\n              ...\nvmodel: error: unrecognized arguments: --integration-tests tests\n' : RED-TARGET usage: vmodel [-h]
+OK  expect=FAIL got=FAIL    test_g6_config.MigrationRed.test_T20_configure_tests_needs_a_terminal
+      AssertionError: 2 != 3 : RED-TARGET user-only command without a TTY: usage: vmodel [-h]
+OK  expect=FAIL got=FAIL    test_g6_config.MigrationRed.test_T20_configure_tests_on_a_terminal_updates_config_and_ledger
+      AssertionError: 'integration_test' not found in {'schema': 'vmodel.config/1', 'project_id': 'a55ca92096e64495b675a79c134111ef', 'default_profile': 'STANDARD', 'language': 'python', 'python': '/usr/bin/python3', 'paths': {'source': ['src/**/*.py'], 'tests': ['tests/**/*.py'], 'build_config': ['pyproject.toml', 'setup.cfg', 'setup.py', 'pytest.ini', 'tox.ini', 'requirements*.txt', 'conftest.py', 'te
+OK  expect=FAIL got=FAIL    test_g6_config.MigrationRed.test_T20_configure_tests_refuses_a_missing_path
+      AssertionError: 'does not exist' not found in "yes\r\nusage: vmodel [-h]\r\n              {init,install,uninstall,new-wi,next-id,lint,hash,gate,verify,status,trace,impact,report,audit,verify-evidence,review-submit,unblock,lock,hook,version,guide}\r\n              ...\r\nvmodel: error: argument cmd: invalid choice: 'configure-tests' (choose from 'init', 'install', 'uninstall', 'new-wi', 'next-id', 
+OK  expect=FAIL got=FAIL    test_g6_config.MigrationRed.test_T20_guard_blocks_the_agent
+      AssertionError: '"deny"' not found in '' : RED-TARGET configure-tests is user-only:
+OK  expect=ok   got=ok      test_g6_scope.ScopeChar.test_D5_unit_test_disappearing_is_still_weakening
+OK  expect=ok   got=ok      test_g6_scope.ScopeInvariant.test_D4_g5_records_without_integration_test_are_unchanged
+OK  expect=FAIL got=FAIL    test_g6_scope.ScopeRed.test_D2_moving_integration_tests_out_of_g5_is_not_weakening
+      AssertionError: 'FAILED' != 'PASSED'
+OK  expect=FAIL got=FAIL    test_g6_scope.ScopeRed.test_D3_mixed_run_without_integration_test_is_warned
+      AssertionError: False is not true : RED-TARGET unit command ran TEST-010: {'id': 'WI-001', 'title': '단어 빈도 기능', 'profile': 'STANDARD', 'status': 'PARTIALLY_VERIFIED', 'gates': [{'gate': 'G1', 'name': 'Requirements', 'status': 'PASSED', 'notes': [], 'manifest_hash_current': 'sha256:219d0abf2a7523328b2cf78c58da45636aa211fbbab6fd830e019ceaf8236ae9', 'record_id': 'R00003', 'evaluated_at': '2026-11-09T
+OK  expect=FAIL got=FAIL    test_g6_scope.ScopeRed.test_T05_integration_run_cannot_stand_in_for_a_unit_test
+      AssertionError: False is not true : RED-TARGET {'work_item': 'WI-001', 'gate': 'G6', 'status': 'BLOCKED', 'recorded': False, 'reasons': ['G6 (Integration Verification) is an extension gate and is not implemented in this DevKit version']}
+OK  expect=FAIL got=FAIL    test_g6_scope.ScopeRed.test_T05_unit_command_running_integration_tests_fails_g5
+      AssertionError: 'PASSED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g6_applicability.NaRed.test_Cb_only_g2_confirmed_blocks
+      AssertionError: Tuples differ: ('BLOCKED', None) != ('BLOCKED', 'applicability_unconfirmed')
+OK  expect=FAIL got=FAIL    test_g6_applicability.NaRed.test_Cc_only_g3_confirmed_blocks
+      AssertionError: Tuples differ: ('BLOCKED', None) != ('BLOCKED', 'applicability_unconfirmed')
+OK  expect=FAIL got=FAIL    test_g6_applicability.NaRed.test_Cd_blank_reason_blocks
+      AssertionError: None != 'applicability_unconfirmed' : RED-TARGET {'work_item': 'WI-001', 'gate': 'G6', 'status': 'BLOCKED', 'recorded': False, 'reasons': ['G6 (Integration Verification) is an extension gate and is not implemented in this DevKit version']}
+OK  expect=FAIL got=FAIL    test_g6_applicability.NaRed.test_Ce_unsubmitted_review_edit_blocks
+      AssertionError: None != 'applicability_unconfirmed' : RED-TARGET {'work_item': 'WI-001', 'gate': 'G6', 'status': 'BLOCKED', 'recorded': False, 'reasons': ['G6 (Integration Verification) is an extension gate and is not implemented in this DevKit version']}
+OK  expect=FAIL got=FAIL    test_g6_applicability.NaRed.test_Cf_integration_spec_without_interface_is_required
+      AssertionError: Tuples differ: ('BLOCKED', None) != ('BLOCKED', 'misconfigured')
+OK  expect=FAIL got=FAIL    test_g6_applicability.NaRed.test_Cg2_external_endpoint_not_reviewed_blocks
+      AssertionError: None != 'applicability_unconfirmed' : RED-TARGET {'work_item': 'WI-001', 'gate': 'G6', 'status': 'BLOCKED', 'recorded': False, 'reasons': ['G6 (Integration Verification) is an extension gate and is not implemented in this DevKit version']}
+OK  expect=FAIL got=FAIL    test_g6_applicability.NaRed.test_Cg_data_flow_to_another_component_blocks
+      AssertionError: None != 'applicability_unconfirmed' : RED-TARGET {'work_item': 'WI-001', 'gate': 'G6', 'status': 'BLOCKED', 'recorded': False, 'reasons': ['G6 (Integration Verification) is an extension gate and is not implemented in this DevKit version']}
+OK  expect=FAIL got=FAIL    test_g6_applicability.NaRed.test_Ch_review_change_after_na_stales_only_g6
+      AssertionError: None != 'not_applicable' : RED-TARGET {'work_item': 'WI-001', 'gate': 'G6', 'status': 'BLOCKED', 'recorded': False, 'reasons': ['G6 (Integration Verification) is an extension gate and is not implemented in this DevKit version']}
+OK  expect=FAIL got=FAIL    test_g6_applicability.NaRed.test_T10_confirmed_single_component_is_na
+      AssertionError: Tuples differ: ('BLOCKED', None) != ('PASSED', 'not_applicable')
+OK  expect=FAIL got=FAIL    test_g6_applicability.NaRemovalRed.test_T11_interface_removed_without_justification_blocks
+      AssertionError: Tuples differ: ('BLOCKED', None) != ('BLOCKED', 'applicability_unconfirmed')
+OK  expect=FAIL got=FAIL    test_g6_applicability.NaRemovalRed.test_T11_justified_removal_with_confirmed_reviews_is_na
+      AssertionError: Tuples differ: ('BLOCKED', None) != ('PASSED', 'not_applicable')
+OK  expect=FAIL got=FAIL    test_g6_applicability.NaRemovalRed.test_T11_justified_removal_without_review_confirmation_blocks
+      AssertionError: None != 'applicability_unconfirmed' : RED-TARGET {'work_item': 'WI-001', 'gate': 'G6', 'status': 'BLOCKED', 'recorded': False, 'reasons': ['G6 (Integration Verification) is an extension gate and is not implemented in this DevKit version']}
+OK  expect=FAIL got=FAIL    test_g6_rework.ReworkRed.test_F3_partial_run_failure_splits_failing_and_unknown
+      AssertionError: 'BLOCKED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g6_rework.ReworkRed.test_F7_misconfigured_block_is_neutral
+      AssertionError: None != 'misconfigured' : RED-TARGET {'work_item': 'WI-001', 'gate': 'G6', 'status': 'BLOCKED', 'recorded': False, 'reasons': ['G6 (Integration Verification) is an extension gate and is not implemented in this DevKit version']}
+OK  expect=FAIL got=FAIL    test_g6_rework.ReworkRed.test_T12_scope_removed_by_change_request_is_out_of_scope_not_closed
+      AssertionError: 'BLOCKED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g6_rework.ReworkRed.test_T13_failure_defect_fix_reverify_closes
+      AssertionError: 'BLOCKED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g6_status.StatusRed.test_G1_not_evaluated_is_in_progress_with_gate_summary
+      AssertionError: 'NOT_IMPLEMENTED' != 'IN_PROGRESS'
+OK  expect=FAIL got=FAIL    test_g6_status.StatusRed.test_G2_required_pass_is_partially_verified
+      AssertionError: 'BLOCKED' != 'PASSED'
+OK  expect=FAIL got=FAIL    test_g6_status.StatusRed.test_G4_verify_runs_g1_to_g6
+      AssertionError: Lists differ: ['G1', 'G2', 'G3', 'G4', 'G5'] != ['G1', 'G2', 'G3', 'G4', 'G5', 'G6']
+OK  expect=FAIL got=FAIL    test_g6_status.StatusRed.test_G6_trace_has_interface_rows_and_integration_results_from_g6
+      AssertionError: 'BLOCKED' != 'PASSED'
+OK  expect=FAIL got=FAIL    test_g6_status.StatusRed.test_G7_preview_names_the_missing_input
+      AssertionError: 'integration_test' not found in 'G1-G5 verified. G6+ are extension gates (not implemented); report PARTIALLY_VERIFIED.' : RED-TARGET G1-G5 verified. G6+ are extension gates (not implemented); report PARTIALLY_VERIFIED.
+OK  expect=ok   got=ok      test_g6_compat.CompatInvariant.test_C1_C2_T17_same_g1_g5_decisions_and_manifests_without_interfaces
+OK  expect=ok   got=ok      test_g6_compat.CompatInvariant.test_T17_015_signed_evidence_verifies_with_this_core
+OK  expect=FAIL got=FAIL    test_g6_compat.CompatRed.test_T14_g4_review_file_change_stales_g6
+      AssertionError: 'BLOCKED' != 'PASSED'
+OK  expect=FAIL got=FAIL    test_g6_compat.CompatRed.test_T14_interface_test_and_review_changes_stale_the_right_gates
+      AssertionError: 'BLOCKED' != 'PASSED'
+OK  expect=FAIL got=FAIL    test_g6_compat.CompatRed.test_T15_g6_keeps_g1_g5_records_and_evidence
+      AssertionError: None is not true : RED-TARGET G6 not evaluated yet
+OK  expect=FAIL got=FAIL    test_g6_encoding.EncodingRed.test_T19_cp949_output_and_korean_data_in_integration_run
+      AssertionError: 'BLOCKED' != 'PASSED'
+OK  expect=FAIL got=FAIL    test_g6_encoding.EncodingRed.test_T19_subprocess_path_in_a_korean_path
+      AssertionError: 'BLOCKED' != 'PASSED'

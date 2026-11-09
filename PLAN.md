@@ -1,6 +1,6 @@
 # PLAN
 
-현재 목표: v0.1.5 확정(2026-11-09, 태그 `v0.1.5`, `main` fast-forward, D40, TEST_RESULTS §13). 다음은 G6: 사용자가 정책 네 가지를 정했고(2026-11-09), 확정 설계·구현 계획은 브랜치 `g6-dev`의 DECISIONS D41과 `docs/g6/G6-DESIGN.md`에 둔다. **G6 구현은 그 문서 §9의 남은 결정 뒤 별도 세션에서 시작한다.** 원격 푸시는 승인되지 않았다.
+현재 목표: **v0.2.0 릴리스 후보(G6 Integration Verification)** — 사용자 결정 D1~D8(2026-11-09)로 구현·검증 완료, 사용자 확정(병합·태그) 대기(브랜치 `g6-dev`, D42, `docs/g6/WORKITEM.md`, TEST_RESULTS §14). 확정 버전은 0.1.5(태그 `v0.1.5`, `main`). 원격 푸시·유료 E2E는 승인되지 않았다.
 
 | 마일스톤 | 내용 | 완료 기준 (테스트) | 상태 |
 |---|---|---|---|
@@ -12,7 +12,7 @@
 | R0.1.3 | 재작업 결함 F1~F4 수정, 실제 재작업 세션 검증 | 하네스 103/103(WSL), Windows 실패 0, drill-3 실제 세션 1회, audit OK | 완료, 태그 `v0.1.3` |
 | R0.1.4 | 결함 검증 상태 표시, guard 읽기 오탐, 실패 TEST 추적·증거 참조 (아래 §v0.1.4), 표시 상태 6종(D37), 실제 세션 1회 | 재현 테스트 RED 확인 후 수정, 기존 하네스 포함 전체 통과, Gate 판정 불변, 새 릴리스, 실제 세션에서 guard 우회 0 | 완료(2026-11-09, TEST_RESULTS §10·§11, DECISIONS D36·D37), 태그 `v0.1.4`, main fast-forward. 푸시는 미승인 |
 | R0.1.5 | 업그레이드 시 DevKit 권한 규칙 이동(D38) | 0.1.4 릴리스 대상 RED, GREEN, 전체 회귀, 독립 검토, 실제 릴리스 사본 0.1.4 → 0.1.5 재현 | 완료(2026-11-09, TEST_RESULTS §12·§13, D38·D40), 태그 `v0.1.5`, main fast-forward. 푸시는 미승인 |
-| M5 | G6 Integration Verification (아래 §확장) | 하네스 + 새 샘플(IF 있는 2컴포넌트) | 정책 사용자 결정(2026-11-09). 확정 설계는 브랜치 `g6-dev`(D41, `docs/g6/G6-DESIGN.md`). 구현 전 남은 결정 있음 |
+| M5 | G6 Integration Verification (아래 §확장) | 하네스 + 새 픽스처(IF 있는 2컴포넌트 `pipeline`, 단일 `single`) | 구현·검증 완료, v0.2.0 후보(브랜치 `g6-dev`, D41·D42, TEST_RESULTS §14). 사용자 확정·E2E 승인 대기 |
 | M6 | G7 System Verification, STANDARD WI의 COMPLETED | 하네스 + 새 샘플 | 계획 (사용자 결정 전 착수 금지) |
 | M7 | Extension 실제 세션 E2E | 실제 Claude 세션(비용 승인 후) | 계획 |
 
@@ -139,7 +139,9 @@ D35에 따라 바꿀 것(Gate 판정은 바꾸지 않는다)
 - 스킬·verifier 지침·SessionStart 문구("MVP scope: only G1-G5")·하네스
 - IF가 있는 실제 산출물. 지금까지 실제 세션이 textstats·scorestats 샘플로 만든 아키텍처는 모두 컴포넌트 1개, IF 0개였다(E2E-3, drill S1). 이대로면 G6은 공허하게 통과한다.
 
-### M5. G6 Integration Verification (제안 버전 0.2.0)
+### M5. G6 Integration Verification (0.2.0 후보, 2026-11-09 구현)
+2026-11-09 두 번째 결정(D1~D8)으로 남은 §9 항목이 모두 정해져 구현했다(D42). 진행·검토 기록은 `docs/g6/WORKITEM.md` §6·§7, 결과는 TEST_RESULTS §14. 다음: 사용자 확정(병합·태그 여부), 실전 E2E 2회 승인(계획 WORKITEM §8: sonnet 2회, 회당 $2, 합계 $4).
+
 2026-11-09 사용자가 정책 네 가지를 정했다(D41). 확정 설계·요구사항·테스트 명세·구현 절차는 `docs/g6/G6-DESIGN.md`가 정본이다(이전 결정안 D39·`G6-DESIGN-PROPOSAL.md`는 대안 비교 기록).
 
 착수 조건: 설계 §9의 남은 결정(§1.1 해석 확인, N/A 리뷰 확인 범위, 새 init 기본값, 업그레이드 G4 재리뷰 비용 처리, 연결 정적 확인 강도, 버전 번호). 결정 전 구현 금지.
@@ -163,6 +165,7 @@ D35에 따라 바꿀 것(Gate 판정은 바꾸지 않는다)
 새 샘플로 `/vmodel:start`부터 G7 COMPLETED까지 1회, G6 실패에서 시작하는 재작업 1회. 실제 Claude 실행이라 횟수와 상한을 정해 사용자 승인을 받은 뒤에만 한다.
 
 ## 버전 이력
+- 0.2.0 후보 (브랜치 `g6-dev`, 확정 전): G6 Integration Verification(D41·D42). 기록·태그는 사용자 확정 때 정한다(릴리스 사본 `dist/vmodel-0.2.0`과 `releases/vmodel-0.2.0.json`은 후보로 만들어 두었고, 같은 버전으로 다시 빌드하려면 `release.py --force`).
 - 0.1.5 (releases/vmodel-0.1.5.json, core `sha256:37071459…`, 태그 `v0.1.5`, 2026-11-09 확정): 업그레이드 시 DevKit 권한 규칙 이동(D38). Gate 판정·원장 형식·manifest·guard 불변. **현재 기준 버전.** 검증: WSL 225/225, Windows cp949 225 실행·실패 0·skip 40, 확정 검증 TEST_RESULTS §13(D40). 알려진 비용: 업그레이드마다 G4 재리뷰.
 - 0.1.0 (releases/vmodel-0.1.0.json): 최초 고정 릴리스. E2E-1에서 사용.
 - 0.1.1 (releases/vmodel-0.1.1.json): 스킬/에이전트가 프로젝트 밖 플러그인 파일을 Read하지 않도록 `vmodel guide <topic>` 추가. E2E-2에서 사용.

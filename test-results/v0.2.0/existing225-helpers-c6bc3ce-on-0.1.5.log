@@ -1,0 +1,33 @@
+.....................................................................................................................................................................E.......E...................................................
+======================================================================
+ERROR: test_T12_validator_core_modification_blocks (test_integrity.CoreTamper.test_T12_validator_core_modification_blocks)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/cyyoo/develop/vmodel-devkit/tests/test_integrity.py", line 105, in test_T12_validator_core_modification_blocks
+    gates_py.write_text(gates_py.read_text(encoding="utf-8").replace(
+  File "/usr/lib/python3.12/pathlib.py", line 1049, in write_text
+    with self.open(mode='w', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1015, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [Errno 13] Permission denied: '/tmp/vmodel-test-msirrsu3/plugin copy/validator/vmodel_validator/gates.py'
+
+======================================================================
+ERROR: test_upgrade_requires_user_repin_and_stales_previous_passes (test_integrity.Upgrade.test_upgrade_requires_user_repin_and_stales_previous_passes)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/cyyoo/develop/vmodel-devkit/tests/test_integrity.py", line 170, in test_upgrade_requires_user_repin_and_stales_previous_passes
+    init_py.write_text(init_py.read_text(encoding="utf-8") + "# 0.1.0+upgrade\n", encoding="utf-8")
+  File "/usr/lib/python3.12/pathlib.py", line 1049, in write_text
+    with self.open(mode='w', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1015, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [Errno 13] Permission denied: '/tmp/vmodel-test-nojodmds/plugin copy/validator/vmodel_validator/__init__.py'
+
+----------------------------------------------------------------------
+Ran 225 tests in 679.260s
+
+FAILED (errors=2)
