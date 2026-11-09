@@ -1825,6 +1825,14 @@ NOT_INTERFACE_METHODS = {"__init__", "__new__", "__post_init__", "__init_subclas
                          "__class_getitem__"}
 
 
+def _patches_symbol(target: str, syms: set[str]) -> bool:
+    """Whether a patch target (dotted module path + attribute path) is an interface symbol or one of its methods; with
+    no known symbol every provider patch counts (conservative)."""
+    parts = target.split(".")
+    return not syms or any(_is_symbol_function(".".join(parts[-k:]), s)
+                           for k in range(1, min(len(parts), 4) + 1) for s in syms)
+
+
 def _is_symbol_function(func: str, sym: str) -> bool:
     """Whether a traced function (co_qualname) is the interface symbol `sym`: the function itself, a method of a class
     symbol (not its constructor or object protocol: review 5 N3), or, for a method-named signature, that method of any
@@ -2293,7 +2301,11 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
             # must be the test function or a fixture / setUp it requested, never an autouse or unrequested fixture
             own_fns = {fv["name"] for fv in tv["functions"]}
             anchors = {a for fv in tv["functions"] for a in (fv.get("anchors") or [fv["name"]])}
-            patched = any(fv.get("patched_provider") for fv in tv["functions"])
+            # review 8 P1: only a patch of an interface symbol (or its method) is a mock of the provider; a constant
+            # or helper of the provider module (a limit, a clock) is not (G4 still warns about every provider patch)
+            patch_targets = sorted({t for fv in tv["functions"] for t in fv.get("patched_provider") or []
+                                    if isinstance(t, str) and _patches_symbol(t, syms)})
+            patched = bool(patch_targets)
             if needs_edge:
                 linked = [a for e, fn, c, a in seen["edges"] if is_prov(e, fn) and c in cons_rels]
             else:
@@ -2306,7 +2318,6 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
             # test-level evidence, even when part of the real provider also ran in it
             connected = (direct or via_fixture) and not patched
             foreign = sorted({x for a in linked for x in a} - anchors)
-            patch_targets = sorted({t for fv in tv["functions"] for t in fv.get("patched_provider") or []})
             not_own = None if connected or not linked else (
                 f"ran from its consumer in this test, but the test patches the provider ({', '.join(patch_targets)}): "
                 "a test that replaces part of the provider does not verify the real connection by itself"

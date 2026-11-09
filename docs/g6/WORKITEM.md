@@ -276,6 +276,14 @@ REQ-G6-01~26은 설계 문서 §2가 정본이다. 아래는 바뀐 것과 새�
 | R4(판단): 클래스 provider의 다른 메서드를 목으로 바꾸고 팩토리 classmethod로 진입하면 test-level | 보수 쪽(Case B): 테스트 함수가 provider를 patch하면(G4 정적 탐지) test-level로 세지 않음. 6회차 M7 규칙을 일반화. 사용자 확인 사항 |
 | R5: 앵커 수집 상한 16 | 64로 |
 
+### 7.8 8회차 (`953d502`, 변경분만)
+R1(클로저 래퍼)·R3·R4 닫힘, R2 문서화대로 BLOCKED. 새 거짓 PASS·크래시 없음. `tests/test_g6_review8.py`로 재현(RED 대상 `953d502`).
+
+| 지적 | 처리 |
+|---|---|
+| P1 MEDIUM(`953d502` 회귀): provider 모듈의 무해한 속성(설정 상수)을 patch해도 R4 규칙으로 test-level에서 빠짐 | patch 대상이 인터페이스 심볼이나 그 메서드일 때만 provider 목으로 봄(G4 경고는 그대로) |
+| P2 LOW(기존): 호출 가능한 클래스 데코레이터(`_Checked.__call__`)가 진입 함수를 가림 → 보수적 BLOCKED, 메시지가 "never ran"으로 부정확 | 고치지 않음: "심볼 프레임 우선"은 6회차 M1(생성자가 부르는 메서드)을 다시 연다. 특성 테스트로 고정, 한계로 기록 |
+
 ## 8. 실전 E2E 계획 (D8, 실행은 별도 승인)
 - 예산: sonnet 최대 2회, 회당 `--max-budget-usd 2`, 합계 $4 상한. `--permission-mode auto`, `--setting-sources project,local`, `--plugin-dir dist/vmodel-0.2.0`, `--dangerously-skip-permissions` 금지. 실행 전 모델 호출 없는 준비(setup)와 기대 판정 확인을 먼저 한다.
 - 시나리오 A (Provider/Consumer, G6 실패 → 결함 → 수정 → 재검증): 기존 코드가 있는 프로젝트(점수 파서 모듈과 그 통합 테스트가 이미 `tests/integration/`에 있어 `init`이 실제 경로를 등록 — D3 규칙을 그대로 지킴)에 "파서 결과를 소비하는 요약 보고 CLI를 추가해줘"를 요청한다. 파서의 오류 계약(형식 오류 줄 번호)과 소비 측 처리 사이의 불일치를 하나 미리 심어(D26 블라인드 시딩, 세션 프롬프트에 알리지 않음) 단위 테스트는 통과하고 IF 통합 테스트에서 드러나게 한다. 기대: G1~G5 PASSED → G6 FAILED(TEST_MAPPING·RESULTS) → DEFECT(gate G6, IF·TEST 연결) → 수정 → G4 재리뷰 → G5 → G6 PASSED, 결함 CLOSED. 관찰: placeholder·import-only 테스트를 쓰는지, 통합 테스트가 경로 A인지, verifier가 `interfaces` 항목을 쓰는지, guard 우회 0.

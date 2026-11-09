@@ -1,0 +1,19 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/43cdb556-8cbb-4e88-9bf3-ce8c6609a0de/scratchpad/red-953d502/plugins/vmodel",
+    "release_manifest": null
+  },
+  "git_head": "953d502",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "marker": "RED-TARGET",
+  "tests": 2,
+  "expectations_met": 2,
+  "violations": 0,
+  "seconds": 12.1
+}
+
+OK  expect=ok   got=ok      test_g6_review8.R8ClassDecoratorChar.test_P2_callable_class_decorator_in_the_provider_module
+OK  expect=FAIL got=FAIL    test_g6_review8.R8HarmlessPatchRed.test_P1_patching_a_provider_module_constant_is_not_a_mock
+      AssertionError: 'BLOCKED' != 'PASSED'
