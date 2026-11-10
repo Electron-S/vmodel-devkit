@@ -2018,7 +2018,7 @@ def read_runtime_trace(trace_dir: Path, prior_errors: list[str] | None = None, p
             "edge_scan_capped": sorted(capped)[:20], "test_boundaries": sum(len(v) for v in boundaries.values()),
             "boundary_clock": "perf_counter_ns" if use_tc else "wall",
             "spawned_lines_reattributed": moved, "errors": errors[:20], "_events": events, "_edges": edges,
-            "_cons": cons, "_ran": ran}
+            "_cons": cons, "_capped": sorted(capped), "_ran": ran}
 
 
 def test_function_of(nodeid: str) -> str:
@@ -2305,7 +2305,8 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
     ran_entries = {(e, fn, st) for _t, _ph, _f, e, fn, c, _a, st, _o in rt.get("_edges") or [] if c is None}
     # TEST ids of the capped pytest node ids (review 13: the node ids were compared with TEST ids, so the "not certain"
     # note never showed)
-    capped = {i for n in rt.get("edge_scan_capped") or [] for i in test_ids_in_text(test_function_of(n))}
+    capped = {i for n in rt.get("_capped") or rt.get("edge_scan_capped") or []
+              for i in test_ids_in_text(test_function_of(n))}
     if not rt["active"]:  # the validator injected its tracer: no trace at all is missing evidence (review N4)
         blocks.append("no runtime trace was written although the validator injected its tracer (Python started with "
                       "-I/-E/-S, PYTHONPATH replaced, or the trace removed): which test functions ran and whether the "
@@ -2423,17 +2424,18 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
                     # entries of the provider during the call (review 6 M1) with the anchors of the stack they ran on
                     # plus those of the stacks that started their process (D45)
                     other = kind in ("subprocess", "ipc")  # proof must come from another process (review F6)
-                    runs = [a for k, v in seen["prov_calls"].items() if is_prov(k[0], pfn(k[1], k[2]))
+                    runs = [(k[0], a) for k, v in seen["prov_calls"].items() if is_prov(k[0], pfn(k[1], k[2]))
                             for proc, a in v if not other or proc not in procs]
                     # D45 policy B: only what the test function or a fixture it requested ran or started counts, never
                     # what an autouse / unrequested fixture started (thread, server, process) or an unlinked process
-                    p_ok = any(set(a) & anchors for a in runs)
+                    p_ok = any(set(a) & anchors for _e, a in runs)
                     # review 12 H2: and the consumer evidence must be the test's own consumer run as well
                     cons_own = (not cons_rels) or any(lab in cons_rels and set(a) & anchors
                                                       for _proc, lab, a in seen["cons_calls"]) or \
-                        (same_file and p_ok)  # review 13 SF1: one module, the provider run is the consumer's too
+                        any(e in cons_rels and set(a) & anchors for e, a in runs)  # review 13 SF1 / 14 SF2: a provider
+                    # run of the test itself in a module that is also a consumer module is the consumer's run too
                     where = " in a process other than the test's" if other else ""
-                    started_by = sorted({x for a in runs for x in a} - anchors)
+                    started_by = sorted({x for _e, a in runs for x in a} - anchors)
                     cand = ("insufficient", f"runtime path ({kind}) declared at G4 and the provider ran{where} during the "
                                             f"test call, but the test patches the provider ({', '.join(patch_targets)}): "
                                             "a test that replaces part of the provider does not verify the real "

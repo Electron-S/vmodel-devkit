@@ -83,6 +83,7 @@ def _vmodel_trace_install():
     state = {"out": None, "seen": set(), "full": False, "bytes": 0, "found": {}, "scans": {}}
     lock = threading.Lock()
     local = threading.local()  # the thread-pool work item running in this thread: (owner test, consumer labels)
+    budget = threading.local()  # stack-scan counts of this thread (review 14: a thread id is reused after exit)
     unset = object()
 
     def open_out():
@@ -132,6 +133,7 @@ def _vmodel_trace_install():
         def _child():
             try:
                 state["sysenv"] = {"lock": threading.Lock(), "active": [], "base": None}
+                budget.d = {}
                 if state.get("fork"):
                     os.environ[ORIGIN] = state["fork"]  # also for a program the child execs (os.spawn*, pty.spawn)
                 open_out()
@@ -236,6 +238,14 @@ def _vmodel_trace_install():
         i = test.find(".py::") if test else -1
         return test[i + 5:].replace("::", ".") if i >= 0 else None
 
+    def scan_counts():
+        """Stack-scan counts of the running thread (reviews 13-14: noise in another thread, also one that already
+        exited and whose thread id the OS reused, must not use up this thread's budget)."""
+        d = getattr(budget, "d", None)
+        if d is None:
+            d = budget.d = {}
+        return d
+
     def note_provider(test, phase, lab, func, frame):
         want = providers[lab]
         k = (test, phase, lab, func)
@@ -243,10 +253,11 @@ def _vmodel_trace_install():
         done = state["found"].setdefault(k, set())
         if "ran" in done and done >= want:
             return
-        n = state["scans"].get(k, 0)
+        scans = scan_counts()
+        n = scans.get(k, 0)
         if n >= scan_limit:
             return
-        state["scans"][k] = n + 1
+        scans[k] = n + 1
         cons, entry, anchors = stack_info(frame, lab, func)
         inh_c, inh_a = inherited()
         for c in inh_c - set(cons):
@@ -274,18 +285,18 @@ def _vmodel_trace_install():
         k = (test, phase, lab)
         if k in state["kdone"]:
             return
-        sk = ("k", k, threading.get_ident())  # per thread: another thread's runs cannot use up this one's budget
-        n = state["scans"].get(sk, 0)
+        scans = scan_counts()  # per thread: another thread's runs cannot use up this one's budget
+        n = scans.get(("k", k), 0)
         if n >= scan_limit:
             return
-        state["scans"][sk] = n + 1
+        scans[("k", k)] = n + 1
         _c, _e, anchors = stack_info(frame)
         anchors = tuple(sorted(set(anchors) | inherited()[1]))
         write(("k", test, phase, lab, anchors), {"t": test, "p": phase, "k": lab, "a": list(anchors)})
         if own_anchor(test) in anchors:
             state["kdone"].add(k)
         elif n + 1 == scan_limit:
-            write(("kcap", test, phase, lab, threading.get_ident()),
+            write(("kcap", test, phase, lab),
                   {"edge_scan_capped": True, "t": test, "p": phase, "k": lab})
 
     def record(code, frame=None):
