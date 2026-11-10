@@ -1,0 +1,19 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/7cecc96f-20f2-42ed-ab37-b71618f25fbb/scratchpad/red-690e757/plugins/vmodel",
+    "release_manifest": null
+  },
+  "git_head": "690e757",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "marker": "RED-TARGET",
+  "tests": 2,
+  "expectations_met": 2,
+  "violations": 0,
+  "seconds": 2.9
+}
+
+OK  expect=ok   got=ok      test_guard_quoted5.GuardQuoted5Char.test_plain_quoted_requests_stay_allowed
+OK  expect=FAIL got=FAIL    test_guard_quoted5.GuardQuoted5Red.test_typographic_quotes_and_batch_targets
+      AssertionError: Lists differ: ["/tmp/claude-1000/-home-cyyoo-develop-vmo[683 chars]nl'"] != []
