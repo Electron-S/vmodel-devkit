@@ -53,7 +53,8 @@ class TracerAccept(unittest.TestCase):
         for r in out:
             r.pop("ts", None)
             r.pop("tc", None)  # 0.2.0 review 4: lines carry a wall-clock time; compared without it
-        return [r for r in out if "b" not in r]  # and test boundary lines (the pytest process only)
+        # and test boundary lines (the pytest process only) and spawn lines (D45, checked separately)
+        return [r for r in out if "b" not in r and "spawn" not in r]
 
     def test_function_calls_are_attributed_to_the_test_and_children_are_traced(self):
         code = ("import subprocess, sys, mod, other\nmod.f(); other.g(); mod.K().m()\n"
@@ -67,6 +68,11 @@ class TracerAccept(unittest.TestCase):
         headers = [json.loads(f.read_text(encoding="utf-8").splitlines()[0]) for f in self.out.glob("*.jsonl")]
         self.assertEqual(len(headers), 2)  # parent and child
         self.assertEqual(len([r for r in recs if r["f"] == "f"]), 2)
+        # D45: the parent wrote a spawn line for the child, whose header carries the same origin token
+        spawns = [json.loads(x) for f in self.out.glob("*.jsonl")
+                  for x in f.read_text(encoding="utf-8").splitlines()[1:] if '"spawn"' in x]
+        self.assertEqual(len(spawns), 1, spawns)
+        self.assertEqual(sorted(str(h.get("origin")) for h in headers), sorted(["None", spawns[0]["spawn"]]))
 
     def test_import_alone_is_not_execution(self):
         self.assertEqual(self.run_py("import mod\n", self.spec()), 0)
