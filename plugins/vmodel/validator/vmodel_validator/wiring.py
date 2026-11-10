@@ -131,6 +131,55 @@ def _is_fixture(fn: ast.AST) -> bool:
     return False
 
 
+def _is_autouse(fn: ast.AST) -> bool:
+    for d in getattr(fn, "decorator_list", []):
+        if isinstance(d, ast.Call):
+            name = d.func.attr if isinstance(d.func, ast.Attribute) else getattr(d.func, "id", "")
+            if name == "fixture" and any(k.arg == "autouse" and isinstance(k.value, ast.Constant) and k.value.value is True
+                                         for k in d.keywords):
+                return True
+    return False
+
+
+def _usefixtures(marks: list[ast.AST]) -> list[str]:
+    """Fixture names of `pytest.mark.usefixtures("a", ...)` among decorators / pytestmark values."""
+    out: list[str] = []
+    for d in marks:
+        if isinstance(d, ast.Call) and isinstance(d.func, ast.Attribute) and d.func.attr == "usefixtures":
+            out += [a.value for a in d.args if isinstance(a, ast.Constant) and isinstance(a.value, str)]
+    return out
+
+
+def _pytestmark(body: list[ast.AST]) -> list[ast.AST]:
+    """The marks of `pytestmark = mark` / `pytestmark = [mark, ...]` in a module or class body."""
+    out: list[ast.AST] = []
+    for node in body:
+        if isinstance(node, ast.Assign) and any(isinstance(x, ast.Name) and x.id == "pytestmark" for x in node.targets):
+            v = node.value
+            out += list(v.elts) if isinstance(v, (ast.List, ast.Tuple)) else [v]
+    return out
+
+
+def applied_usefixtures(mod: Module, fn: ast.AST, cls: str | None) -> list[str]:
+    """Fixtures a test requests with @pytest.mark.usefixtures on itself, its class or the module's pytestmark (review
+    12 M2: requested like a parameter)."""
+    marks = [*getattr(fn, "decorator_list", []), *_pytestmark(getattr(mod.tree, "body", []))]
+    c = mod.classes.get(cls) if cls else None
+    if c is not None:
+        marks += [*c.decorator_list, *_pytestmark(c.body)]
+    return _usefixtures(marks)
+
+
+def applied_autouse(mod: Module, fixtures: dict, cls: str | None) -> list[tuple]:
+    """(module, fixture function) of the autouse fixtures that apply to a test of `mod` (in class `cls`): conftest.py
+    files above it, the module itself and the test's class."""
+    out = [(fm, ff) for fm, ff in fixtures.values() if _is_autouse(ff)]
+    c = mod.classes.get(cls) if cls else None
+    if c is not None:
+        out += [(mod, n) for n in c.body if isinstance(n, FUNC) and _is_fixture(n) and _is_autouse(n)]
+    return out
+
+
 def _target_names(t: ast.AST) -> list[str]:
     """Names an assignment target binds: plain names (also inside tuples/lists/starred); `obj.attr = ...` and
     `obj[k] = ...` bind nothing."""
@@ -667,11 +716,19 @@ def analyze(ix: Index, mod: Module, fn: ast.AST, depth: int = 0, seen: set | Non
                             sc.self_aliases[t.attr] = (node.value, ssc)
                 out.fixture_funcs.add(f"{cls}.{sm}")
                 analyze(ix, mod, setup, depth + 1, seen, out, cls=cls)
-        for p in sorted(sc.fixtures):  # requested fixtures run as part of the test
+        used = set(applied_usefixtures(mod, fn, cls)) if depth == 0 else set()
+        for p in sorted(sc.fixtures | used):  # requested fixtures (parameters, usefixtures) run as part of the test
             if p in fixtures and fixtures[p][1] is not fn:
                 fm, ff = fixtures[p]
                 out.fixture_funcs.add(getattr(ff, "name", p))
                 analyze(ix, fm, ff, depth + 1, seen, out)
+        if depth == 0:  # D45 policy A (review 12 H1): a provider patch made by an autouse fixture applies to the test
+            for fm, ff in applied_autouse(mod, fixtures, cls):
+                if ff is fn or getattr(ff, "name", None) in sc.fixtures | used:
+                    continue
+                extra = Analysis()  # only its patches count: an autouse fixture is no call path and no anchor
+                analyze(ix, fm, ff, depth + 1, set(), extra, cls=cls if fm is mod else None)
+                out.patches += extra.patches
     for node, _parent in _walk_own(roots):
         if isinstance(node, ast.Assign):  # `module.symbol = fake` replaces a source symbol (review 4 M6)
             for t in node.targets:

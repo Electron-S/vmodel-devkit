@@ -28,11 +28,14 @@ PYTEST_CURRENT_TEST, header "spawned_in") keeps that test id for its whole life,
 against exact test phase boundaries written by the validator's pytest plugin (vmodel_trace_plugin.py, loaded through
 PYTEST_PLUGINS): a line outside that test's phases is "detached", one inside its call is "call".
 
-Spawn origin (D45, policy B): subprocess.Popen writes {"spawn": token, "t", "p", "a": anchors of the starting stack and
-what its thread inherited} and gives the child the token in VMODEL_TRACE_ORIGIN; the child's header has "origin". The
+Spawn origin (D45, policy B): starting a process writes {"spawn": token, "t", "p", "a": anchors of the starting stack and
+what its thread inherited, "via"} and hands the child the token: subprocess.Popen, os.system and os.posix_spawn[p] in
+VMODEL_TRACE_ORIGIN (the child's header has "origin"), os.fork (also pty.spawn and the POSIX os.spawn*) through the
+fork hooks, multiprocessing (spawn, forkserver, fork) on the Process object (the child writes {"origin": token}). The
 validator follows token -> spawn line -> that process's own origin, so a child's work is credited to a test only when
-the test function or a fixture it requested started it (directly or through further children). Processes started
-another way (multiprocessing spawn/forkserver, os.posix_spawn) have no origin; a forked child keeps its stack.
+the test function or a fixture it requested started it (directly or through further children). Windows os.spawn* and
+C-level spawns have no origin. Consumer files also get {"t", "p", "k": consumer file, "a": anchors} lines (review 12
+H2): a runtime path credits only a consumer run of the test itself.
 
 Trust: this runs inside the processes under test, like the test runner itself (SPEC 5.7); the validator hashes the
 files after the run and records them in the signed evidence. Any problem here is swallowed: the traced program must
@@ -88,6 +91,7 @@ def _vmodel_trace_install():
         state["name"] = f"{os.getpid()}-{os.urandom(4).hex()}"
         state["out"] = open(os.path.join(spec["out"], state["name"] + ".jsonl"), "a", encoding="utf-8", buffering=1)
         state["spawns"] = 0
+        state["kdone"] = set()
         state["seen"] = set()
         state["full"] = False
         state["bytes"] = 0
@@ -114,12 +118,25 @@ def _vmodel_trace_install():
 
     open_out()
     if hasattr(os, "register_at_fork"):
+        def _before():
+            """D45 (review 12 M3): a forked child's origin is the forking stack and what that thread inherited (the
+            child's only thread becomes its main thread, which inherits nothing)."""
+            try:
+                state["fork"] = new_spawn(sys._getframe(1), "fork")
+            except Exception:
+                state["fork"] = None
+
+        def _parent():
+            state["fork"] = None
+
         def _child():
             try:
+                if state.get("fork"):
+                    os.environ[ORIGIN] = state["fork"]  # also for a program the child execs (os.spawn*, pty.spawn)
                 open_out()
             except Exception:
                 state["out"] = None
-        os.register_at_fork(after_in_child=_child)
+        os.register_at_fork(before=_before, after_in_parent=_parent, after_in_child=_child)
 
     def this_thread():
         return getattr(threading, "_active", {}).get(threading.get_ident())  # looked up each time: fork rebuilds it
@@ -249,6 +266,23 @@ def _vmodel_trace_install():
             write(("cap", test, phase, lab, func), {"edge_scan_capped": True, "t": test, "p": phase, "e": lab,
                                                     "f": func})
 
+    def note_consumer(test, phase, lab, frame):
+        """D45 (review 12 H2): the anchors a consumer ran under, so that a runtime path credits only the test's own
+        consumer run (not an autouse fixture's). One line per (test, phase, consumer, anchors); scans stop once the
+        test function itself is an anchor, or at the cap."""
+        k = (test, phase, lab)
+        if k in state["kdone"]:
+            return
+        n = state["scans"].get(("k", k), 0)
+        if n >= scan_limit:
+            return
+        state["scans"][("k", k)] = n + 1
+        _c, _e, anchors = stack_info(frame)
+        anchors = tuple(sorted(set(anchors) | inherited()[1]))
+        write(("k", test, phase, lab, anchors), {"t": test, "p": phase, "k": lab, "a": list(anchors)})
+        if own_anchor(test) in anchors:
+            state["kdone"].add(k)
+
     def record(code, frame=None):
         """None: not watched; True: watched (recorded when it is a function)."""
         lab = label_of(code.co_filename)
@@ -261,6 +295,8 @@ def _vmodel_trace_install():
         write((test, phase, lab, func), {"t": test, "p": phase, "m": lab, "f": func})
         if lab in providers:
             note_provider(test, phase, lab, func, frame)
+        if lab in consumers and frame is not None:
+            note_consumer(test, phase, lab, frame)
         return True
 
     def boundary(nodeid, phase):
@@ -326,37 +362,114 @@ def _vmodel_trace_install():
 
     threading.Thread.start = start
 
-    def patch_popen():
-        """Policy B (D45): who started a child process. Each subprocess.Popen writes a spawn line here with the
-        test-file functions (anchors) on the starting stack and what that thread inherited, and passes the line's token
-        to the child in VMODEL_TRACE_ORIGIN (an environment variable survives a venv launcher on Windows; the child's
-        header carries it). env=None becomes an explicit copy of os.environ plus the token."""
+    def new_spawn(frame, via):
+        """Policy B (D45): a spawn line for a process about to start from `frame` - the test-file functions (anchors)
+        on that stack and what its thread inherited - and its token, which reaches the child as VMODEL_TRACE_ORIGIN
+        (environment, survives a venv launcher on Windows) or on the multiprocessing Process object."""
+        test, phase = context()
+        _c, _e, anchors = stack_info(frame)
+        anchors = sorted(set(anchors) | set(inherited()[1]))
+        with lock:
+            state["spawns"] += 1
+            token = f"{state['name']}:{state['spawns']}"
+        write(("spawn", token), {"spawn": token, "t": test, "p": phase, "a": anchors, "via": via})
+        return token
+
+    def patch_spawners():
+        """subprocess.Popen (env=None becomes an explicit copy of os.environ plus the token), multiprocessing
+        Process.start/_bootstrap (spawn, forkserver, fork; the child writes an {"origin": token} line), os.system (the
+        token is put into os.environ for the call), os.posix_spawn[p] (the env argument). os.fork, pty.spawn and the
+        POSIX os.spawn* (fork + exec) are covered by the fork hooks above. Windows os.spawn* and C-level spawns are
+        not: such a process has no origin."""
+        import functools
         import subprocess
 
         original_init = subprocess.Popen.__init__
 
+        @functools.wraps(original_init)
         def init(self, args, *rest, **kwargs):
             try:
-                test, phase = context()
-                _c, _e, anchors = stack_info(sys._getframe(1))
-                anchors = sorted(set(anchors) | set(inherited()[1]))
-                with lock:
-                    state["spawns"] += 1
-                    token = f"{state['name']}:{state['spawns']}"
+                token = new_spawn(sys._getframe(1), "subprocess.Popen")
                 if len(rest) > 9:  # env passed positionally (bufsize ... cwd, env)
                     rest = (*rest[:9], {**(os.environ if rest[9] is None else rest[9]), ORIGIN: token}, *rest[10:])
                 else:
                     base = kwargs.get("env")
                     kwargs["env"] = {**(os.environ if base is None else base), ORIGIN: token}
-                write(("spawn", token), {"spawn": token, "t": test, "p": phase, "a": anchors})
             except Exception:
                 pass
             return original_init(self, args, *rest, **kwargs)
 
         subprocess.Popen.__init__ = init
 
+        env_lock = threading.Lock()
+        original_system = os.system
+
+        @functools.wraps(original_system)
+        def system(command):
+            try:
+                token = new_spawn(sys._getframe(1), "os.system")
+            except Exception:
+                return original_system(command)
+            with env_lock:  # serialises os.system calls while the token is in the process environment
+                prev = os.environ.get(ORIGIN)
+                os.environ[ORIGIN] = token
+                try:
+                    return original_system(command)
+                finally:
+                    if prev is None:
+                        os.environ.pop(ORIGIN, None)
+                    else:
+                        os.environ[ORIGIN] = prev
+
+        os.system = system
+
+        def wrap_posix_spawn(name):
+            original = getattr(os, name)
+
+            @functools.wraps(original)
+            def spawn(path, argv, env, *rest, **kwargs):
+                try:
+                    env = {**env, ORIGIN: new_spawn(sys._getframe(1), name)}
+                except Exception:
+                    pass
+                return original(path, argv, env, *rest, **kwargs)
+
+            setattr(os, name, spawn)
+
+        for name in ("posix_spawn", "posix_spawnp"):
+            if hasattr(os, name):
+                wrap_posix_spawn(name)
+
+        try:
+            import multiprocessing.process as mp_process
+        except Exception:
+            return
+        base = mp_process.BaseProcess
+        original_mp_start, original_bootstrap = base.start, base._bootstrap
+
+        @functools.wraps(original_mp_start)
+        def mp_start(self, *args, **kwargs):
+            try:
+                self._vmodel_origin = new_spawn(sys._getframe(1), "multiprocessing")
+            except Exception:
+                pass
+            return original_mp_start(self, *args, **kwargs)
+
+        @functools.wraps(original_bootstrap)
+        def mp_bootstrap(self, *args, **kwargs):
+            try:
+                token = getattr(self, "_vmodel_origin", None)
+                if isinstance(token, str):
+                    os.environ[ORIGIN] = token
+                    write(("origin", token), {"origin": token})
+            except Exception:
+                pass
+            return original_bootstrap(self, *args, **kwargs)
+
+        base.start, base._bootstrap = mp_start, mp_bootstrap
+
     try:
-        patch_popen()
+        patch_spawners()
     except Exception:
         pass
 

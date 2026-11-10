@@ -1910,6 +1910,7 @@ def read_runtime_trace(trace_dir: Path, prior_errors: list[str] | None = None, p
     boundaries: dict[str, list[tuple[float, str, str]]] = {}
     capped: set[str] = set()
     spawn_lines: dict[str, tuple[tuple[str, ...], str]] = {}  # D45: token -> (anchors of the starting stack, file)
+    raw_cons: list[tuple] = []  # consumer runs with their stack anchors (review 12 H2)
     file_origin: dict[str, str] = {}  # process file -> the spawn token it was started with (subprocess.Popen)
     spawned_files = 0
     windows_complete = oversized == 0  # a lost or truncated pytest-process file may have lost test boundaries
@@ -1950,6 +1951,14 @@ def read_runtime_trace(trace_dir: Path, prior_errors: list[str] | None = None, p
                 a = r.get("a")
                 spawn_lines.setdefault(r["spawn"], (tuple(sorted(x for x in a if isinstance(x, str)))
                                                     if isinstance(a, list) else (), f.name))
+            elif isinstance(r.get("origin"), str):  # a multiprocessing child names its start (overrides the header)
+                file_origin[f.name] = r["origin"]
+            elif isinstance(r.get("k"), str):  # a consumer ran, with the anchors of its stack (review 12 H2)
+                a = r.get("a")
+                if isinstance(t, str):
+                    raw_cons.append((t, str(r.get("p") or ""), f.name, r["k"],
+                                     tuple(sorted(x for x in a if isinstance(x, str))) if isinstance(a, list) else (),
+                                     ts, spawned))
             elif isinstance(r.get("e"), str):  # a provider function ran (c absent) or a consumer called it (c)
                 c, anchor = r.get("c"), r.get("a")
                 anchors = (anchor,) if isinstance(anchor, str) else tuple(
@@ -2001,13 +2010,15 @@ def read_runtime_trace(trace_dir: Path, prior_errors: list[str] | None = None, p
     events = [(t, phase_of(t, ph, ts, sp), fn, m, func) for t, ph, fn, m, func, ts, sp in raw_events]
     edges = [(t, phase_of(t, ph, ts, sp), fn, e, func, c, a, st, origins.get(fn, ()))
              for t, ph, fn, e, func, c, a, st, ts, sp in raw_edges]
+    cons = [(t, phase_of(t, ph, ts, sp), fn, lab, tuple(sorted(set(a) | set(origins.get(fn, ())))))
+            for t, ph, fn, lab, a, ts, sp in raw_cons]
     return {"active": procs > 0, "processes": procs, "spawned_processes": spawned_files, "methods": sorted(methods),
             "truncated": truncated, "ran_files": sorted(ran_files),
             "tests": {t: sorted(v) for t, v in sorted(tests.items())}, "edges": len(edges),
             "edge_scan_capped": sorted(capped)[:20], "test_boundaries": sum(len(v) for v in boundaries.values()),
             "boundary_clock": "perf_counter_ns" if use_tc else "wall",
             "spawned_lines_reattributed": moved, "errors": errors[:20], "_events": events, "_edges": edges,
-            "_ran": ran}
+            "_cons": cons, "_ran": ran}
 
 
 def test_function_of(nodeid: str) -> str:
@@ -2033,7 +2044,7 @@ def trace_by_test(rt: dict) -> dict[str, dict]:
         if len(ids) != 1:
             return None
         return out.setdefault(next(iter(ids)), {"functions": {}, "call": {}, "ran": set(), "edges": set(),
-                                                "prov_runs": set(), "prov_calls": {}})
+                                                "prov_runs": set(), "prov_calls": {}, "cons_calls": set()})
 
     for nodeid, phase, proc, label, func in rt.get("_events") or []:
         d = entry(nodeid)
@@ -2055,6 +2066,10 @@ def trace_by_test(rt: dict) -> dict[str, dict]:
                     (proc, tuple(sorted(set(anchors) | set(origin)))))
         else:
             d["edges"].add((provider, func, consumer, anchors))
+    for nodeid, phase, proc, label, anchors in rt.get("_cons") or []:
+        d = entry(nodeid)
+        if d is not None and phase == "call":
+            d["cons_calls"].add((proc, label, anchors))
     return out
 
 
@@ -2293,7 +2308,8 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
         blocks.append("no runtime trace was written although the validator injected its tracer (Python started with "
                       "-I/-E/-S, PYTHONPATH replaced, or the trace removed): which test functions ran and whether the "
                       "providers ran cannot be shown")
-    empty = {"functions": {}, "call": {}, "ran": set(), "edges": set(), "prov_runs": set(), "prov_calls": {}}
+    empty = {"functions": {}, "call": {}, "ran": set(), "edges": set(), "prov_runs": set(), "prov_calls": {},
+             "cons_calls": set()}
     for iid, iv in sorted(wd["interfaces"].items()):
         prov_rels = set(iv["provider_modules"])
         # review 4 H4: the provider is the interface's own symbols (the signature's def/class and the accepted G4
@@ -2410,15 +2426,20 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
                     # D45 policy B: only what the test function or a fixture it requested ran or started counts, never
                     # what an autouse / unrequested fixture started (thread, server, process) or an unlinked process
                     p_ok = any(set(a) & anchors for a in runs)
+                    # review 12 H2: and the consumer evidence must be the test's own consumer run as well
+                    cons_own = (not cons_rels) or any(lab in cons_rels and set(a) & anchors
+                                                      for _proc, lab, a in seen["cons_calls"])
                     where = " in a process other than the test's" if other else ""
                     started_by = sorted({x for a in runs for x in a} - anchors)
                     cand = ("insufficient", f"runtime path ({kind}) declared at G4 and the provider ran{where} during the "
                                             f"test call, but the test patches the provider ({', '.join(patch_targets)}): "
                                             "a test that replaces part of the provider does not verify the real "
                                             "connection by itself") if runs and patched else \
-                        ("test_level", None) if p_ok and cons_call else \
+                        ("test_level", None) if p_ok and cons_own else \
                         ("insufficient", f"runtime path ({kind}) declared at G4 and the provider ran{where} during the "
-                                         "test call, but no consumer function ran in it") if p_ok else \
+                                         "test call, but no consumer function ran in it" + (
+                                             " from the test function or a fixture it requested (only from an "
+                                             "autouse or unrequested fixture)" if cons_call else "")) if p_ok else \
                         ("suite_level", f"runtime path ({kind}) declared at G4 and the provider{sym_text} ran{where} "
                                         "during the test call, but only in a thread or process the test function or a "
                                         "fixture it requested did not start ("
