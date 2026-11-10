@@ -1,0 +1,22 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/7cecc96f-20f2-42ed-ab37-b71618f25fbb/scratchpad/red-7526ce3/plugins/vmodel",
+    "release_manifest": null
+  },
+  "git_head": "7526ce3",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "marker": "RED-TARGET",
+  "tests": 4,
+  "expectations_met": 4,
+  "violations": 0,
+  "seconds": 4.9
+}
+
+OK  expect=FAIL got=FAIL    test_guard_quoted3.GuardQuoted3AllowRed.test_dollar_in_quoted_text_and_backslash_continued_calls
+      AssertionError: {'le "t" --request "통화 기호 \'$\'를 붙이고 금액 > [213 chars]ed)'} != {}
+OK  expect=ok   got=ok      test_guard_quoted3.GuardQuoted3Char.test_plain_calls_and_tails_stay_allowed
+OK  expect=ok   got=ok      test_guard_quoted3.GuardQuoted3Char.test_round16_bypasses_stay_closed
+OK  expect=FAIL got=FAIL    test_guard_quoted3.GuardQuoted3DenyRed.test_newline_in_the_safe_tail_and_powershell_expressions
+      AssertionError: Lists differ: ['"/tmp/claude-1000/-home-cyyoo-develop-vm[919 chars] x)'] != []
