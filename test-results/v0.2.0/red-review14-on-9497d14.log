@@ -1,0 +1,24 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/7cecc96f-20f2-42ed-ab37-b71618f25fbb/scratchpad/red-9497d14/plugins/vmodel",
+    "release_manifest": null
+  },
+  "git_head": "247297e",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "marker": "RED-TARGET",
+  "tests": 4,
+  "expectations_met": 4,
+  "violations": 0,
+  "seconds": 17.0
+}
+
+OK  expect=FAIL got=FAIL    test_g6_review14.R14CappedRed.test_every_capped_test_is_known_to_the_judgement
+      AssertionError: 0 != 30 : RED-TARGET only the summary's first 20 were kept
+OK  expect=FAIL got=FAIL    test_g6_review14.R14PartialOverlapRed.test_SF2_provider_only_module_run_is_no_consumer_evidence
+      AssertionError: 'test_level' == 'test_level' : RED-TARGET no consumer function ran anywhere: {'consumer_modules': ['src/pipeline/report.py'], 'consumers': ['ARCH-002'], 'covered': True, 'covered_by': ['TEST-010', 'TEST-011'], 'id': 'IF-001', 'provider': 'ARCH-001', 'provider_modules': ['src/pipeline/parser.py', 'src/pipeline/report.py'], 'provider_symbols': ['parse'], 'tests': {'TEST-010': {'evide
+OK  expect=FAIL got=FAIL    test_g6_review14.R14ScanBudgetRed.test_C5_provider_noise_from_an_autouse_thread
+      AssertionError: 'suite_level' != 'test_level'
+OK  expect=FAIL got=FAIL    test_g6_review14.R14ScanBudgetRed.test_C5_reused_thread_id_after_an_autouse_thread_exits
+      AssertionError: 'insufficient' != 'test_level'
