@@ -1,0 +1,20 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/7cecc96f-20f2-42ed-ab37-b71618f25fbb/scratchpad/red-fa815b3/plugins/vmodel",
+    "release_manifest": null
+  },
+  "git_head": "cbe6680",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "marker": "RED-TARGET",
+  "tests": 3,
+  "expectations_met": 3,
+  "violations": 0,
+  "seconds": 3.2
+}
+
+OK  expect=ok   got=ok      test_guard_quoted.GuardQuotedTextChar.test_quoted_separators_without_a_write_stay_allowed
+OK  expect=ok   got=ok      test_guard_quoted.GuardQuotedTextChar.test_real_redirections_and_substitutions_stay_denied
+OK  expect=FAIL got=FAIL    test_guard_quoted.GuardQuotedTextRed.test_request_text_with_angle_brackets_is_a_validator_call
+      AssertionError: {'> <금액>\', 끝에 \'SUBTOTAL <소계>\', \'DISCOU[554 chars]ed)'} != {}
