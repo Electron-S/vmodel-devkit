@@ -1,0 +1,21 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/7cecc96f-20f2-42ed-ab37-b71618f25fbb/scratchpad/red-88971ac/plugins/vmodel",
+    "release_manifest": null
+  },
+  "git_head": "88971ac",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "marker": "RED-TARGET",
+  "tests": 3,
+  "expectations_met": 3,
+  "violations": 0,
+  "seconds": 3.9
+}
+
+OK  expect=FAIL got=FAIL    test_guard_quoted4.GuardQuoted4AllowRed.test_powershell_quoted_text_with_parentheses
+      AssertionError: {'-title "t" --request "Add a copy button [217 chars]ed)'} != {}
+OK  expect=ok   got=ok      test_guard_quoted4.GuardQuoted4Char.test_powershell_expressions_and_bash_quoted_text
+OK  expect=FAIL got=FAIL    test_guard_quoted4.GuardQuoted4DenyRed.test_a_quote_in_a_comment_does_not_hide_the_next_line
+      AssertionError: Lists differ: ['"/tmp/claude-1000/-home-cyyoo-develop-vm[318 chars]#\''] != []
