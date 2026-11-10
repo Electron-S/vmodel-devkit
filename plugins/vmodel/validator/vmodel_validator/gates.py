@@ -1892,7 +1892,8 @@ def _phase_in(runs: list[dict], ts: float) -> str:
 def read_runtime_trace(trace_dir: Path, prior_errors: list[str] | None = None, prior_oversized: int = 0) -> dict:
     """The tracer files (written inside the processes under test, hashed into the signed evidence). In memory:
     `_events` (pytest node id, phase, process file, watched file, function), `_edges` (node id, phase, process file,
-    provider file, provider entry function, consumer file or None, anchors), `_ran` (watched file, function) run
+    provider file, provider entry function, consumer file or None, anchors, started function, anchors of the stacks
+    that started the process (D45)), `_ran` (watched file, function) run
     anywhere. A process started during a test
     keeps that test id for its whole life, so its lines are re-read against the pytest process's test boundaries:
     after the test ended -> "detached", during its call -> "call" (review 4 H3/M1). `truncated`: some process hit the
@@ -1908,6 +1909,8 @@ def read_runtime_trace(trace_dir: Path, prior_errors: list[str] | None = None, p
     raw_edges: list[tuple] = []
     boundaries: dict[str, list[tuple[float, str, str]]] = {}
     capped: set[str] = set()
+    spawn_lines: dict[str, tuple[tuple[str, ...], str]] = {}  # D45: token -> (anchors of the starting stack, file)
+    file_origin: dict[str, str] = {}  # process file -> the spawn token it was started with (subprocess.Popen)
     spawned_files = 0
     windows_complete = oversized == 0  # a lost or truncated pytest-process file may have lost test boundaries
     for f in files:
@@ -1926,6 +1929,8 @@ def read_runtime_trace(trace_dir: Path, prior_errors: list[str] | None = None, p
         methods.add(str(head.get("method")))
         spawned = isinstance(head.get("spawned_in"), list)
         spawned_files += spawned
+        if isinstance(head.get("origin"), str):
+            file_origin[f.name] = head["origin"]
         for ln in lines[1:]:
             r = _trace_json(ln)
             if not isinstance(r, dict):
@@ -1941,6 +1946,10 @@ def read_runtime_trace(trace_dir: Path, prior_errors: list[str] | None = None, p
             elif r.get("edge_scan_capped") is True:
                 if isinstance(t, str):
                     capped.add(t)
+            elif isinstance(r.get("spawn"), str):
+                a = r.get("a")
+                spawn_lines.setdefault(r["spawn"], (tuple(sorted(x for x in a if isinstance(x, str)))
+                                                    if isinstance(a, list) else (), f.name))
             elif isinstance(r.get("e"), str):  # a provider function ran (c absent) or a consumer called it (c)
                 c, anchor = r.get("c"), r.get("a")
                 anchors = (anchor,) if isinstance(anchor, str) else tuple(
@@ -1975,8 +1984,23 @@ def read_runtime_trace(trace_dir: Path, prior_errors: list[str] | None = None, p
             moved[new] = moved.get(new, 0) + 1
         return new
 
+    def origin_of(fname: str) -> tuple[str, ...]:
+        """D45: the anchors of the stacks that started this process (its spawn line, then the starting process's own
+        origin, and so on); () when it was not started through subprocess.Popen in a traced process."""
+        out, seen = set(), set()
+        while fname in file_origin and fname not in seen:
+            seen.add(fname)
+            line = spawn_lines.get(file_origin[fname])
+            if line is None:
+                break
+            out.update(line[0])
+            fname = line[1]
+        return tuple(sorted(out))
+
+    origins = {fn: origin_of(fn) for fn in file_origin}
     events = [(t, phase_of(t, ph, ts, sp), fn, m, func) for t, ph, fn, m, func, ts, sp in raw_events]
-    edges = [(t, phase_of(t, ph, ts, sp), fn, e, func, c, a, st) for t, ph, fn, e, func, c, a, st, ts, sp in raw_edges]
+    edges = [(t, phase_of(t, ph, ts, sp), fn, e, func, c, a, st, origins.get(fn, ()))
+             for t, ph, fn, e, func, c, a, st, ts, sp in raw_edges]
     return {"active": procs > 0, "processes": procs, "spawned_processes": spawned_files, "methods": sorted(methods),
             "truncated": truncated, "ran_files": sorted(ran_files),
             "tests": {t: sorted(v) for t, v in sorted(tests.items())}, "edges": len(edges),
@@ -1998,9 +2022,10 @@ def trace_by_test(rt: dict) -> dict[str, dict]:
     """TEST id -> what ran during the pytest tests named with exactly that id: `functions` (file::qualname, any
     phase) with the processes they ran in, `ran` ((file, function) in any phase of the test's own execution), `call`
     ((file, function) -> processes, call phase), `edges` ((provider file, entry function, consumer file, anchors)),
-    `prov_runs` ((provider file, entry function, anchors)) and `prov_calls` ((provider file, entry function) ->
-    processes, call phase). The tracer attributes another thread to the test
-    that started it and a pool work item to the test that submitted it."""
+    `prov_runs` ((provider file, entry function, anchors)) and `prov_calls` ((provider file, entry function, started
+    function) -> {(process, anchors on its stack plus the anchors of the stacks that started its process)}, call phase,
+    D45). The tracer attributes another thread to the test that started it and a pool work item to the test that
+    submitted it."""
     out: dict[str, dict] = {}
 
     def entry(nodeid: str) -> dict | None:
@@ -2019,14 +2044,15 @@ def trace_by_test(rt: dict) -> dict[str, dict]:
             d["ran"].add((label, func))
         if phase == "call":
             d["call"].setdefault((label, func), set()).add(proc)
-    for nodeid, phase, proc, provider, func, consumer, anchors, start in rt.get("_edges") or []:
+    for nodeid, phase, proc, provider, func, consumer, anchors, start, origin in rt.get("_edges") or []:
         d = entry(nodeid)
         if d is None or phase == "detached":
             continue
         if consumer is None:
             d["prov_runs"].add((provider, func, anchors, start))
             if phase == "call":
-                d["prov_calls"].setdefault((provider, func, start), set()).add(proc)
+                d["prov_calls"].setdefault((provider, func, start), set()).add(
+                    (proc, tuple(sorted(set(anchors) | set(origin)))))
         else:
             d["edges"].add((provider, func, consumer, anchors))
     return out
@@ -2261,7 +2287,7 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
     if_view = []
     levels_data: dict[str, dict] = {}
     ran_all: set[tuple[str, str]] = set(rt.get("_ran") or set())
-    ran_entries = {(e, fn, st) for _t, _ph, _f, e, fn, c, _a, st in rt.get("_edges") or [] if c is None}
+    ran_entries = {(e, fn, st) for _t, _ph, _f, e, fn, c, _a, st, _o in rt.get("_edges") or [] if c is None}
     capped = set(rt.get("edge_scan_capped") or [])
     if not rt["active"]:  # the validator injected its tracer: no trace at all is missing evidence (review N4)
         blocks.append("no runtime trace was written although the validator injected its tracer (Python started with "
@@ -2376,15 +2402,29 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
                         continue
                     r["path"] = "runtime"
                     kind = (declared.get((iid, tid)) or {}).get("kind")
-                    calls = seen["prov_calls"]  # entries of the provider during the call (review 6 M1)
-                    if kind in ("subprocess", "ipc"):  # proof must come from another process (review F6)
-                        p_ok = any(is_prov(k[0], pfn(k[1], k[2])) and v - procs for k, v in calls.items())
-                    else:
-                        p_ok = any(is_prov(k[0], pfn(k[1], k[2])) for k in calls)
-                    where = " in a process other than the test's" if kind in ("subprocess", "ipc") else ""
-                    cand = ("test_level", None) if p_ok and cons_call else \
+                    # entries of the provider during the call (review 6 M1) with the anchors of the stack they ran on
+                    # plus those of the stacks that started their process (D45)
+                    other = kind in ("subprocess", "ipc")  # proof must come from another process (review F6)
+                    runs = [a for k, v in seen["prov_calls"].items() if is_prov(k[0], pfn(k[1], k[2]))
+                            for proc, a in v if not other or proc not in procs]
+                    # D45 policy B: only what the test function or a fixture it requested ran or started counts, never
+                    # what an autouse / unrequested fixture started (thread, server, process) or an unlinked process
+                    p_ok = any(set(a) & anchors for a in runs)
+                    where = " in a process other than the test's" if other else ""
+                    started_by = sorted({x for a in runs for x in a} - anchors)
+                    cand = ("insufficient", f"runtime path ({kind}) declared at G4 and the provider ran{where} during the "
+                                            f"test call, but the test patches the provider ({', '.join(patch_targets)}): "
+                                            "a test that replaces part of the provider does not verify the real "
+                                            "connection by itself") if runs and patched else \
+                        ("test_level", None) if p_ok and cons_call else \
                         ("insufficient", f"runtime path ({kind}) declared at G4 and the provider ran{where} during the "
                                          "test call, but no consumer function ran in it") if p_ok else \
+                        ("suite_level", f"runtime path ({kind}) declared at G4 and the provider{sym_text} ran{where} "
+                                        "during the test call, but only in a thread or process the test function or a "
+                                        "fixture it requested did not start ("
+                                        f"{', '.join(started_by) or 'not linked to any test function'}: an autouse or "
+                                        "unrequested fixture, or a process not started through subprocess.Popen)") \
+                        if runs else \
                         ("suite_level", f"runtime path ({kind}) declared at G4, but no provider function{sym_text} ran{where} "
                                         "during this test's call; it ran elsewhere in the run") if prov_anywhere else \
                         ("insufficient", f"runtime path ({kind}) declared at G4, but no provider function{sym_text} ran{where} "

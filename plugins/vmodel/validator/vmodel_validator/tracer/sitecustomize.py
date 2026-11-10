@@ -28,6 +28,12 @@ PYTEST_CURRENT_TEST, header "spawned_in") keeps that test id for its whole life,
 against exact test phase boundaries written by the validator's pytest plugin (vmodel_trace_plugin.py, loaded through
 PYTEST_PLUGINS): a line outside that test's phases is "detached", one inside its call is "call".
 
+Spawn origin (D45, policy B): subprocess.Popen writes {"spawn": token, "t", "p", "a": anchors of the starting stack and
+what its thread inherited} and gives the child the token in VMODEL_TRACE_ORIGIN; the child's header has "origin". The
+validator follows token -> spawn line -> that process's own origin, so a child's work is credited to a test only when
+the test function or a fixture it requested started it (directly or through further children). Processes started
+another way (multiprocessing spawn/forkserver, os.posix_spawn) have no origin; a forked child keeps its stack.
+
 Trust: this runs inside the processes under test, like the test runner itself (SPEC 5.7); the validator hashes the
 files after the run and records them in the signed evidence. Any problem here is swallowed: the traced program must
 behave exactly as without the tracer. A project's own sitecustomize (later on sys.path) still runs.
@@ -70,6 +76,7 @@ def _vmodel_trace_install():
             except (ValueError, RuntimeError):
                 continue
     method = "sys.monitoring" if tool is not None else "setprofile"
+    ORIGIN = "VMODEL_TRACE_ORIGIN"  # the spawn line (in the starting process's file) a subprocess.Popen child came from
     state = {"out": None, "seen": set(), "full": False, "bytes": 0, "found": {}, "scans": {}}
     lock = threading.Lock()
     local = threading.local()  # the thread-pool work item running in this thread: (owner test, consumer labels)
@@ -78,8 +85,9 @@ def _vmodel_trace_install():
     def open_out():
         """One file per process; a forked child gets its own (it must not write into its parent's file). spawned_in:
         the test this process was started in (inherited PYTEST_CURRENT_TEST), None for the pytest process itself."""
-        state["out"] = open(os.path.join(spec["out"], f"{os.getpid()}-{os.urandom(4).hex()}.jsonl"), "a",
-                            encoding="utf-8", buffering=1)
+        state["name"] = f"{os.getpid()}-{os.urandom(4).hex()}"
+        state["out"] = open(os.path.join(spec["out"], state["name"] + ".jsonl"), "a", encoding="utf-8", buffering=1)
+        state["spawns"] = 0
         state["seen"] = set()
         state["full"] = False
         state["bytes"] = 0
@@ -87,9 +95,11 @@ def _vmodel_trace_install():
         state["scans"] = {}
         born = env_context()
         state["spawned"] = born[0] is not None
+        origin = os.environ.get(ORIGIN)
         state["out"].write(json.dumps({"v": 2, "pid": os.getpid(), "ppid": os.getppid(),
                                        "python": sys.version.split()[0], "method": method,
                                        "spawned_in": list(born) if born[0] is not None else None,
+                                       "origin": origin if origin else None,
                                        "argv": [str(a) for a in getattr(sys, "orig_argv", sys.argv)][:20]},
                                       ensure_ascii=True) + "\n")
 
@@ -315,6 +325,40 @@ def _vmodel_trace_install():
         return original_start(self, *args, **kwargs)
 
     threading.Thread.start = start
+
+    def patch_popen():
+        """Policy B (D45): who started a child process. Each subprocess.Popen writes a spawn line here with the
+        test-file functions (anchors) on the starting stack and what that thread inherited, and passes the line's token
+        to the child in VMODEL_TRACE_ORIGIN (an environment variable survives a venv launcher on Windows; the child's
+        header carries it). env=None becomes an explicit copy of os.environ plus the token."""
+        import subprocess
+
+        original_init = subprocess.Popen.__init__
+
+        def init(self, args, *rest, **kwargs):
+            try:
+                test, phase = context()
+                _c, _e, anchors = stack_info(sys._getframe(1))
+                anchors = sorted(set(anchors) | set(inherited()[1]))
+                with lock:
+                    state["spawns"] += 1
+                    token = f"{state['name']}:{state['spawns']}"
+                if len(rest) > 9:  # env passed positionally (bufsize ... cwd, env)
+                    rest = (*rest[:9], {**(os.environ if rest[9] is None else rest[9]), ORIGIN: token}, *rest[10:])
+                else:
+                    base = kwargs.get("env")
+                    kwargs["env"] = {**(os.environ if base is None else base), ORIGIN: token}
+                write(("spawn", token), {"spawn": token, "t": test, "p": phase, "a": anchors})
+            except Exception:
+                pass
+            return original_init(self, args, *rest, **kwargs)
+
+        subprocess.Popen.__init__ = init
+
+    try:
+        patch_popen()
+    except Exception:
+        pass
 
     if tool is not None:
         disable = mon.DISABLE
