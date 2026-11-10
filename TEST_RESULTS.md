@@ -769,6 +769,7 @@ E2E-B (`samples/textstats`, 단일 함수 기능, 37턴, 3.4분)
 | 항목 | 결과 |
 |---|---|
 | WSL 전체 하네스(깨끗한 worktree) | `7c7b446` 432 통과, `c451a13` 444 통과, **`fa815b3` 453 통과**(각 skip 1: xdist 시험 환경 변수 없음) (`wsl-harness-*.log`) |
+| Windows 11, Python 3.13.14 venv, cp949, 한글·공백 경로(`fa815b3`) | **453 실행, 실패 0**, skip 55 = §15.8의 50(pty 필요한 사용자 전용 경로 등) + 이번 POSIX 전용 새 시험 5(fork 2, fifo·fork 2, forkserver 1). multiprocessing spawn 풀·`os.system`·usefixtures 서버·patch·autouse 시험은 Windows에서 실행·통과 (`windows-harness-fa815b3.log`) |
 | 릴리스 재빌드 | `release.py --force` → `dist/vmodel-0.2.0` 46개 파일, core `sha256:ce81befa63914478d8e54252d3cf05ad9104ced40c4e4eab398be7295e80a134` (`0664a39`) |
 | 릴리스 점검(`release_check.py`) | OK: 소스 = 0.2.0 기록, 0.1.0~0.1.5 사본·기록 불변, 태그 `v0.1.2`~`v0.1.5` 불변, `v0.2.0` 태그 없음, `main` = `78517d5` (`release-check-fa815b3.json`) |
 | `claude plugin validate --strict` | 소스·릴리스 모두 통과 |
