@@ -1,0 +1,7 @@
+{
+  "id": "WI-001",
+  "title": "longest_word 기능",
+  "request": "문장에서 가장 긴 단어를 찾는 기능을 추가해 주세요. 함수 longest_word(text)는 공백으로 나눈 단어 중 가장 긴 것을 돌려주고(길이가 같으면 먼저 나온 것), 단어가 하나도 없으면 ValueError를 냅니다.",
+  "profile": "STANDARD",
+  "created_at": "2026-11-10T00:15:38.483Z"
+}

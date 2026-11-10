@@ -648,3 +648,99 @@ T01 `test_g6_gate` T01, T02 T02, T03 `test_g6_config` T03, T04 gate T04·T04b, T
 - 계측 한계(D43): forkserver(Python 3.14부터 Linux 기본)와 이전 테스트가 만든 fork 풀의 귀속, 세션·모듈 범위 서버의 경로 B BLOCKED, 데이터 전용 IF BLOCKED, 같은 프로세스 위조(F5), pytest가 아닌 러너(경로 B 증명 불가).
 - 실제 Claude 세션에서의 G6(verifier의 `interfaces`·`runtime_paths`·`integration_applicability` 작성, 사용자 `configure-tests` 흐름)은 실행하지 않았다(D8 E2E 계획 WORKITEM §8, 승인 필요).
 - Windows의 pty 경로, Python 3.11, macOS는 미검증. 업그레이드마다 G4 재리뷰 비용(D40)은 그대로(D4 결정).
+
+## 15. v0.2.0 최종 독립 검증과 실제 E2E (2026-11-09~10, 브랜치 `g6-dev`)
+
+사용자 지시("VModel DevKit v0.2.0 — 최종 독립 검증 및 E2E")에 따른 결과다. main 병합·`v0.2.0` 태그·원격 푸시는 하지 않았다. 결정은 D44, 처리표는 `docs/g6/WORKITEM.md` §7.4~7.11, 로그는 `test-results/v0.2.0/`. 하네스는 Claude 없이 사용자·verifier 역할을 대신한다(그 부분은 시뮬레이션). 실제 Claude 세션은 §15.5의 2회뿐이다.
+
+### 15.1 출발 상태 확인
+`g6-dev` = `c83df4b`, 마지막 코드 커밋 `14b34af`(그 뒤 플러그인 트리 변경 없음 확인), `main` = 태그 `v0.1.5` = `78517d5`, 릴리스 후보 core `f835ec91…`. HANDOFF·TEST_RESULTS §14의 보고와 같았다.
+
+### 15.2 사용자 Case A~F (`tests/test_g6_evidence.py`, RED 대상 `14b34af`)
+14b34af(D43 규칙)에서 재현된 것: **Case B**(IF-001 테스트 둘 다 목, parser는 TEST-012(IF-002)에서만 실행) → G6 PASSED(경고), **Case C**(TEST-010만 목) → `covered_by`에 목 테스트 TEST-010 포함, **Case D**(테스트가 provider를 직접 부르고 consumer 안의 호출은 목) → 경고도 없이 PASSED. 즉 Suite-level 증거가 Test-level 검증으로 표시됐다. RED 10/10(목표 assertion), 이후 계측기 단위 테스트 포함 21/21.
+최종 빌드의 판정(모두 하네스에서 실제 실행):
+| Case | 시나리오 | 결과 |
+|---|---|---|
+| A 정상 연결 | consumer가 실제 provider 호출 | PASSED, IF 2/2 Test-level Verified |
+| B Mock만 | IF-001 테스트 전부 목 | BLOCKED `integration_evidence_insufficient`, 두 테스트 Suite-level Evidence Only, `covered_by` 비어 있음 |
+| C 다른 테스트의 실행 | TEST-010 목, TEST-011 실제 | PASSED, `covered_by` = TEST-011만, TEST-010은 "Suite-level Evidence Only, not counted" |
+| D 연결 근거 없음 | provider·consumer가 같은 테스트에서 따로 실행 | BLOCKED, "not called from the consumer"(Insufficient). provider만 부르는 테스트는 G4가 FAILED |
+| E subprocess/API/풀 | 선언된 subprocess, 함수 fixture의 HTTP 서버 스레드, 공유 스레드 풀 consumer, 함수 fixture 서버 프로세스 | 모두 PASSED, Test-level |
+| F 증거 불충분 | `-I` 자식(계측 불가), provider가 어디서도 안 돎, 계측 없음 | BLOCKED, IF별 Insufficient Evidence와 사유를 gate·status·trace·report에 표시 |
+Suite-level 증거만 있는 IF는 PASS가 되지 않는다(D44). 판정 근거는 호출 스택의 consumer→provider 연결(진입 함수·앵커), 스레드·풀 작업의 시작·제출 관계, 자식 프로세스는 Validator 소유 pytest 플러그인이 기록한 그 테스트의 call 구간이다.
+
+### 15.3 독립 검토 4~11회차 (별도 컨텍스트 검토자, 읽기 전용 worktree, 지적은 검토 빌드 대상 RED 후 수정)
+| 회차 | 대상 | 지적(HIGH/MED/LOW) | 처리 |
+|---|---|---|---|
+| 4 | `c83df4b`(=`14b34af`) | 4/6/4 | H1~H4·M1~M6·L1·L2 수정, L3·L4 문서화 (`test_g6_review4`, RED 12/12) |
+| 5 | `464d01b` | 3/4/0 | N1·N1b·N2·N3·N7·N8 수정, N4·N5 문서화 (`test_g6_review5`, RED 10/10) |
+| 6 | `e8a5a7e` | 1/4/0 | M1·M2·M4·M5/6 수정, M7 보수 판단 (`test_g6_review6`, RED 5/5) |
+| 7 | `ce59c33` | 0/3/2 | R1·R3·R4(판단)·R5 수정, R2 문서화 (`test_g6_review7`) |
+| 8 | `953d502` | 0/1/1 | P1 수정, P2 문서화 (`test_g6_review8`) |
+| 9 | `31ccb0d` | 0/1(거짓 PASS)/0 | Q1 수정 (`test_g6_review9`) |
+| 10 | `3a08592` | 0/0/0 | 새 문제 없음 |
+| 11 | `5275b5d`(E2E 결함 수정) | 0/0/0 | 새 문제 없음(두 파일 IF 판정 불변) |
+내가 회귀 실행 중 발견해 고친 것: `prov_runs` KeyError 내부 오류(`e8a5a7e` 직전 작업 트리). E2E가 찾은 결함 2건은 §15.5.
+
+### 15.4 전체 회귀 (깨끗한 detached worktree)
+| 환경 | 커밋 | 결과 |
+|---|---|---|
+| WSL2 Ubuntu 24.04, Python 3.12.3, pytest 9.0.3 | `464d01b` | 394/394 |
+| 같음 | `e8a5a7e` | 409/409 |
+| 같음 | `ce59c33` | 414/414 |
+| 같음 | `589c779`(E2E에 쓴 빌드) | 422 통과, skip 1(xdist 환경 변수 없을 때) |
+| Windows 11, Python 3.13.14 venv, cp949, 한글·공백 경로 | `e8a5a7e` | 409 실행, 실패 0, skip 49 |
+최종 커밋 결과는 §15.8.
+
+### 15.5 실제 Claude Code E2E (승인: sonnet 최대 2회, 회당 $2, 합계 $4)
+공통: `scripts/e2e/e2e_run.py`, `--model sonnet`(실제 `claude-sonnet-5-5`), `--max-budget-usd 2`, `--permission-mode auto --permission-prompts none`, `--setting-sources project,local`, `--no-session-persistence`, `--plugin-dir dist/vmodel-0.2.0`(빌드 `589c779`, core `2d3dd0ab…`), 임시 샌드박스(스크래치의 `e2e-a`·`e2e-b/한글 샘플 프로젝트`, 전용 `VMODEL_HOME`). `--dangerously-skip-permissions` 쓰지 않음. 실제 업무 프로젝트·기존 릴리스·서명 원장은 건드리지 않았다. 세션 뒤 판정은 모델 호출 없이 `scripts/e2e/e2e_verify.py`(릴리스 Validator의 status·audit·verify-evidence·trace·report). 산출물 `test-results/v0.2.0/e2e/`.
+**실행 횟수 2회, 비용 합계 약 $2.08**(A $1.48, B $0.60; CLI `total_cost_usd`, 추정치). 두 세션 모두 끝에 release core `2d3dd0aba096` 무결성 OK.
+
+E2E-A (`samples/scorepipe`, 기존 provider `parser.py` 수정 금지, 소비 측 요약 보고·CLI 추가, 72턴, 8.3분)
+- 합성 시딩: provider가 문서대로 점수를 문자열로 반환하고, 요청은 정수 계산·가짜 파서 주입 단위 테스트를 요구(`SEEDING.md`). **에이전트는 함정에 걸리지 않았다**(provider 문서를 읽고 `int()` 변환). 그래서 시딩한 결함으로 G6 FAILED가 나는 단계는 **관찰되지 않았다.**
+- 실제 흐름: 요구사항(REQ 6) → 아키텍처(ARCH-001 summary, ARCH-002 CLI, IF-001 summarize) → 설계·테스트 명세(unit 15, integration 2, system 4) → 구현 → G1~G5 PASSED → **G6 BLOCKED `integration_evidence_insufficient`**(R00011) → 에이전트가 원인을 P2(두 컴포넌트가 한 모듈 `report.py`)로 보고 `summarize`를 `summary.py`로 옮김(아키텍처 변경) → G2~G5 재평가 → **G6 PASSED**(R00019, IF-001 Test-level Verified, TEST-016·017) → audit OK(원장 19건, 증거 6건 모두 OK) → WI PARTIALLY_VERIFIED.
+- 그 BLOCKED는 **DevKit 결함**이었다(나중에 직접 재현): 6회차 M1 수정(진입 함수 기록)이 같은 파일 안 `main → summarize`를 `main`으로 기록해 "summarize never ran"으로 잘못 판단했다(`e8a5a7e`는 통과). `test_g6_e2e_findings`로 고정(RED 대상 `589c779`) 후 수정(§15.8). 에이전트의 모듈 분리는 그 자체로 합리적이었지만 계기는 Validator 오판이었다.
+- BLOCKED는 중립 판정이라 결함 기록 대상이 아니다: 에이전트가 BLOCKED 기록을 인용한 DEFECT를 쓰려다 Validator가 인용 오류로 거부했고, `defects.json`은 비어 있다. 따라서 **G6 FAILED → DEFECT → 수정 → CLOSED 경로는 실제 세션에서 검증되지 않았다**(하네스 F1·T12와 §14.6 시연으로만 확인).
+- guard 거부 1건: 셸 heredoc으로 `.vmodel/work-items/.../architecture.json`을 고쳐 쓰려던 명령. 올바른 차단(우회 없음, 에이전트는 Edit/Write로 진행).
+- 관찰: 에이전트는 기존 파서를 컴포넌트·IF로 모델링하지 않았다. 그래서 G6이 판정한 IF는 summary↔CLI 하나이고, summary↔기존 파서 연결은 통합 테스트가 실제로 실행하지만 IF로 판정되지는 않았다(verifier가 G2에서 승인). DevKit이 기존 코드 의존을 IF로 강제하지 않는 한계다.
+
+E2E-B (`samples/textstats`, 단일 함수 기능, 37턴, 3.4분)
+- REQ 3 → ARCH-001 하나, IF 0 → 설계·unit 7·system 2, integration 0 → G1~G5 PASSED → G6 PASSED + `applicability: not_applicable`(R00011), 실행 체크 전부 skip, 증거 없음 → WI PARTIALLY_VERIFIED, `gate_summary`의 `na: [G6]`.
+- verifier가 G2·G3(그리고 G4) 리뷰에 `integration_applicability`(not_required, 사유, endpoints_reviewed)를 기록했다. G6 N/A 근거는 G2(R00005)·G3(R00007) 리뷰.
+- 세션 최종 보고: "G6 통합 검증 N/A … 통합 테스트는 실행하지 않았으므로 '통합 테스트 통과'가 아닙니다." 보고서 파일에도 "통합 테스트 통과" 없음. audit OK(원장 11건, 증거 2건 OK), guard 거부 0.
+- 발견한 표시 결함(LOW): 보고서 Gate별 체크 절 제목이 `### G6 — PASSED (R00011)`(REQ-G6-17 위반). 고정·수정(§15.8).
+
+### 15.6 G1~G6과 원장·증거
+- G1~G5 판정·manifest 불변: `test_g6_compat`(C1/C2), 0.1.5 서명 원장·증거의 새 코어 검증(T17), 0.1.5 → 0.2.0 재고정(T20) 모두 최종 회귀에 포함되어 통과.
+- G6 증거: 서명된 record.json에 `runtime_trace`(프로세스 수, spawned 프로세스, 테스트 경계 수, 비교 시계 `perf_counter_ns`, 연결 수, 오류), 실행 직후 스냅샷한 `trace/*.jsonl` 해시. 남은 자식 프로세스가 서명 뒤 증거를 바꾸지 못함(4회차 M5).
+- E2E 두 샌드박스: audit OK, 모든 증거 verify-evidence OK, trace 끊어진 링크 없음.
+
+### 15.7 미검증·남은 위험
+- 실제 세션에서 G6 FAILED → DEFECT → 수정 → CLOSED 경로(시딩 함정이 발동하지 않음). 추가 실행은 승인 범위 밖이라 하지 않았다.
+- E2E 이후 수정(같은 모듈 provider/consumer, 보고서 제목)은 하네스로만 확인했다(E2E는 `589c779`에서 실행).
+- 문서화한 보수적 BLOCKED(정상 코드가 막힐 수 있음): 데이터 전달형 테스트, `asyncio.gather` 작업·provider 제너레이터 전달(N4/N5), setup에서 한 번 실행한 함수를 call에서 다시 쓰는 자식 서버(R2), provider 모듈의 호출 가능한 클래스 데코레이터(P2), 세션·모듈 범위 서버, pytest가 아닌 러너, provider 모듈에 정의된 시계·설정 도우미를 patch한 테스트(Q1 판단의 대가).
+- 사용자 확인이 필요한 보수 판단 2가지: (1) 테스트 함수가 provider(인터페이스 심볼 또는 provider 모듈에 정의된 함수)를 patch하면 그 테스트는 Test-level로 세지 않는다(6회차 M7, 7회차 R4, 9회차 Q1). (2) autouse·요청하지 않은 fixture가 만든 연결은 세지 않고, 요청한 fixture의 연결은 센다.
+- 같은 프로세스 신뢰 경계(SPEC §5.7): 계측 줄·경계·시각은 테스트 코드가 의도적으로 위조할 수 있다.
+- Windows Python 3.12 이하의 거친 벽시계는 `perf_counter_ns` 비교로 대응했고 시뮬레이션만 했다(실제 3.12 Windows는 미검증). macOS 미검증. 4회차 L3(setprofile 경로의 기록 유실)·L4(손자 프로세스가 파이프를 잡을 때 시간 초과 보고)는 고치지 않았다.
+- 검토는 8회 반복했고 회차마다 새 형태가 나왔다(7회차부터 HIGH 0, 9회차 Q1이 마지막 거짓 PASS). 정적 분석·계측 기반 판정의 본질적 한계로, 앞으로도 새 우회·오판이 나올 수 있다.
+
+### 15.8 최종 후보 회귀와 릴리스 점검 (코드 `5275b5d`, 릴리스 기록 `83b3b9a`)
+| 항목 | 결과 |
+|---|---|
+| WSL 전체 하네스(깨끗한 worktree `83b3b9a`) | **424 통과**, skip 1(xdist 시험: `VMODEL_R7_XDIST_PYTHON` 없을 때), 1258초 (`wsl-harness-83b3b9a.log`) |
+| Windows 11, Python 3.13.14, cp949, 한글·공백 경로(`83b3b9a`) | **424 실행, 실패 0**, skip 50(pty 필요한 사용자 전용 경로 45, 심볼릭 링크 권한 2, ruff 없음 1, xdist 1, 기타 pty 1) (`windows-harness-83b3b9a.log`) |
+| Windows cp949 전체(`589c779`, E2E 빌드) | 422 실행, 실패 0, skip 50 (`windows-harness-589c779.log`) |
+| 릴리스 재빌드 | `release.py --force` → `dist/vmodel-0.2.0` 46개 파일, core `sha256:9cc0997a886cd36b5f116a9f0889017a347c5accf234488db6e391a0d1927b9d` |
+| 릴리스 점검(`release_check.py`, Validator 코드 없이 해시 재계산) | OK: 소스 = 0.2.0 기록, 0.1.0~0.1.5 사본·기록 일치·불변, 태그 `v0.1.2`~`v0.1.5` 불변, `v0.2.0` 태그 없음, `main` = `78517d5` (`release-check-83b3b9a.json`) |
+| `claude plugin validate --strict` | 소스·릴리스 모두 통과(README 마켓플레이스 설치 줄 권고만) |
+| 0.1.5 서명 원장·증거 호환, G1~G5 판정·manifest 불변, 0.1.5 → 0.2.0 재고정 | 하네스 T17·C1·C2·T20(pty)·D4 포함, 위 회귀에서 통과 |
+| 새 시험 모듈 | `test_g6_evidence`(23), `test_g6_review4`(15), `test_g6_review5`(12), `test_g6_review6`(5), `test_g6_review7`(5), `test_g6_review8`(2), `test_g6_review9`(1), `test_g6_e2e_findings`(2) |
+| RED 로그 | `red-evidence-on-14b34af.log`, `red-evidence2-on-14b34af.log`, `red-review4-on-14b34af.log`, `red-review5-on-464d01b.log`, `red-review6-on-e8a5a7e.log`, `red-review7-on-ce59c33.log`, `red-review8-on-953d502.log`, `red-review9-on-31ccb0d.log`, `red-e2e-findings-on-589c779.log` (모두 위반 0) |
+
+### 15.9 판정: RELEASE CONDITIONAL
+근거(통과한 것): CRITICAL·HIGH 미해결 0(7~11회차 HIGH 0, 마지막 거짓 PASS인 9회차 Q1은 10회차에서 닫힘), 사용자 Case A~F가 하네스에서 기대대로 판정, Suite-level 증거만으로는 PASS가 나지 않음, 최종 후보 WSL 424 통과·Windows 424 실행 실패 0(skip 50), 릴리스 해시·태그·0.1.x 기록 불변, 실제 E2E-B(N/A)는 기대 전부 충족, 실제 E2E-A는 Provider/Consumer 개발 → G6 BLOCKED → 수정 → G6 Test-level PASS·audit OK까지 진행.
+조건(확정 전에 사용자 판단이 필요한 것):
+1. 실제 세션에서 G6 FAILED → DEFECT → 수정 → CLOSED 경로는 관찰되지 않았다(시딩 함정 미발동). 하네스와 §14.6 시연으로만 확인됐다. 그대로 받아들일지, 하네스 개입(봉인된 결함 주입, D26/D27 방식)을 쓰는 2세션 드릴을 추가 승인할지.
+2. E2E 이후의 수정 2건(같은 모듈 provider/consumer, 보고서 제목)은 하네스·11회차 검토로만 확인했다(실제 세션은 `589c779`).
+3. 보수 판단 2가지의 확인: 테스트 함수가 provider(인터페이스 심볼 또는 provider 모듈에 정의된 함수)를 patch하면 Test-level로 세지 않음, autouse·요청하지 않은 fixture의 연결은 세지 않음.
+4. 문서화한 거짓 BLOCKED 한계(§15.7)를 받아들일지.

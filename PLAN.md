@@ -140,6 +140,7 @@ D35에 따라 바꿀 것(Gate 판정은 바꾸지 않는다)
 - IF가 있는 실제 산출물. 지금까지 실제 세션이 textstats·scorestats 샘플로 만든 아키텍처는 모두 컴포넌트 1개, IF 0개였다(E2E-3, drill S1). 이대로면 G6은 공허하게 통과한다.
 
 ### M5. G6 Integration Verification (0.2.0 후보, 2026-11-09 구현)
+2026-11-10 최종 독립 검증(사용자 지시 "최종 독립 검증 및 E2E"): Case A~F 테스트로 D43의 Suite-level 귀속 문제를 재현하고 D44(테스트 수준 증거만 셈)로 고쳤다. 독립 검토 4~11회차, 실제 E2E 2회(sonnet, 합계 약 $2.08), 결과 TEST_RESULTS §15. 확정(병합·태그)과 푸시는 사용자 결정 대기.
 2026-11-09 두 번째 결정(D1~D8)으로 남은 §9 항목이 모두 정해져 구현했다(D42). 진행·검토 기록은 `docs/g6/WORKITEM.md` §6·§7, 결과는 TEST_RESULTS §14. 다음: 사용자 확정(병합·태그 여부), 실전 E2E 2회 승인(계획 WORKITEM §8: sonnet 2회, 회당 $2, 합계 $4).
 
 2026-11-09 사용자가 정책 네 가지를 정했다(D41). 확정 설계·요구사항·테스트 명세·구현 절차는 `docs/g6/G6-DESIGN.md`가 정본이다(이전 결정안 D39·`G6-DESIGN-PROPOSAL.md`는 대안 비교 기록).
@@ -162,10 +163,11 @@ D35에 따라 바꿀 것(Gate 판정은 바꾸지 않는다)
 하네스: G1~G7 → COMPLETED, AC 미검증 → FAILED, G6 STALE → G7 STALE 전파, 재작업 루프, Windows cp949.
 
 ### M7. Extension 실제 세션 E2E
+2026-11-10: G6 부분 실행(E2E-A: G6 BLOCKED → 아키텍처 수정 → PASSED, E2E-B: G6 N/A). G6 FAILED → DEFECT → CLOSED는 실제 세션에서 아직 관찰되지 않음(시딩 함정 미발동).
 새 샘플로 `/vmodel:start`부터 G7 COMPLETED까지 1회, G6 실패에서 시작하는 재작업 1회. 실제 Claude 실행이라 횟수와 상한을 정해 사용자 승인을 받은 뒤에만 한다.
 
 ## 버전 이력
-- 0.2.0 후보 (브랜치 `g6-dev`, 확정 전): G6 Integration Verification(D41·D42). 기록·태그는 사용자 확정 때 정한다(릴리스 사본 `dist/vmodel-0.2.0`과 `releases/vmodel-0.2.0.json`은 후보로 만들어 두었고, 같은 버전으로 다시 빌드하려면 `release.py --force`).
+- 0.2.0 후보 (브랜치 `g6-dev`, 확정 전): G6 Integration Verification(D41·D42·D43·D44). 최종 독립 검증 TEST_RESULTS §15. 기록·태그는 사용자 확정 때 정한다(릴리스 사본 `dist/vmodel-0.2.0`과 `releases/vmodel-0.2.0.json`은 후보로 만들어 두었고, 같은 버전으로 다시 빌드하려면 `release.py --force`).
 - 0.1.5 (releases/vmodel-0.1.5.json, core `sha256:37071459…`, 태그 `v0.1.5`, 2026-11-09 확정): 업그레이드 시 DevKit 권한 규칙 이동(D38). Gate 판정·원장 형식·manifest·guard 불변. **현재 기준 버전.** 검증: WSL 225/225, Windows cp949 225 실행·실패 0·skip 40, 확정 검증 TEST_RESULTS §13(D40). 알려진 비용: 업그레이드마다 G4 재리뷰.
 - 0.1.0 (releases/vmodel-0.1.0.json): 최초 고정 릴리스. E2E-1에서 사용.
 - 0.1.1 (releases/vmodel-0.1.1.json): 스킬/에이전트가 프로젝트 밖 플러그인 파일을 Read하지 않도록 `vmodel guide <topic>` 추가. E2E-2에서 사용.

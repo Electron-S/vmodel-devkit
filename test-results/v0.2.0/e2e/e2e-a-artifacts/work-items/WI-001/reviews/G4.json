@@ -1,0 +1,20 @@
+{"gate": "G4", "work_item": "WI-001", "reviewer": "vmodel:verifier", "target_hash": "sha256:ed7b7bb336f615852a0cf5abc19d2daeffd54f5e84baa6f754db8de52aa7ac3a",
+ "reviewed_at": "2026-11-10T00:00:00Z", "verdict": "approve",
+ "summary": "summarize now lives in summary.py (provider) and report.py (consumer) imports it; code matches DESIGN-001/002 contracts and TEST-001..017 are implemented faithfully with meaningful assertions. Integration tests call the real consumer and provider with no mocks; wiring shows static call paths reaching both. parser.py is unmodified (git clean).",
+ "checklist": [
+  {"item": "Code matches design signatures, errors, boundaries", "result": "ok", "note": "summarize signature, half-up formula, empty case, first-max top, ValueError/TypeError propagation; main usage/read/format errors exit 2, ensure_ascii JSON, utf-8-sig."},
+  {"item": "No unrequested behaviour / dead code", "result": "ok", "note": "report re-exports summarize via __all__ as stated; nothing extra."},
+  {"item": "Unit tests TEST-001..015 faithful, tokens in names", "result": "ok", "note": "Expected values match specs, including 2.25->2.3 half-up boundary, key order, float type, single parser call."},
+  {"item": "Assertions meaningful, nothing skipped, no conftest tampering", "result": "ok", "note": "No skips or swallowed exceptions; no conftest."},
+  {"item": "defects / change requests", "result": "na", "note": "defects.json is empty; no change-requests.json."},
+  {"item": "parser.py unmodified (REQ-006)", "result": "ok", "note": "git status shows no change for src/scorepipe/parser.py."},
+  {"item": "integration_test command runs integration folder", "result": "ok", "note": "argv targets tests/integration; unit_test ignores it."},
+  {"item": "Integration tests connect consumer and provider", "result": "ok", "note": "TEST-016 (main plus python -m subprocess) and TEST-017 (real parser error to exit 2) use no mocks; wiring: reaches provider and consumer True."}
+ ],
+ "findings": [
+  {"id": "F-1", "severity": "info", "description": "Unit tests for summarize import it from scorepipe.report (re-export) rather than scorepipe.summary; works, but importing from the provider module would be more direct.", "related": ["TEST-001", "DESIGN-001"], "status": "open"}
+ ],
+ "interfaces": [
+  {"id": "IF-001", "result": "ok", "provider_symbols": ["summarize"],
+   "note": "Provider summarize in summary.py; consumer main in report.py. TEST-016 and TEST-017 have static call paths to both, so no runtime_paths declaration is needed (the subprocess part of TEST-016 is additional). Error path (ValueError from real parser) covered by TEST-017."}
+ ]}

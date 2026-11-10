@@ -293,6 +293,12 @@ Q1 닫힘(BLOCKED), P1 PASSED 유지, 7회차 R4 BLOCKED·R1 PASSED 유지. 새 
 ### 7.11 검토 회차 요약
 4~10회차: 지적 HIGH 4(4회차) → 3(5회차) → 1(6회차) → 0(7~10회차). 7회차 이후 남은 것은 거짓 BLOCKED(중립) 쪽이 대부분이고, 거짓 PASS는 9회차 Q1 하나였으며 10회차에서 닫혔다. 고치지 않고 문서화한 것: 5회차 N4/N5, 7회차 R2, 8회차 P2, 4회차 L3/L4.
 
+### 7.12 실제 E2E에서 찾은 결함과 11회차 (`5275b5d`)
+실제 세션 2회(TEST_RESULTS §15.5)가 하네스·검토가 놓친 결함 2건을 찾았다. `tests/test_g6_e2e_findings.py`로 고정(RED 대상 `589c779`, 2/2) 후 수정 `5275b5d`.
+- E2E-A: provider와 consumer 설계 단위가 한 모듈이면 진입 함수 규칙(6회차 M1)이 consumer 함수(`main`)를 기록해 "summarize never ran" 거짓 BLOCKED(`ce59c33` 회귀). 같은 파일 IF는 시작된 함수로 판단(`"s"` 필드).
+- E2E-B: 보고서 Gate별 절 제목이 N/A 평가에 "G6 — PASSED"(REQ-G6-17). "N/A (recorded PASSED, no integration test executed)"로.
+11회차 확인: 문제 없음. 두 파일 IF 판정 불변(Q1·P1·R4·R1·R2 대조·M1·M2·M7 같은 결과), 같은 파일 IF는 문서화한 약화만.
+
 ## 8. 실전 E2E 계획 (D8, 실행은 별도 승인)
 - 예산: sonnet 최대 2회, 회당 `--max-budget-usd 2`, 합계 $4 상한. `--permission-mode auto`, `--setting-sources project,local`, `--plugin-dir dist/vmodel-0.2.0`, `--dangerously-skip-permissions` 금지. 실행 전 모델 호출 없는 준비(setup)와 기대 판정 확인을 먼저 한다.
 - 시나리오 A (Provider/Consumer, G6 실패 → 결함 → 수정 → 재검증): 기존 코드가 있는 프로젝트(점수 파서 모듈과 그 통합 테스트가 이미 `tests/integration/`에 있어 `init`이 실제 경로를 등록 — D3 규칙을 그대로 지킴)에 "파서 결과를 소비하는 요약 보고 CLI를 추가해줘"를 요청한다. 파서의 오류 계약(형식 오류 줄 번호)과 소비 측 처리 사이의 불일치를 하나 미리 심어(D26 블라인드 시딩, 세션 프롬프트에 알리지 않음) 단위 테스트는 통과하고 IF 통합 테스트에서 드러나게 한다. 기대: G1~G5 PASSED → G6 FAILED(TEST_MAPPING·RESULTS) → DEFECT(gate G6, IF·TEST 연결) → 수정 → G4 재리뷰 → G5 → G6 PASSED, 결함 CLOSED. 관찰: placeholder·import-only 테스트를 쓰는지, 통합 테스트가 경로 A인지, verifier가 `interfaces` 항목을 쓰는지, guard 우회 0.

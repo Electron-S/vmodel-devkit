@@ -1,0 +1,269 @@
+{
+  "release": "/home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.2.0",
+  "status_exit": 0,
+  "audit": {
+    "exit": 0,
+    "tail": [
+      "audit: validator 0.2.0 release core 2d3dd0aba096; 11 ledger entries; 2 evidence record(s) checked",
+      "audit OK"
+    ]
+  },
+  "gate_sequence": [
+    "R00003 WI-001 G1 PASSED",
+    "R00005 WI-001 G2 PASSED",
+    "R00007 WI-001 G3 PASSED",
+    "R00009 WI-001 G4 PASSED",
+    "R00010 WI-001 G5 PASSED",
+    "R00011 WI-001 G6 PASSED applicability=not_applicable"
+  ],
+  "reviews": [
+    "R00002 G1 approve",
+    "R00004 G2 approve",
+    "R00006 G3 approve",
+    "R00008 G4 approve"
+  ],
+  "verify_evidence": [
+    {
+      "record": "R00009",
+      "gate": "G4",
+      "path": ".vmodel/evidence/WI-001/G4/20261110T001838614796Z-lint-0f9d54/record.json",
+      "exit": 0,
+      "result": "evidence OK"
+    },
+    {
+      "record": "R00010",
+      "gate": "G5",
+      "path": ".vmodel/evidence/WI-001/G5/20261110T001841131210Z-unit-46d5da/record.json",
+      "exit": 0,
+      "result": "evidence OK"
+    }
+  ],
+  "g6_records": [
+    {
+      "record": "R00011",
+      "status": "PASSED",
+      "applicability": "not_applicable",
+      "blocked_reason": null,
+      "if_coverage": {
+        "status": "skip",
+        "detail": "not executed: not applicable (no integration test was run)",
+        "items": []
+      },
+      "interfaces": [],
+      "executed_tests": {},
+      "failed_cases": null,
+      "runtime_trace": {
+        "active": null,
+        "processes": null,
+        "spawned_processes": null,
+        "truncated": null,
+        "test_boundaries": null,
+        "boundary_clock": null,
+        "edges": null,
+        "errors": null
+      }
+    }
+  ],
+  "work_items": [
+    {
+      "id": "WI-001",
+      "status": "PARTIALLY_VERIFIED",
+      "gate_summary": {
+        "passed_current": [
+          "G1",
+          "G2",
+          "G3",
+          "G4",
+          "G5"
+        ],
+        "na": [
+          "G6"
+        ],
+        "not_evaluated": [],
+        "review_required": [],
+        "in_progress": [],
+        "not_started": [],
+        "stale": [],
+        "failed": [],
+        "blocked": [],
+        "not_implemented": [
+          "G7"
+        ]
+      },
+      "gates": {
+        "G1": "PASSED",
+        "G2": "PASSED",
+        "G3": "PASSED",
+        "G4": "PASSED",
+        "G5": "PASSED",
+        "G6": "N/A",
+        "G7": "NOT_IMPLEMENTED"
+      },
+      "next_action": "G1-G5 PASSED, G6 N/A (no integration scope: One component with no interfaces and no external system; it is a pure function using only the standard library.; no integration test executed). G7+ are extension gates (not implemented); report PARTIALLY_VERIFIED.",
+      "defects": []
+    }
+  ],
+  "architecture": {
+    "WI-001": {
+      "components": [
+        "ARCH-001"
+      ],
+      "interfaces": []
+    }
+  },
+  "tests": {
+    "WI-001": [
+      [
+        "TEST-001",
+        "unit",
+        [
+          "DESIGN-001",
+          "REQ-001"
+        ]
+      ],
+      [
+        "TEST-002",
+        "unit",
+        [
+          "DESIGN-001",
+          "REQ-001"
+        ]
+      ],
+      [
+        "TEST-003",
+        "unit",
+        [
+          "DESIGN-001"
+        ]
+      ],
+      [
+        "TEST-004",
+        "unit",
+        [
+          "DESIGN-001",
+          "REQ-001"
+        ]
+      ],
+      [
+        "TEST-005",
+        "unit",
+        [
+          "DESIGN-001",
+          "REQ-002"
+        ]
+      ],
+      [
+        "TEST-006",
+        "unit",
+        [
+          "DESIGN-001",
+          "REQ-002"
+        ]
+      ],
+      [
+        "TEST-007",
+        "unit",
+        [
+          "DESIGN-001",
+          "REQ-002"
+        ]
+      ],
+      [
+        "TEST-008",
+        "system",
+        [
+          "REQ-001"
+        ]
+      ],
+      [
+        "TEST-009",
+        "system",
+        [
+          "REQ-002"
+        ]
+      ]
+    ]
+  },
+  "review_keys": {
+    "WI-001": {
+      "G2": {
+        "verdict": "approve",
+        "integration_applicability": {
+          "decision": "not_required",
+          "reason": "One component with no interfaces and no external system; it is a pure function using only the standard library.",
+          "endpoints_reviewed": [
+            "caller-supplied text argument (in-process)",
+            "returned longest word",
+            "ValueError raised to the caller"
+          ]
+        },
+        "interfaces": null
+      },
+      "G3": {
+        "verdict": "approve",
+        "integration_applicability": {
+          "decision": "not_required",
+          "reason": "One component (ARCH-001) with a pure function; no interfaces, no integration specs; G6 not applicable.",
+          "endpoints_reviewed": [
+            "caller-supplied text argument",
+            "return value / ValueError to caller",
+            "no files, DB or network"
+          ]
+        },
+        "interfaces": null
+      },
+      "G4": {
+        "verdict": "approve",
+        "integration_applicability": {
+          "decision": "not_required",
+          "reason": "Single pure function, no interfaces in architecture.json.",
+          "endpoints_reviewed": [
+            "function argument text",
+            "return value / ValueError"
+          ]
+        },
+        "interfaces": null
+      }
+    }
+  },
+  "trace": {
+    "WI-001": [
+      "   ARCH: ARCH-001   DESIGN: DESIGN-001",
+      "   CODE: src/textstats/longest.py:longest_word",
+      "   TEST: TEST-001(unit:passed), TEST-002(unit:passed), TEST-003(unit:passed), TEST-004(unit:passed), TEST-005(unit:passed), TEST-006(unit:passed), TEST-007(unit:passed), TEST-008(system:not run)",
+      "REQ-002 [functional/active] 단어 없음 오류",
+      "   AC: AC-002-1, AC-002-2",
+      "   ARCH: ARCH-001   DESIGN: DESIGN-001",
+      "   CODE: src/textstats/longest.py:longest_word",
+      "   TEST: TEST-001(unit:passed), TEST-002(unit:passed), TEST-003(unit:passed), TEST-004(unit:passed), TEST-005(unit:passed), TEST-006(unit:passed), TEST-007(unit:passed), TEST-009(system:not run)",
+      "REQ-003 [constraint/active] 표준 라이브러리만 사용",
+      "   AC: -",
+      "   ARCH: ARCH-001   DESIGN: DESIGN-001",
+      "   CODE: src/textstats/longest.py:longest_word",
+      "   TEST: TEST-001(unit:passed), TEST-002(unit:passed), TEST-003(unit:passed), TEST-004(unit:passed), TEST-005(unit:passed), TEST-006(unit:passed), TEST-007(unit:passed)",
+      "Interfaces (integration results from N/A (no interfaces)):",
+      "Reverse (TEST -> REQ):",
+      "   TEST-001 -> REQ-001, REQ-002, REQ-003",
+      "   TEST-002 -> REQ-001, REQ-002, REQ-003",
+      "   TEST-003 -> REQ-001, REQ-002, REQ-003",
+      "   TEST-004 -> REQ-001, REQ-002, REQ-003",
+      "   TEST-005 -> REQ-001, REQ-002, REQ-003",
+      "   TEST-006 -> REQ-001, REQ-002, REQ-003",
+      "   TEST-007 -> REQ-001, REQ-002, REQ-003",
+      "   TEST-008 -> REQ-001",
+      "   TEST-009 -> REQ-002",
+      "Dangling references: none"
+    ]
+  },
+  "report_g6_lines": {
+    "WI-001": []
+  },
+  "session": {
+    "subtype": "success",
+    "total_cost_usd": 0.5987660000000001,
+    "num_turns": 37,
+    "duration_ms": 201506
+  },
+  "session_result_text": "`longest_word(text)`를 추가했고 V-Model 절차를 G6까지 마쳤습니다. 최종 상태는 **PARTIALLY_VERIFIED**(WI-001)입니다. G6는 통합 테스트를 실행하지 않은 N/A이고, G7은 이 DevKit 버전에 구현돼 있지 않습니다. 따라서 V-Model을 완전히 마친 것은 아닙니다.\n\n**구현**\n- 함수는 `src/textstats/longest.py`에 있습니다. `text.split()`으로 나눈 뒤 `max(words, key=len)`을 쓰므로 길이가 같으면 먼저 나온 단어가 반환됩니다.\n- 단어가 하나도 없으면(빈 문자열, 공백만 있는 문자열) ValueError를 냅니다.\n- 단위 테스트는 `tests/test_longest.py`에 TEST-001~007로 있습니다. 직접 실행했을 때 기존 스모크 테스트를 포함해 8개 모두 통과했습니다.\n\n**Gate별 결과**\n\n| Gate | 결과 | 기록 |\n|---|---|---|\n| G1 요구사항 | PASSED | R00003 |\n| G2 아키텍처 | PASSED | R00005 |\n| G3 설계·테스트 명세 | PASSED | R00007 |\n| G4 구현 | PASSED | R00009 |\n| G5 단위 검증 | PASSED (8/8) | R00010 |\n| G6 통합 검증 | **N/A** | R00011 |\n| G7 시스템 | 미구현 | — |\n\n**G6 판정**\n- 컴포넌트가 하나(ARCH-001)이고 인터페이스와 외부 데이터 흐름이 없어 N/A입니다.\n- G2와 G3 리뷰에서 검증자가 N/A를 확인했습니다.\n- 통합 테스트는 실행하지 않았으므로 \"통합 테스트 통과\"가 아닙니다.\n\n**감사(audit) 결과**\n- 장부(ledger)와 검증기 무결성은 OK입니다. 장부 항목은 11개입니다.\n- 결함 추적 검사는 오류 0, 경고 0입니다.\n- 결함(DEFECT)과 변경 요청(CR)은 없었고 재작업도 없었습니다.\n- 검증자 리뷰(G1~G4)는 모두 approve였습니다. 차단 사항은 없었고 minor 1건, info 3건이 있었습니다.\n  - G1(minor): REQ-003(표준 라이브러리만 사용)에는 인수 기준이 없어 측정할 수 없습니다.\n  - G2(info): 아키텍처에 함수 이름과 시그니처가 명시되어 있지 않습니다.\n  - G3(info): 반환값이 `text.split()`의 원소라는 사후조건에 전용 테스트가 없습니다. TEST-001~004가 간접적으로 확인합니다.\n  - G4(info): 시스템 테스트 명세 TEST-008·009에는 자동화 파일이 없습니다. 같은 호출을 단위 테스트가 확인합니다.\n- G4·G5 증거 파일은 `.vmodel/evidence/WI-001/G4/`와 `.vmodel/evidence/WI-001/G5/` 아래에 있고, G6는 증거 없이 N/A로 기록됐습니다.\n- 보고서는 `.vmodel/reports/WI-001.md`에 있습니다.\n\n**확인할 가정**\n- 공백은 `str.split()`이 구분하는 모든 공백(스페이스, 탭, 줄바꿈)입니다. 구두점은 단어에 포함돼 길이에 셉니다.\n- `str`이 아닌 입력의 동작은 요청에 없어 별도로 처리하지 않았습니다.",
+  "guard_denials": []
+}

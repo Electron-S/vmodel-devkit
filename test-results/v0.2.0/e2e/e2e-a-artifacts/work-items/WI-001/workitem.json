@@ -1,0 +1,7 @@
+{
+  "id": "WI-001",
+  "title": "성적 요약 보고",
+  "request": "기존 성적 내보내기 파서(src/scorepipe/parser.py, 수정 금지)의 결과로 summarize(text) 및 python -m scorepipe.report CLI 추가, 파서 주입 가능한 단위 테스트",
+  "profile": "STANDARD",
+  "created_at": "2026-11-10T00:15:30.679Z"
+}

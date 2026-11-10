@@ -1,0 +1,17 @@
+{"gate": "G2", "work_item": "WI-001", "reviewer": "vmodel:verifier", "target_hash": "sha256:6af7a4ba5b59b92b3a164baf0e9ac95b82dc74b25e0cf0c10c03c532cb8bfa46",
+ "reviewed_at": "2026-11-10T01:00:00Z", "verdict": "approve",
+ "summary": "Two components cover REQ-001..006; IF-001 (summarize) crosses the module boundary summary.py -> report.py with a precise signature and error propagation. NFR and constraint REQ-006 have a credible approach, and the integration strategy exercises the real provider through the CLI. Only minor remarks.",
+ "checklist": [
+  {"item": "Every requirement realised by a component", "result": "ok", "note": "REQ-001/2/3/6 -> ARCH-001, REQ-004/5 -> ARCH-002"},
+  {"item": "Interfaces precise", "result": "ok", "note": "IF-001 signature, return keys and ValueError propagation defined"},
+  {"item": "Data flows consistent", "result": "ok", "note": "ARCH-002 -> ARCH-001 via IF-001; matches interface consumer list"},
+  {"item": "NFRs have approach", "result": "ok", "note": "REQ-006 via parser injection and stdlib only; ensure_ascii for cp949 is in REQ-004 but not in nfr_mapping (minor)"},
+  {"item": "Trade-offs justified", "result": "ok", "note": "parser injection, integer half-up rounding"},
+  {"item": "Integration strategy covers all interfaces", "result": "ok", "note": "main() and python -m with real parser and summarize; fake parser only in unit tests"},
+  {"item": "External endpoints (file, stdout/stderr)", "result": "ok", "note": "handled in ARCH-002; no external system needing a contract"}
+ ],
+ "findings": [
+  {"id": "F-1", "severity": "minor", "description": "The architecture does not mention that report.py re-exports summarize from summary.py; consumers importing from report would depend on an undocumented path. Consider noting it in ARCH-002 or keeping consumers on scorepipe.summary.", "related": ["ARCH-001", "ARCH-002", "IF-001"], "status": "open"},
+  {"id": "F-2", "severity": "info", "description": "The ASCII-only JSON output (cp949 safety) is covered by REQ-004 and AC-004-2 but not by any architecture note (json.dumps ensure_ascii in ARCH-002).", "related": ["REQ-004", "ARCH-002"], "status": "open"}
+ ]
+}

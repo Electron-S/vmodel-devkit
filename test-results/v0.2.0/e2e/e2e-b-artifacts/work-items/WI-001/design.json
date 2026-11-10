@@ -1,0 +1,14 @@
+{
+  "work_item": "WI-001",
+  "units": [
+    {"id": "DESIGN-001", "component": "ARCH-001", "module": "src/textstats/longest.py", "name": "longest_word",
+     "kind": "function", "signature": "def longest_word(text: str) -> str",
+     "description": "text.split()으로 단어를 나누고 max(words, key=len)으로 가장 긴 단어를 돌려준다. 동률이면 먼저 나온 단어. 단어가 없으면 ValueError.",
+     "requirements": ["REQ-001", "REQ-002", "REQ-003"],
+     "contract": {
+       "preconditions": ["text는 str이다"],
+       "postconditions": ["반환값은 text.split()의 원소 중 하나이다", "반환값의 길이는 모든 단어 길이 이상이다", "길이가 같은 단어가 여럿이면 가장 먼저 나온 단어이다"]},
+     "errors": [{"exception": "ValueError", "condition": "text.split()이 빈 리스트일 때(빈 문자열 또는 공백만 있는 문자열)"}],
+     "boundary_conditions": ["빈 문자열 -> ValueError", "공백/탭/줄바꿈만 있는 문자열 -> ValueError", "단어 하나 -> 그 단어", "길이가 같은 단어들 -> 먼저 나온 단어", "앞뒤/연속 공백은 무시"]}
+  ]
+}

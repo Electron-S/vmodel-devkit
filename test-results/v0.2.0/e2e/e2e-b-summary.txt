@@ -1,0 +1,73 @@
+{
+  "tag": "b",
+  "auto_trigger_vmodel_start": false,
+  "skill_invocations": [],
+  "subagents": [
+    "vmodel:verifier",
+    "vmodel:verifier",
+    "vmodel:test-designer",
+    "vmodel:verifier",
+    "vmodel:verifier"
+  ],
+  "work_items": [
+    {
+      "id": "WI-001",
+      "status": "PARTIALLY_VERIFIED",
+      "gates": {
+        "G1": "PASSED",
+        "G2": "PASSED",
+        "G3": "PASSED",
+        "G4": "PASSED",
+        "G5": "PASSED",
+        "G6": "PASSED",
+        "G7": "NOT_IMPLEMENTED"
+      }
+    }
+  ],
+  "review_submissions": [
+    {
+      "record_id": "R00002",
+      "gate": "G1",
+      "verdict": "approve"
+    },
+    {
+      "record_id": "R00004",
+      "gate": "G2",
+      "verdict": "approve"
+    },
+    {
+      "record_id": "R00006",
+      "gate": "G3",
+      "verdict": "approve"
+    },
+    {
+      "record_id": "R00008",
+      "gate": "G4",
+      "verdict": "approve"
+    }
+  ],
+  "guard_denials": [],
+  "audit": {
+    "exit": 0,
+    "tail": [
+      "audit: validator 0.2.0 release core 2d3dd0aba096; 11 ledger entries; 2 evidence record(s) checked",
+      "audit OK"
+    ]
+  },
+  "gate_records": [
+    "R00003 G1 PASSED",
+    "R00005 G2 PASSED",
+    "R00007 G3 PASSED",
+    "R00009 G4 PASSED",
+    "R00010 G5 PASSED",
+    "R00011 G6 PASSED"
+  ],
+  "final": {
+    "subtype": "success",
+    "total_cost_usd": 0.5987660000000001,
+    "num_turns": 37,
+    "duration_ms": 201506
+  },
+  "result_tail": "니다. G6는 통합 테스트를 실행하지 않은 N/A이고, G7은 이 DevKit 버전에 구현돼 있지 않습니다. 따라서 V-Model을 완전히 마친 것은 아닙니다.\n\n**구현**\n- 함수는 `src/textstats/longest.py`에 있습니다. `text.split()`으로 나눈 뒤 `max(words, key=len)`을 쓰므로 길이가 같으면 먼저 나온 단어가 반환됩니다.\n- 단어가 하나도 없으면(빈 문자열, 공백만 있는 문자열) ValueError를 냅니다.\n- 단위 테스트는 `tests/test_longest.py`에 TEST-001~007로 있습니다. 직접 실행했을 때 기존 스모크 테스트를 포함해 8개 모두 통과했습니다.\n\n**Gate별 결과**\n\n| Gate | 결과 | 기록 |\n|---|---|---|\n| G1 요구사항 | PASSED | R00003 |\n| G2 아키텍처 | PASSED | R00005 |\n| G3 설계·테스트 명세 | PASSED | R00007 |\n| G4 구현 | PASSED | R00009 |\n| G5 단위 검증 | PASSED (8/8) | R00010 |\n| G6 통합 검증 | **N/A** | R00011 |\n| G7 시스템 | 미구현 | — |\n\n**G6 판정**\n- 컴포넌트가 하나(ARCH-001)이고 인터페이스와 외부 데이터 흐름이 없어 N/A입니다.\n- G2와 G3 리뷰에서 검증자가 N/A를 확인했습니다.\n- 통합 테스트는 실행하지 않았으므로 \"통합 테스트 통과\"가 아닙니다.\n\n**감사(audit) 결과**\n- 장부(ledger)와 검증기 무결성은 OK입니다. 장부 항목은 11개입니다.\n- 결함 추적 검사는 오류 0, 경고 0입니다.\n- 결함(DEFECT)과 변경 요청(CR)은 없었고 재작업도 없었습니다.\n- 검증자 리뷰(G1~G4)는 모두 approve였습니다. 차단 사항은 없었고 minor 1건, info 3건이 있었습니다.\n  - G1(minor): REQ-003(표준 라이브러리만 사용)에는 인수 기준이 없어 측정할 수 없습니다.\n  - G2(info): 아키텍처에 함수 이름과 시그니처가 명시되어 있지 않습니다.\n  - G3(info): 반환값이 `text.split()`의 원소라는 사후조건에 전용 테스트가 없습니다. TEST-001~004가 간접적으로 확인합니다.\n  - G4(info): 시스템 테스트 명세 TEST-008·009에는 자동화 파일이 없습니다. 같은 호출을 단위 테스트가 확인합니다.\n- G4·G5 증거 파일은 `.vmodel/evidence/WI-001/G4/`와 `.vmodel/evidence/WI-001/G5/` 아래에 있고, G6는 증거 없이 N/A로 기록됐습니다.\n- 보고서는 `.vmodel/reports/WI-001.md`에 있습니다.\n\n**확인할 가정**\n- 공백은 `str.split()`이 구분하는 모든 공백(스페이스, 탭, 줄바꿈)입니다. 구두점은 단어에 포함돼 길이에 셉니다.\n- `str`이 아닌 입력의 동작은 요청에 없어 별도로 처리하지 않았습니다."
+}
+exit=0

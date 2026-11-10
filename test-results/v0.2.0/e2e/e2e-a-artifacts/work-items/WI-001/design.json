@@ -1,0 +1,33 @@
+{
+  "work_item": "WI-001",
+  "units": [
+    {"id": "DESIGN-001", "component": "ARCH-001", "module": "src/scorepipe/summary.py", "name": "summarize",
+     "kind": "function", "signature": "def summarize(text: str, parser=parse_scores) -> dict",
+     "description": "records = parser(text)로 [{'name': str, 'score': str}, ...]를 얻고(파서 계약: 위반 시 ValueError('line N: ...')), 점수를 int로 변환해 count, total, average(정수 half-up으로 소수 첫째 자리: (total*20 + count) // (2*count) / 10), top(최고 점수, 동점이면 먼저 나온 이름)을 계산한다. 기본 parser는 scorepipe.parser.parse_scores이며 parser.py는 수정하지 않는다. 반환 dict 키 순서: count,total,average,top.",
+     "requirements": ["REQ-001", "REQ-002", "REQ-003", "REQ-006"],
+     "contract": {
+       "preconditions": ["parser(text)는 name 문자열과 score 숫자 문자열을 가진 dict 목록을 돌려준다"],
+       "postconditions": [
+         "count == len(records), total == 정수 점수 합",
+         "records가 비면 {'count': 0, 'total': 0, 'average': 0.0, 'top': None}",
+         "average는 float이며 total/count를 소수 첫째 자리로 half-up 반올림한 값",
+         "top은 최고 점수 중 입력 순서상 첫 이름",
+         "parser는 정확히 한 번 text 인자로 호출된다"]},
+     "errors": [
+       {"exception": "ValueError", "condition": "parser가 ValueError를 일으키면 가공 없이 그대로 전파(메시지의 'line N' 유지)"},
+       {"exception": "TypeError", "condition": "기본 파서에서 text가 str이 아니면 파서의 TypeError가 그대로 전파"}],
+     "boundary_conditions": ["빈 문자열/헤더만 → 빈 요약(count 0, average 0.0, top None)", "점수 '07' → 7, '0' 허용", "평균 x.x5 경계는 올림(2.25→2.3)", "모두 동점 → 첫 사람", "1명 → average == score(float)"]},
+    {"id": "DESIGN-002", "component": "ARCH-002", "module": "src/scorepipe/report.py", "name": "main",
+     "kind": "function", "signature": "def main(argv: list[str] | None = None) -> int",
+     "description": "argv(기본 sys.argv[1:])가 정확히 1개 파일 경로여야 한다. 파일을 encoding='utf-8-sig'로 읽어 summarize(text)를 호출하고 json.dumps(결과, ensure_ascii=True)를 한 줄로 stdout에 쓴 뒤 0을 돌려준다. ValueError는 'error: <메시지>'를 stderr에 쓰고 2를 돌려준다(stdout 출력 없음). OSError/UnicodeDecodeError는 'error: cannot read <경로>: <사유>'를 stderr에 쓰고 2. 인자 개수가 1이 아니면 'usage: python -m scorepipe.report <file>'을 stderr에 쓰고 2. 모듈 하단에 if __name__ == '__main__': sys.exit(main()).",
+     "requirements": ["REQ-004", "REQ-005"],
+     "contract": {
+       "preconditions": ["argv는 문자열 목록 또는 None"],
+       "postconditions": [
+         "성공: 종료값 0, stdout은 ASCII JSON 한 줄(개행 포함 1줄), stderr 비어 있음",
+         "실패(형식 오류/읽기 실패/인자 오류): 종료값 2, stdout 비어 있음, stderr에 사유 메시지",
+         "형식 오류 메시지에는 파서가 알려 준 'line N'이 포함된다"]},
+     "errors": [],
+     "boundary_conditions": ["인자 0개 또는 2개 이상 → 사용법 + 2", "존재하지 않는 파일 → 2", "UTF-8 BOM 파일 허용", "한글 이름 → stdout은 ASCII(\\uXXXX) 이스케이프", "빈 파일 → count 0 요약 JSON, 종료 0"]}
+  ]
+}

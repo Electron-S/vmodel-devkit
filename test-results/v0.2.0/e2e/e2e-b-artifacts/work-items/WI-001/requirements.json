@@ -1,0 +1,27 @@
+{
+  "work_item": "WI-001",
+  "requirements": [
+    {"id": "REQ-001", "type": "functional", "title": "가장 긴 단어 찾기", "priority": "must", "status": "active",
+     "description": "longest_word(text)는 text를 공백(str.split() 기준)으로 나눈 단어 중 길이가 가장 긴 단어를 돌려준다. 길이가 같으면 먼저 나온 단어를 돌려준다.",
+     "source": "user request",
+     "acceptance_criteria": [
+       {"id": "AC-001-1", "criterion": "longest_word('a bbb cc') 는 'bbb'를 돌려준다"},
+       {"id": "AC-001-2", "criterion": "longest_word('aa bb c') 는 길이가 같을 때 먼저 나온 'aa'를 돌려준다"},
+       {"id": "AC-001-3", "criterion": "longest_word('  hello   world  ') 는 연속/앞뒤 공백을 무시하고 'hello'를 돌려준다"}]},
+    {"id": "REQ-002", "type": "functional", "title": "단어 없음 오류", "priority": "must", "status": "active",
+     "description": "공백으로 나눈 단어가 하나도 없으면(빈 문자열, 공백만 있는 문자열) longest_word는 ValueError를 낸다.",
+     "source": "user request",
+     "acceptance_criteria": [
+       {"id": "AC-002-1", "criterion": "longest_word('') 는 ValueError를 낸다"},
+       {"id": "AC-002-2", "criterion": "longest_word('   \\t\\n') 는 ValueError를 낸다"}]},
+    {"id": "REQ-003", "type": "constraint", "title": "표준 라이브러리만 사용", "priority": "should", "status": "active",
+     "description": "구현은 파이썬 표준 라이브러리만 사용하고 textstats 패키지 안에 둔다.",
+     "acceptance_criteria": []}
+  ],
+  "conflict_analysis": {"performed": true, "method": "요구사항 쌍별 검토", "conflicts": []},
+  "open_issues": [],
+  "assumptions": [
+    {"id": "ASM-001", "description": "'공백'은 str.split()이 구분하는 모든 공백 문자(스페이스, 탭, 줄바꿈 등)이다.", "impact": "구두점은 단어에 포함되어 길이에 셈"},
+    {"id": "ASM-002", "description": "text가 str이 아닌 경우의 동작은 요청에 없으므로 별도 처리하지 않는다(str.split의 자연스러운 오류).", "impact": "TypeError 보장은 범위 밖"}
+  ]
+}

@@ -1,0 +1,13 @@
+{"gate": "G3", "work_item": "WI-001", "reviewer": "vmodel:verifier", "target_hash": "sha256:f78d4d0fd4185e6533db7cd2485ab8c88ff48b425f713dac0a9bcb9853f0080d",
+ "reviewed_at": "2026-11-10T00:00:00Z", "verdict": "approve",
+ "summary": "Both design units are implementable and their contracts (errors, boundaries, half-up integer average formula) are precise; the formula (total*20+count)//(2*count)/10 was checked for 2.25->2.3 and 1/3->0.3. Unit tests TEST-001..015 carry concrete expected values and can detect rounding, tie-break, error-propagation and exit-code defects; TEST-016/017 cover IF-001 including the error path; system tests TEST-018..021 cover every acceptance criterion. DESIGN-001 now lives in src/scorepipe/summary.py, consistent with ARCH-001 location.",
+ "checklist": [
+  {"item": "Units implementable as specified", "result": "ok", "note": "summarize and main are fully described; module paths match ARCH locations."},
+  {"item": "Contracts precise and complete", "result": "ok", "note": "pre/postconditions, errors and boundaries given; parser TypeError/ValueError propagation matches parser.py."},
+  {"item": "Unit tests detect violations (normal/abnormal/boundary)", "result": "ok", "note": "Banker's rounding distinguished in TEST-006; tie-break TEST-007; stdout/stderr/exit code asserted in TEST-009..015."},
+  {"item": "Integration specs cover interfaces", "result": "ok", "note": "IF-001 normal (TEST-016 incl. subprocess) and error path (TEST-017) with real parser."},
+  {"item": "System specs cover every acceptance criterion", "result": "ok", "note": "AC-001-1..3, 002-1..2, 003-1, 004-1..2, 005-1..2 all mapped; REQ-006 has no ACs (constraint, covered by TEST-001 injection)."},
+  {"item": "No unrequested design", "result": "ok", "note": "Nothing beyond requirements."}],
+ "findings": [
+  {"id": "F-1", "severity": "info", "description": "parser.isdigit() accepts non-ASCII digit characters (e.g. superscripts) for which int() would raise ValueError without a 'line N' prefix; parser is out of scope (REQ-006) and undefined by requirements.", "related": ["DESIGN-001"], "status": "open"}
+ ]}

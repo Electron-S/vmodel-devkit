@@ -1,0 +1,14 @@
+{"gate": "G1", "work_item": "WI-001", "reviewer": "vmodel:verifier", "target_hash": "sha256:7252501fe3008e43953ef9612d527e485af3c816f7eccf0c44fa71ca350e03a7",
+ "reviewed_at": "2026-11-10T00:30:00Z", "verdict": "approve",
+ "summary": "REQ-001 and REQ-002 cover every part of the request (longest word, tie goes to the first, ValueError when no words) with concrete, testable acceptance criteria. Assumptions are recorded and reasonable; no conflicts exist. Only minor remarks on REQ-003.",
+ "checklist": [
+  {"item": "Request fully covered", "result": "ok", "note": "longest, first-on-tie, ValueError on no words all mapped"},
+  {"item": "Atomic, unambiguous, testable requirements", "result": "ok", "note": "split basis fixed as str.split()"},
+  {"item": "Acceptance criteria concrete", "result": "ok", "note": "AC-001-1..3, AC-002-1..2 with concrete inputs/outputs"},
+  {"item": "Non-functional needs and constraints", "result": "ok", "note": "REQ-003 stdlib-only constraint; no performance need stated"},
+  {"item": "Conflict analysis", "result": "ok", "note": "performed, none found; plausible for 3 requirements"},
+  {"item": "Critical decisions to user", "result": "na", "note": "no security/data-loss issues"},
+  {"item": "Assumptions recorded", "result": "ok", "note": "ASM-001, ASM-002 reasonable"}],
+ "findings": [
+  {"id": "F-1", "severity": "minor", "description": "REQ-003 has no acceptance criteria and no source field; its verification (stdlib-only imports, location in textstats package) is not measurable. Consider a criterion such as 'module imports only stdlib' and 'longest_word importable from textstats'. Also the exact module path is unspecified.", "related": ["REQ-003"], "status": "open"}
+ ]}

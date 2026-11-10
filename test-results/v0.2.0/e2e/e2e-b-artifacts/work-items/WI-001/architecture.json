@@ -1,0 +1,21 @@
+{
+  "work_item": "WI-001",
+  "components": [
+    {"id": "ARCH-001", "name": "longest", "responsibility": "공백으로 나눈 단어 중 가장 긴 단어를 찾고, 단어가 없으면 ValueError를 낸다",
+     "requirements": ["REQ-001", "REQ-002", "REQ-003"], "location": "src/textstats/longest.py"}
+  ],
+  "interfaces": [],
+  "data_flows": [],
+  "nfr_mapping": [
+    {"requirement": "REQ-003", "approach": "str.split()과 내장 max만 사용하고 외부 패키지를 쓰지 않는다", "components": ["ARCH-001"]}
+  ],
+  "tradeoffs": [
+    {"topic": "최대 단어 선택 방식", "options": ["max(words, key=len)", "직접 순회"],
+     "decision": "max(words, key=len)",
+     "rationale": "max는 동률일 때 먼저 나온 요소를 돌려주므로 요구사항과 일치하고 간결하다"}
+  ],
+  "integration_test_strategy": {
+    "approach": "단일 컴포넌트이며 컴포넌트 간 인터페이스와 외부 데이터 흐름이 없으므로 통합 테스트 대상이 없다(G6 N/A 후보). 동작은 단위 테스트로 검증한다.",
+    "interfaces_covered": []
+  }
+}

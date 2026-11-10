@@ -1,0 +1,18 @@
+{"gate": "G2", "work_item": "WI-001", "reviewer": "vmodel:verifier",
+ "target_hash": "sha256:9b34b2857693f3182c0316376e40a4ee9e244eb8995d3103d63b33db52a8a8bd",
+ "reviewed_at": "2026-11-10T00:30:00Z", "verdict": "approve",
+ "summary": "Single component ARCH-001 realises REQ-001..003 with a clear responsibility and location. The NFR/constraint approach (stdlib only) and the tie-breaking trade-off (max returns first maximal element) are credible. No interfaces or external data flows exist, so integration is not required.",
+ "checklist": [
+  {"item": "Every requirement realised by a component", "result": "ok", "note": "REQ-001/002/003 all mapped to ARCH-001"},
+  {"item": "Interfaces precise", "result": "na", "note": "No interfaces; the public function signature longest_word(text) is given in the requirements"},
+  {"item": "Data flows consistent", "result": "ok", "note": "None declared; the only flow is str in, str or ValueError out through the public function"},
+  {"item": "NFR approach credible", "result": "ok", "note": "REQ-003 handled by str.split and built-in max"},
+  {"item": "Trade-offs justified", "result": "ok", "note": "max(key=len) keeps the first among equal lengths, matching REQ-001"},
+  {"item": "Integration strategy", "result": "ok", "note": "N/A with justification; unit tests cover behaviour"}
+ ],
+ "findings": [
+  {"id": "F-1", "severity": "info", "description": "The component is named 'longest' while the function is longest_word(text); the architecture does not state the function name or signature. Consider stating it in G3 design.", "related": ["ARCH-001"], "status": "open"}
+ ],
+ "integration_applicability": {"decision": "not_required",
+  "reason": "One component with no interfaces and no external system; it is a pure function using only the standard library.",
+  "endpoints_reviewed": ["caller-supplied text argument (in-process)", "returned longest word", "ValueError raised to the caller"]}}

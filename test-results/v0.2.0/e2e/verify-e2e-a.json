@@ -1,0 +1,473 @@
+{
+  "release": "/home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.2.0",
+  "status_exit": 0,
+  "audit": {
+    "exit": 0,
+    "tail": [
+      "audit: validator 0.2.0 release core 2d3dd0aba096; 19 ledger entries; 6 evidence record(s) checked",
+      "audit OK"
+    ]
+  },
+  "gate_sequence": [
+    "R00003 WI-001 G1 PASSED",
+    "R00005 WI-001 G2 PASSED",
+    "R00007 WI-001 G3 PASSED",
+    "R00009 WI-001 G4 PASSED",
+    "R00010 WI-001 G5 PASSED",
+    "R00011 WI-001 G6 BLOCKED (integration_evidence_insufficient) applicability=required",
+    "R00013 WI-001 G2 PASSED",
+    "R00015 WI-001 G3 PASSED",
+    "R00017 WI-001 G4 PASSED",
+    "R00018 WI-001 G5 PASSED",
+    "R00019 WI-001 G6 PASSED applicability=required"
+  ],
+  "reviews": [
+    "R00002 G1 approve",
+    "R00004 G2 approve",
+    "R00006 G3 approve",
+    "R00008 G4 approve",
+    "R00012 G2 approve",
+    "R00014 G3 approve",
+    "R00016 G4 approve"
+  ],
+  "verify_evidence": [
+    {
+      "record": "R00009",
+      "gate": "G4",
+      "path": ".vmodel/evidence/WI-001/G4/20261110T002029451018Z-lint-48d09f/record.json",
+      "exit": 0,
+      "result": "evidence OK"
+    },
+    {
+      "record": "R00010",
+      "gate": "G5",
+      "path": ".vmodel/evidence/WI-001/G5/20261110T002031598050Z-unit-beebe4/record.json",
+      "exit": 0,
+      "result": "evidence OK"
+    },
+    {
+      "record": "R00011",
+      "gate": "G6",
+      "path": ".vmodel/evidence/WI-001/G6/20261110T002034107548Z-integration-f8c857/record.json",
+      "exit": 0,
+      "result": "evidence OK"
+    },
+    {
+      "record": "R00017",
+      "gate": "G4",
+      "path": ".vmodel/evidence/WI-001/G4/20261110T002323745319Z-lint-715c3c/record.json",
+      "exit": 0,
+      "result": "evidence OK"
+    },
+    {
+      "record": "R00018",
+      "gate": "G5",
+      "path": ".vmodel/evidence/WI-001/G5/20261110T002325911991Z-unit-dd4288/record.json",
+      "exit": 0,
+      "result": "evidence OK"
+    },
+    {
+      "record": "R00019",
+      "gate": "G6",
+      "path": ".vmodel/evidence/WI-001/G6/20261110T002328527812Z-integration-62e0ca/record.json",
+      "exit": 0,
+      "result": "evidence OK"
+    }
+  ],
+  "g6_records": [
+    {
+      "record": "R00011",
+      "status": "BLOCKED",
+      "applicability": "required",
+      "blocked_reason": "integration_evidence_insufficient",
+      "if_coverage": {
+        "status": "blocked",
+        "detail": "0/1 interface(s) test-level verified; insufficient runtime evidence for the rest (REQ-G6-32/33, D44)",
+        "items": [
+          "TEST-016 (IF-001): Insufficient Evidence: the provider (summarize) never ran in this integration run (mocked everywhere, or a data-only interface)",
+          "TEST-017 (IF-001): Insufficient Evidence: the provider (summarize) never ran in this integration run (mocked everywhere, or a data-only interface)",
+          "IF-001: Insufficient Evidence: no passed integration test shows the connection in its own execution, so the interface is not verified at test level"
+        ]
+      },
+      "interfaces": [
+        {
+          "id": "IF-001",
+          "verification": "insufficient",
+          "covered_by": [],
+          "tests": {
+            "TEST-016": {
+              "status": "passed",
+              "path": "static",
+              "evidence_level": "insufficient",
+              "reason": "the provider (summarize) never ran in this integration run (mocked everywhere, or a data-only interface)"
+            },
+            "TEST-017": {
+              "status": "passed",
+              "path": "static",
+              "evidence_level": "insufficient",
+              "reason": "the provider (summarize) never ran in this integration run (mocked everywhere, or a data-only interface)"
+            }
+          }
+        }
+      ],
+      "executed_tests": {
+        "TEST-016": "passed",
+        "TEST-017": "passed"
+      },
+      "failed_cases": [],
+      "runtime_trace": {
+        "active": true,
+        "processes": 2,
+        "spawned_processes": 1,
+        "truncated": false,
+        "test_boundaries": 12,
+        "boundary_clock": "perf_counter_ns",
+        "edges": 3,
+        "errors": []
+      }
+    },
+    {
+      "record": "R00019",
+      "status": "PASSED",
+      "applicability": "required",
+      "blocked_reason": null,
+      "if_coverage": {
+        "status": "pass",
+        "detail": "1/1 interface(s) test-level verified (passed integration tests whose own execution shows the connection)",
+        "items": []
+      },
+      "interfaces": [
+        {
+          "id": "IF-001",
+          "verification": "test_level",
+          "covered_by": [
+            "TEST-016",
+            "TEST-017"
+          ],
+          "tests": {
+            "TEST-016": {
+              "status": "passed",
+              "path": "static",
+              "evidence_level": "test_level",
+              "reason": ""
+            },
+            "TEST-017": {
+              "status": "passed",
+              "path": "static",
+              "evidence_level": "test_level",
+              "reason": ""
+            }
+          }
+        }
+      ],
+      "executed_tests": {
+        "TEST-016": "passed",
+        "TEST-017": "passed"
+      },
+      "failed_cases": [],
+      "runtime_trace": {
+        "active": true,
+        "processes": 2,
+        "spawned_processes": 1,
+        "truncated": false,
+        "test_boundaries": 12,
+        "boundary_clock": "perf_counter_ns",
+        "edges": 6,
+        "errors": []
+      }
+    }
+  ],
+  "work_items": [
+    {
+      "id": "WI-001",
+      "status": "PARTIALLY_VERIFIED",
+      "gate_summary": {
+        "passed_current": [
+          "G1",
+          "G2",
+          "G3",
+          "G4",
+          "G5",
+          "G6"
+        ],
+        "na": [],
+        "not_evaluated": [],
+        "review_required": [],
+        "in_progress": [],
+        "not_started": [],
+        "stale": [],
+        "failed": [],
+        "blocked": [],
+        "not_implemented": [
+          "G7"
+        ]
+      },
+      "gates": {
+        "G1": "PASSED",
+        "G2": "PASSED",
+        "G3": "PASSED",
+        "G4": "PASSED",
+        "G5": "PASSED",
+        "G6": "PASSED",
+        "G7": "NOT_IMPLEMENTED"
+      },
+      "next_action": "G1-G6 verified. G7+ are extension gates (not implemented); report PARTIALLY_VERIFIED.",
+      "defects": []
+    }
+  ],
+  "architecture": {
+    "WI-001": {
+      "components": [
+        "ARCH-001",
+        "ARCH-002"
+      ],
+      "interfaces": [
+        {
+          "id": "IF-001",
+          "provider": "ARCH-001",
+          "consumers": [
+            "ARCH-002"
+          ],
+          "signature": "def summarize(text: str, parser=parse_scores) -> dict"
+        }
+      ]
+    }
+  },
+  "tests": {
+    "WI-001": [
+      [
+        "TEST-001",
+        "unit",
+        [
+          "DESIGN-001",
+          "REQ-001"
+        ]
+      ],
+      [
+        "TEST-002",
+        "unit",
+        [
+          "DESIGN-001"
+        ]
+      ],
+      [
+        "TEST-003",
+        "unit",
+        [
+          "DESIGN-001"
+        ]
+      ],
+      [
+        "TEST-004",
+        "unit",
+        [
+          "DESIGN-001",
+          "REQ-002"
+        ]
+      ],
+      [
+        "TEST-005",
+        "unit",
+        [
+          "DESIGN-001",
+          "REQ-001"
+        ]
+      ],
+      [
+        "TEST-006",
+        "unit",
+        [
+          "DESIGN-001",
+          "REQ-001"
+        ]
+      ],
+      [
+        "TEST-007",
+        "unit",
+        [
+          "DESIGN-001",
+          "REQ-003"
+        ]
+      ],
+      [
+        "TEST-008",
+        "unit",
+        [
+          "DESIGN-001"
+        ]
+      ],
+      [
+        "TEST-009",
+        "unit",
+        [
+          "DESIGN-002",
+          "REQ-004"
+        ]
+      ],
+      [
+        "TEST-010",
+        "unit",
+        [
+          "DESIGN-002",
+          "REQ-005"
+        ]
+      ],
+      [
+        "TEST-011",
+        "unit",
+        [
+          "DESIGN-002",
+          "REQ-005"
+        ]
+      ],
+      [
+        "TEST-012",
+        "unit",
+        [
+          "DESIGN-002",
+          "REQ-004"
+        ]
+      ],
+      [
+        "TEST-013",
+        "unit",
+        [
+          "DESIGN-002",
+          "REQ-004"
+        ]
+      ],
+      [
+        "TEST-014",
+        "unit",
+        [
+          "DESIGN-002",
+          "REQ-002"
+        ]
+      ],
+      [
+        "TEST-015",
+        "unit",
+        [
+          "DESIGN-002",
+          "REQ-005"
+        ]
+      ],
+      [
+        "TEST-016",
+        "integration",
+        [
+          "IF-001"
+        ]
+      ],
+      [
+        "TEST-017",
+        "integration",
+        [
+          "IF-001"
+        ]
+      ],
+      [
+        "TEST-018",
+        "system",
+        [
+          "REQ-001"
+        ]
+      ],
+      [
+        "TEST-019",
+        "system",
+        [
+          "REQ-002"
+        ]
+      ],
+      [
+        "TEST-020",
+        "system",
+        [
+          "REQ-003"
+        ]
+      ],
+      [
+        "TEST-021",
+        "system",
+        [
+          "REQ-004",
+          "REQ-005"
+        ]
+      ]
+    ]
+  },
+  "defects_file": {
+    "WI-001": []
+  },
+  "review_keys": {
+    "WI-001": {
+      "G2": {
+        "verdict": "approve",
+        "integration_applicability": null,
+        "interfaces": null
+      },
+      "G3": {
+        "verdict": "approve",
+        "integration_applicability": null,
+        "interfaces": null
+      },
+      "G4": {
+        "verdict": "approve",
+        "integration_applicability": null,
+        "interfaces": [
+          {
+            "id": "IF-001",
+            "result": "ok",
+            "provider_symbols": [
+              "summarize"
+            ],
+            "note": "Provider summarize in summary.py; consumer main in report.py. TEST-016 and TEST-017 have static call paths to both, so no runtime_paths declaration is needed (the subprocess part of TEST-016 is additional). Error path (ValueError from real parser) covered by TEST-017."
+          }
+        ]
+      }
+    }
+  },
+  "trace": {
+    "WI-001": [
+      "IF-001 summarize: ARCH-001 -> ARCH-002 (covered: yes, Test-level Verified)",
+      "   TEST: TEST-016(passed, static, Test-level Verified), TEST-017(passed, static, Test-level Verified)",
+      "Reverse (TEST -> REQ):",
+      "   TEST-001 -> REQ-001, REQ-002, REQ-003, REQ-006",
+      "   TEST-002 -> REQ-001, REQ-002, REQ-003, REQ-006",
+      "   TEST-003 -> REQ-001, REQ-002, REQ-003, REQ-006",
+      "   TEST-004 -> REQ-001, REQ-002, REQ-003, REQ-006",
+      "   TEST-005 -> REQ-001, REQ-002, REQ-003, REQ-006",
+      "   TEST-006 -> REQ-001, REQ-002, REQ-003, REQ-006",
+      "   TEST-007 -> REQ-001, REQ-002, REQ-003, REQ-006",
+      "   TEST-008 -> REQ-001, REQ-002, REQ-003, REQ-006",
+      "   TEST-009 -> REQ-004, REQ-005",
+      "   TEST-010 -> REQ-004, REQ-005",
+      "   TEST-011 -> REQ-004, REQ-005",
+      "   TEST-012 -> REQ-004, REQ-005",
+      "   TEST-013 -> REQ-004, REQ-005",
+      "   TEST-014 -> REQ-002, REQ-004, REQ-005",
+      "   TEST-015 -> REQ-004, REQ-005",
+      "   TEST-016 -> (none)",
+      "   TEST-017 -> (none)",
+      "   TEST-018 -> REQ-001",
+      "   TEST-019 -> REQ-002",
+      "   TEST-020 -> REQ-003",
+      "   TEST-021 -> REQ-004, REQ-005",
+      "Dangling references: none"
+    ]
+  },
+  "report_g6_lines": {
+    "WI-001": []
+  },
+  "session": {
+    "subtype": "success",
+    "total_cost_usd": 1.4822794000000006,
+    "num_turns": 72,
+    "duration_ms": 496866
+  },
+  "session_result_text": "성적 요약 기능(`summarize(text, parser=parse_scores)`와 `python -m scorepipe.report <파일>`)을 추가했고, G1~G6이 모두 PASSED입니다. 작업 항목 WI-001은 `PARTIALLY_VERIFIED` 상태입니다. 이 DevKit 버전에는 G7이 없어서 V-Model을 끝까지 완료한 것은 아닙니다. `parser.py`는 수정하지 않았습니다.\n\n**Gate별 결과**\n| Gate | 결과 | 비고 |\n|---|---|---|\n| G1 요구사항 | PASSED | 요구사항 6개 |\n| G2 아키텍처 | PASSED | 재작업 후 다시 통과 |\n| G3 상세설계·테스트 계획 | PASSED | 재작업 후 다시 통과 |\n| G4 구현 | PASSED | 재작업 후 다시 통과 |\n| G5 단위 검증 | PASSED | 단위 테스트 15개 통과 |\n| G6 통합 검증 | PASSED | 실제 통합 테스트를 실행했고(N/A 아님), 통합 테스트 2개가 통과했습니다. 인터페이스 1개(IF-001)는 테스트 수준에서 검증됐습니다. |\n\n**결함과 처리**\n- 첫 G6 실행은 BLOCKED(`integration_evidence_insufficient`)였습니다. `summarize`와 `main`이 같은 파일(`report.py`)에 있어서, 검증기가 인터페이스 연결을 실행 추적으로 확인하지 못했습니다.\n- 원인은 P2(아키텍처)입니다. `summarize`를 `src/scorepipe/summary.py`로 옮기고, `report.py`가 이를 가져다 다시 내보내게 했습니다. 이후 G2부터 G6까지 다시 검증했습니다.\n- 이 BLOCKED는 실패 판정이 아니어서 결함 대장에 올릴 수 없었습니다. 검증기가 인용 오류로 거부했습니다. 그래서 `defects.json`은 비어 있고, 결함 추적 검사에는 ERROR와 WARNING이 각각 0건입니다.\n\n**감사(audit)**\n- 장부(ledger)는 정상(OK)이고, 19건이 기록돼 있습니다. 검증기 무결성도 OK입니다.\n- 독립 검토(G1~G4)는 모두 승인(approve)이었습니다. major 지적은 없고 minor와 info 지적만 있었습니다.\n\n**확인하실 가정**\n- 최고 점수가 동점이면 입력 순서상 먼저 나온 사람이 `top`입니다.\n- 평균은 정수 연산으로 소수 첫째 자리에서 0.5를 올립니다(2.25는 2.3).\n- 파일 없음, UTF-8이 아닌 파일, 인자 개수 오류도 종료 코드 2로 처리합니다.\n- 파일은 UTF-8(BOM 허용)로 읽고, JSON은 ASCII 이스케이프로 출력합니다. Windows cp949 콘솔에서 한글 이름이 깨지는 문제를 피하기 위해서입니다.\n- 기존 파서는 `isdigit()`로 점수를 검사해서, 위첨자 같은 비ASCII 숫자는 통과시킵니다. 이 경우 `int()`가 실패하면서 줄 번호 없는 오류가 날 수 있습니다. 파서를 수정하지 않는다는 제약 때문에 처리하지 않았으니, 채점팀에 알릴 만합니다.\n\n보고서는 `.vmodel/reports/WI-001.md`에 있습니다. 근거 자료는 `.vmodel/evidence/WI-001/G5/20261110T002325911991Z-unit-dd4288/`(G5)와 `.vmodel/evidence/WI-001/G6/20261110T002328527812Z-integration-62e0ca/`(G6)입니다.",
+  "guard_denials": [
+    "PreToolUse:Bash hook error: [vmodel guard] this command would modify .vmodel/ through the shell; use the Write/Edit tools for work item artifacts and the vmodel CLI for everything validator-owned"
+  ]
+}

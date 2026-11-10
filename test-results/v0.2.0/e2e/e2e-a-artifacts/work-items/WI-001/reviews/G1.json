@@ -1,0 +1,17 @@
+{"gate": "G1", "work_item": "WI-001", "reviewer": "vmodel:verifier",
+ "target_hash": "sha256:4d2be8dc8733a96789b62ef4210bb20f2543e05b2faf21e62cbbd9732886fed8",
+ "reviewed_at": "2026-11-10T00:30:00Z", "verdict": "approve",
+ "summary": "Requirements cover summarize, the CLI, error reporting, parser immutability and injectable parser. They are atomic and testable with concrete acceptance values that I checked against parser.py (header skipping, zero-padded scores, line numbering). Assumptions are recorded; two minor gaps remain.",
+ "checklist": [
+  {"item": "Original request fully covered", "result": "ok", "note": "summarize, CLI, parser unchanged, injectable parser for unit tests all map to REQ-001..006."},
+  {"item": "Atomic, unambiguous, testable requirements", "result": "ok", "note": "Rounding half-up, key order, tie-break and exit codes are explicit."},
+  {"item": "Acceptance criteria concrete and measurable", "result": "ok", "note": "Values verified: 1/3->0.3, 2.25->2.3, 07+100=107, 'line 3' for the missing-score line with header."},
+  {"item": "Non-functional needs and constraints", "result": "ok", "note": "cp949-safe ASCII JSON, stdlib only, no parser change (REQ-004, REQ-006)."},
+  {"item": "Conflict analysis", "result": "ok", "note": "Performed, none found; no real conflicts apparent."},
+  {"item": "Critical decisions escalated", "result": "ok", "note": "No security or data-loss decisions; exit code 2 extension is recorded as ASM-002."},
+  {"item": "Assumptions reasonable and recorded", "result": "ok", "note": "ASM-001..005 reasonable."}
+ ],
+ "findings": [
+  {"id": "F-1", "severity": "minor", "description": "REQ-006 (parser not modified, parser injection, stdlib only) has no acceptance criteria; injection and unmodified parser should be verifiable (e.g. fake parser result drives summarize output, parser.py unchanged).", "related": ["REQ-006"], "status": "open"},
+  {"id": "F-2", "severity": "info", "description": "The parser accepts any str.isdigit() score, including non-ASCII digits such as superscripts, for which int() raises ValueError without a 'line N' prefix. Edge case not covered by REQ-005; consider stating behaviour.", "related": ["REQ-001", "REQ-005"], "status": "open"}
+ ]}

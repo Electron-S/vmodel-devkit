@@ -1,0 +1,17 @@
+{"gate": "G4", "work_item": "WI-001", "reviewer": "vmodel:verifier", "target_hash": "sha256:026299c91a55b26fa900e4946f20cda81c8c886d00e1195156fc2db17091b5e9",
+ "reviewed_at": "2026-11-10T00:00:00Z", "verdict": "approve",
+ "summary": "longest_word matches DESIGN-001 exactly (signature, ValueError on empty split, first-wins on ties via max, stdlib only). TEST_001..007 are implemented one-to-one with concrete assertions; no defects or change requests exist. No interfaces, so no integration review is needed.",
+ "checklist": [
+  {"item": "Code matches design signature and contract", "result": "ok", "note": "def longest_word(text: str) -> str; split/max(key=len); ValueError when no words."},
+  {"item": "No unrequested behaviour / dead code", "result": "ok", "note": "12-line module, nothing extra."},
+  {"item": "Each unit TEST spec implemented with TEST_nnn token", "result": "ok", "note": "TEST_001-007 present and match procedure/expected."},
+  {"item": "Assertions meaningful", "result": "ok", "note": "Concrete equality and pytest.raises(ValueError); TEST_002 and TEST_004 would detect wrong tie/whitespace handling."},
+  {"item": "No skips, fixtures or conftest altering results", "result": "ok", "note": "No conftest, no skips."},
+  {"item": "Defects/change requests test_changes", "result": "na", "note": "defects.json and change-requests.json absent."},
+  {"item": "REQ-003 stdlib only", "result": "ok", "note": "No imports in module."}
+ ],
+ "findings": [
+  {"id": "F-1", "severity": "info", "description": "System tests TEST-008/009 have no automation file; they are covered at unit level by the same calls. Not a G4 blocker.", "related": ["TEST-008", "TEST-009"], "status": "open"}
+ ],
+ "integration_applicability": {"decision": "not_required", "reason": "Single pure function, no interfaces in architecture.json.",
+  "endpoints_reviewed": ["function argument text", "return value / ValueError"]}}

@@ -1,0 +1,28 @@
+{
+  "work_item": "WI-001",
+  "components": [
+    {"id": "ARCH-001", "name": "summarizer", "responsibility": "파서 결과(이름/문자열 점수 목록)를 받아 count/total/average/top 요약을 계산한다. 파서는 인자로 주입 가능(기본 scorepipe.parser.parse_scores).",
+     "requirements": ["REQ-001", "REQ-002", "REQ-003", "REQ-006"], "location": "src/scorepipe/summary.py"},
+    {"id": "ARCH-002", "name": "report-cli", "responsibility": "명령줄 인자·파일 읽기, summarize 호출, JSON 한 줄 출력, 오류를 stderr 메시지와 종료 코드 2로 변환한다.",
+     "requirements": ["REQ-004", "REQ-005"], "location": "src/scorepipe/report.py"}
+  ],
+  "interfaces": [
+    {"id": "IF-001", "name": "summarize", "provider": "ARCH-001", "consumers": ["ARCH-002"],
+     "description": "summarize(text, parser=parse_scores) -> dict(count,total,average,top); 파서의 ValueError는 그대로 전달",
+     "signature": "def summarize(text: str, parser=parse_scores) -> dict"}
+  ],
+  "data_flows": [
+    {"from": "ARCH-002", "to": "ARCH-001", "data": "CSV 텍스트와 요약 dict/ValueError", "via": "IF-001"}
+  ],
+  "nfr_mapping": [
+    {"requirement": "REQ-006", "approach": "parser.py는 읽기만 하고 import로 사용; summarize의 parser 매개변수로 주입; 표준 라이브러리(argparse 없이 sys, json)만 사용", "components": ["ARCH-001", "ARCH-002"]}
+  ],
+  "tradeoffs": [
+    {"topic": "파서 주입 방식", "options": ["모듈 monkeypatch", "선택 인자 parser"], "decision": "선택 인자 parser(기본 parse_scores)",
+     "rationale": "요청이 인자 주입을 요구하고 테스트가 전역 상태에 의존하지 않는다"},
+    {"topic": "평균 반올림", "options": ["round()", "정수 half-up"], "decision": "정수 half-up",
+     "rationale": "round는 은행가 반올림과 부동소수 오차가 있다"}
+  ],
+  "integration_test_strategy": {"approach": "CLI main()이 실제 summarize와 실제 파서를 통해 파일을 처리하는 것을 tests/integration에서 확인(main 호출 및 python -m 실행). 가짜 파서는 단위 테스트에서만 사용.",
+    "interfaces_covered": ["IF-001"]}
+}

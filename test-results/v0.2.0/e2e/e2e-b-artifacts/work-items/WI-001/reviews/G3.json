@@ -1,0 +1,17 @@
+{"gate": "G3", "work_item": "WI-001", "reviewer": "vmodel:verifier", "target_hash": "sha256:c32cb188f8169499988720cdd16e7dafc4c594ffe7ac323d56708b978a65db73",
+ "reviewed_at": "2026-11-10T00:30:00Z", "verdict": "approve",
+ "summary": "The single design unit DESIGN-001 implements longest_word exactly as requested, with precise contract, error condition and boundaries. Unit tests TEST-001..007 have concrete expected values and cover normal, tie, single word, whitespace and ValueError cases; system tests TEST-008/009 cover all five acceptance criteria. No integration specs are needed since there is one component and no interfaces.",
+ "checklist": [
+  {"item": "Units implementable as specified", "result": "ok", "note": "split() + max(key=len) is straightforward and tie behaviour matches the design."},
+  {"item": "Contracts precise and complete", "result": "ok", "note": "Pre/postconditions, ValueError condition and boundaries are specified; non-str input deliberately out of scope (ASM-002)."},
+  {"item": "Unit tests can detect violations", "result": "ok", "note": "TEST-002 distinguishes first-vs-last on ties; TEST-004 detects whitespace inclusion; TEST-005/006/007 cover empty, whitespace-only and single space."},
+  {"item": "Integration specs cover interfaces", "result": "na", "note": "No interfaces."},
+  {"item": "System specs cover every acceptance criterion", "result": "ok", "note": "AC-001-1..3 in TEST-008, AC-002-1..2 in TEST-009."},
+  {"item": "Nothing designed that is not requested", "result": "ok", "note": "Only longest_word."},
+  {"item": "REQ-003 constraint verification", "result": "ok", "note": "Constraint without acceptance criteria; verified by code review at G4."}
+ ],
+ "findings": [
+  {"id": "F-1", "severity": "info", "description": "The postcondition 'return value is an element of text.split()' is not asserted separately, but TEST-001..004 return exact values, so it is covered indirectly.", "related": ["DESIGN-001", "TEST-001"], "status": "open"}
+ ],
+ "integration_applicability": {"decision": "not_required", "reason": "One component (ARCH-001) with a pure function; no interfaces, no integration specs; G6 not applicable.",
+  "endpoints_reviewed": ["caller-supplied text argument", "return value / ValueError to caller", "no files, DB or network"]}}
