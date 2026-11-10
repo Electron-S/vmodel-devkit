@@ -744,3 +744,31 @@ E2E-B (`samples/textstats`, 단일 함수 기능, 37턴, 3.4분)
 2. E2E 이후의 수정 2건(같은 모듈 provider/consumer, 보고서 제목)은 하네스·11회차 검토로만 확인했다(실제 세션은 `589c779`).
 3. 보수 판단 2가지의 확인: 테스트 함수가 provider(인터페이스 심볼 또는 provider 모듈에 정의된 함수)를 patch하면 Test-level로 세지 않음, autouse·요청하지 않은 fixture의 연결은 세지 않음.
 4. 문서화한 거짓 BLOCKED 한계(§15.7)를 받아들일지.
+
+## 16. 보수 정책 A·B 확정과 G6 FAILED 실전 드릴 (2026-11-10, 브랜치 `g6-dev`)
+
+사용자 지시("VModel DevKit v0.2.0 — G6 최종 실패·재작업 실전 드릴")에 따른 결과다. main 병합·`v0.2.0` 태그·원격 푸시·G7 개발은 하지 않았다. 결정은 D45, 처리표는 `docs/g6/WORKITEM.md` §7.13, 로그는 `test-results/v0.2.0/`.
+
+### 16.1 출발 상태 확인
+`g6-dev` = `d9cae51`(문서), 마지막 코드 `5275b5d`, `main` = 태그 `v0.1.5` = `78517d5`, `v0.2.0` 태그 없음, 릴리스 후보 core `9cc0997a…`가 소스와 일치(`release_check` OK). HANDOFF·§15의 보고와 같았다. 작업 트리의 `.claude/`(예약 기능 잠금 파일)는 커밋하지 않았다.
+
+### 16.2 정책 A·B 확정과 코드 점검
+사용자가 승인한 정책 A(provider patch)·B(autouse fixture)를 D45로 기록하고 D44의 옛 문장(autouse fixture 연결을 셈)을 정정했다. "현재 구현이 이미 충족하면 코드 변경 없음"을 확인하려고 재현해 보니 **충족하지 않았다**: D44는 두 규칙을 정적 경로(경로 A)에만 적용했고, G4에서 선언한 런타임 경로(경로 B)는 call 구간의 provider 실행만 봤다. `5275b5d`에서 provider를 patch한 api·subprocess 테스트, autouse fixture의 스레드·자식 프로세스가 혼자 provider를 돌린 테스트가 Test-level Verified로 PASSED였다(`tests/test_g6_policy.py`, RED 5/5).
+
+### 16.3 수정과 독립 검토 12~15회차 (같은 검토자, 별도 컨텍스트, 읽기 전용 detached worktree, 지적은 검토 빌드 대상 RED 후 수정)
+| 회차 | 대상 | 결과 | 처리 |
+|---|---|---|---|
+| (내 재현) | `5275b5d` | 경로 B 거짓 PASS 5 | `test_g6_policy` RED 5/5·대조군 3/3 → `092a0fe`(경로 B patch 규칙, 스레드·`Popen` 자식 출처 앵커) |
+| 12 | `092a0fe` | 거짓 PASS 4(H1~H4, 기존 공백), 내 수정이 만든 거짓 BLOCKED 5모양(M1~M3), LOW 4 | `test_g6_review12` RED 9/9·대조군 3/3 → `c451a13`(autouse·usefixtures patch 탐지, consumer 실행 앵커, multiprocessing·os.system·posix_spawn·fork 출처). H3·H4 문서화 |
+| 13 | `c451a13` | 12회차 수정이 만든 회귀 3(SF1 같은 모듈, C5 스캔 상한, `os.system` 교착), 정적 탐지가 닿지 않는 fixture 경로 A1~A5, 보수 판단 A6 | `test_g6_review13` RED 4/4 → `9497d14`. A1~A6 사용자 판단 대상(D45 8항) |
+| 14 | `9497d14` | 13회차 수정이 만든 거짓 PASS 1(SF2), C5 미완 2, LOW 1 | `test_g6_review14` RED 4/4 → `fa815b3` |
+| 15 | `fa815b3` | 14회차 지적 해결 확인, 새 거짓 PASS·회귀·충돌 없음. 공유 스레드 풀 작업자의 예산 소진(거짓 BLOCKED, "확실하지 않음" 표시) 1 | 문서화(D45), 검토 종료 |
+회차마다 이전 수정이 만든 반대쪽 오판이 나왔다(D43·D44와 같은 양상). 그래서 15회차 뒤에는 보수 방향의 남은 1건을 고치지 않고 범위를 묶었다. RED 로그: `red-policy-on-5275b5d.log`, `red-review12-on-092a0fe.log`, `red-review13-on-c451a13.log`, `red-review14-on-9497d14.log`(모두 위반 0).
+
+### 16.4 회귀와 릴리스 (최종 후보 코드 `fa815b3`)
+| 항목 | 결과 |
+|---|---|
+| WSL 전체 하네스(깨끗한 worktree) | `7c7b446` 432 통과, `c451a13` 444 통과, **`fa815b3` 453 통과**(각 skip 1: xdist 시험 환경 변수 없음) (`wsl-harness-*.log`) |
+| 릴리스 재빌드 | `release.py --force` → `dist/vmodel-0.2.0` 46개 파일, core `sha256:ce81befa63914478d8e54252d3cf05ad9104ced40c4e4eab398be7295e80a134` (`0664a39`) |
+| 릴리스 점검(`release_check.py`) | OK: 소스 = 0.2.0 기록, 0.1.0~0.1.5 사본·기록 불변, 태그 `v0.1.2`~`v0.1.5` 불변, `v0.2.0` 태그 없음, `main` = `78517d5` (`release-check-fa815b3.json`) |
+| `claude plugin validate --strict` | 소스·릴리스 모두 통과 |
