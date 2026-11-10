@@ -773,3 +773,21 @@ E2E-B (`samples/textstats`, 단일 함수 기능, 37턴, 3.4분)
 | 릴리스 재빌드 | `release.py --force` → `dist/vmodel-0.2.0` 46개 파일, core `sha256:ce81befa63914478d8e54252d3cf05ad9104ced40c4e4eab398be7295e80a134` (`0664a39`) |
 | 릴리스 점검(`release_check.py`) | OK: 소스 = 0.2.0 기록, 0.1.0~0.1.5 사본·기록 불변, 태그 `v0.1.2`~`v0.1.5` 불변, `v0.2.0` 태그 없음, `main` = `78517d5` (`release-check-fa815b3.json`) |
 | `claude plugin validate --strict` | 소스·릴리스 모두 통과 |
+
+### 16.5 드릴 S1 1차 시도: guard 거짓 거부 발견 (유료 세션 1/3)
+- 실행: `scripts/e2e/g6_drill.py run --phase s1`(sonnet, `--max-budget-usd 2`, `--permission-mode auto`, `--setting-sources project,local`, `--no-session-persistence`, 릴리스 core `ce81befa`, 임시 샌드박스·전용 `VMODEL_HOME`). `--dangerously-skip-permissions` 쓰지 않음. **비용 $0.107, 5턴, 18.5초.**
+- 결과: 에이전트가 요청문을 그대로 넣은 `vmodel new-wi --request "… 'ORDER <order_id>' …"`를 guard가 "Validator Core 수정"으로 거부했고, 에이전트는 규칙대로 우회하지 않고 멈췄다(작업 항목 0, Gate 0, 원장 1건, audit OK, 릴리스 트리 불변). 산출물 `test-results/v0.2.0/drill/*-attempt1*`.
+- 원인(직접 재현): 0.1.3·0.1.5·0.2.0 공통의 guard 결함. 따옴표 안 `<`·`>`를 리다이렉션으로 읽어 Validator 호출로 인정하지 않았다(D46). 하네스는 늘 단순 문자열로 호출해 놓쳤다.
+- 사용자 결정: 세션 1회 추가 승인(총 3회, 회당 $2). guard 결함은 드릴과 별개로 고쳤다(§16.6).
+
+### 16.6 guard 수정과 독립 검토 16~21회차 (D46)
+| 회차 | 대상 | 결과 | 처리 |
+|---|---|---|---|
+| (S1 재현) | `fa815b3` | 따옴표 안 `<`·`>` 거짓 거부 | `test_guard_quoted` RED 1/1 → `11bb551`(따옴표 안 가리기) |
+| 16 | `11bb551` | 새 우회 2(`$'…'`, PowerShell 큰따옴표), 기존 우회 2(줄바꿈, 백슬래시-줄바꿈 `$(`) | `test_guard_quoted2` RED 3/3 → `7526ce3` |
+| 17 | `7526ce3` | 기존 우회 2(꼬리 뒤 줄바꿈, PowerShell `(…)`), 거짓 거부 2 | `test_guard_quoted3` RED 2/2 → `88971ac` |
+| 18 | `88971ac` | 주석 안 `'`로 줄 숨김(11bb551부터), PowerShell 거짓 거부 | `test_guard_quoted4` RED 2/2 → `690e757` |
+| 19 | `690e757` | PowerShell 타이포그래피 따옴표, `.cmd` 재해석(bash·PowerShell) | `test_guard_quoted5` RED 1/1 → **방식 변경** `6f332f1`(허용 목록 문법) + ReDoS 수정(내가 발견) |
+| 20 | `6f332f1` | 문법 경로는 단일 호출로만 실행됨 확인, PowerShell의 PATHEXT `vmodel.cmd` 선택 1 | `test_guard_quoted6` RED 1/1 → `18bbcb8` |
+| 21 | `18bbcb8` | 해결 확인, fa815b3 대비 회귀·충돌 없음 | 검토 종료. 기존 공백(PowerShell `del,`)은 문서화 |
+`test_upgrade_settings`의 guard 불변 Invariant는 D46 블록과 `_is_validator_call`·호출부만 되돌려 나머지를 0.1.4와 바이트 비교하도록 갱신했다(다른 규칙 변이를 잡는지 확인). 남은 제약: PowerShell 도구에서는 따옴표 안 `& | < > ^ %`가 있는 Validator 호출이 여전히 거부될 수 있다(bash에서는 허용).
