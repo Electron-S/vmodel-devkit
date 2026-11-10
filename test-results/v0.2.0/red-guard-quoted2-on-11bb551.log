@@ -1,0 +1,23 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/7cecc96f-20f2-42ed-ab37-b71618f25fbb/scratchpad/red-11bb551/plugins/vmodel",
+    "release_manifest": null
+  },
+  "git_head": "11bb551",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "marker": "RED-TARGET",
+  "tests": 4,
+  "expectations_met": 4,
+  "violations": 0,
+  "seconds": 3.3
+}
+
+OK  expect=ok   got=ok      test_guard_quoted2.GuardQuoted2Char.test_quoted_text_stays_allowed
+OK  expect=FAIL got=FAIL    test_guard_quoted2.GuardQuoted2Red.test_ansi_c_quoting_does_not_hide_a_redirection
+      AssertionError: Lists differ: ['"/tmp/claude-1000/-home-cyyoo-develop-vm[669 chars]\\''] != []
+OK  expect=FAIL got=FAIL    test_guard_quoted2.GuardQuoted2Red.test_newline_and_line_continuation_are_shell_syntax
+      AssertionError: Lists differ: ['"/tmp/claude-1000/-home-cyyoo-develop-vm[480 chars]e)"'] != []
+OK  expect=FAIL got=FAIL    test_guard_quoted2.GuardQuoted2Red.test_powershell_double_quotes_have_no_backslash_escape
+      AssertionError: Lists differ: [False, False] != [True, True]
