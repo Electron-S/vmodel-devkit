@@ -269,7 +269,8 @@ def cmd_seed_apply(args) -> int:
     check = json.loads((sealed / "seed-check.json").read_text("utf-8"))
     if not check.get("ok") or check.get("seed_sha256") != sha256_bytes(data):
         raise SystemExit("seed-check did not pass for this exact seed")
-    shutil.copy2(args.seed, sealed / "seed.json")
+    if Path(args.seed).resolve() != (sealed / "seed.json").resolve():
+        shutil.copy2(args.seed, sealed / "seed.json")
     status_before = vm(Path(args.release), env_for(work), proj, "status")[1]
     before, after = apply_seed(proj, seed)
     if (before, after) != (check["file_before"], check["file_after"]):

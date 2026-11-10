@@ -1,0 +1,115 @@
+{
+  "at": "2026-11-10T14:24:46+00:00",
+  "seed_sha256": "sha256:a92152060eebc6b732eb6709724b27d22e11678eb9e65e8975cd6f3f49e483c7",
+  "seed": {
+    "file": "src/orderdesk/receipt.py",
+    "old": "    out.append(f\"DISCOUNT {result['discount']}\")\n",
+    "new": "    out.append(f\"DISCOUNT {-result['discount']}\")\n",
+    "class": "interface contract mismatch on the meaning of a provider field: the consumer treats price_order's 'discount' as a signed price adjustment (negative = reduction) and negates it for display, while the provider contract (IF-001, DESIGN-001 postcondition total == subtotal - discount) returns a positive amount",
+    "why_unit_tests_pass": "every receipt unit test injects a fake pricer whose discount is 0, and -0 renders as 0; the pricing unit tests do not involve the receipt",
+    "expected_integration_failure": "TEST-013 (real price_order, subtotal 50010): the receipt shows 'DISCOUNT -5001' instead of 'DISCOUNT 5001' (AssertionError); TEST-014 still passes",
+    "expected_root_cause": "P4 receipt.py (render_receipt) misreads the IF-001 discount sign; minimal fix: show result['discount'] as returned; no test or spec change needed",
+    "not_disguised": "a one-character change with no comment; it contradicts REQ-004 AC2 (DISCOUNT 5000) and the IF contract, so the G4 verifier may legitimately find it by reading"
+  },
+  "file_before": "sha256:ba13f1f86f73199d5a69d0ebace49135af3dbf1daa67c6ab059f5d471e810711",
+  "file_after": "sha256:5b47ae000561f01375ebda587410acae50650059162a42212ff9e798161ab66b",
+  "baseline": {
+    "unit": {
+      "argv": [
+        "/usr/bin/python3",
+        "-m",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--ignore=tests/integration",
+        "--junitxml=/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/7cecc96f-20f2-42ed-ab37-b71618f25fbb/scratchpad/g6drill3/work-sealed/seed-check-junit/unit.xml"
+      ],
+      "exit": 0,
+      "tail": [
+        ".............                                                            [100%]",
+        "13 passed in 0.07s"
+      ]
+    },
+    "integration": {
+      "argv": [
+        "/usr/bin/python3",
+        "-m",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "tests/integration",
+        "--junitxml=/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/7cecc96f-20f2-42ed-ab37-b71618f25fbb/scratchpad/g6drill3/work-sealed/seed-check-junit/integration.xml"
+      ],
+      "exit": 0,
+      "tail": [
+        "...                                                                      [100%]",
+        "3 passed in 0.05s"
+      ]
+    }
+  },
+  "seeded": {
+    "unit": {
+      "argv": [
+        "/usr/bin/python3",
+        "-m",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--ignore=tests/integration",
+        "--junitxml=/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/7cecc96f-20f2-42ed-ab37-b71618f25fbb/scratchpad/g6drill3/work-sealed/seed-check-junit/unit.xml"
+      ],
+      "exit": 0,
+      "tail": [
+        ".............                                                            [100%]",
+        "13 passed in 0.06s"
+      ]
+    },
+    "integration": {
+      "argv": [
+        "/usr/bin/python3",
+        "-m",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "tests/integration",
+        "--junitxml=/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/7cecc96f-20f2-42ed-ab37-b71618f25fbb/scratchpad/g6drill3/work-sealed/seed-check-junit/integration.xml"
+      ],
+      "exit": 1,
+      "tail": [
+        ".F.                                                                      [100%]",
+        "=================================== FAILURES ===================================",
+        "_________________ test_TEST_013_receipt_uses_real_price_order __________________",
+        "",
+        "    def test_TEST_013_receipt_uses_real_price_order():",
+        "        order = {",
+        "            \"order_id\": \"O-9\",",
+        "            \"lines\": [",
+        "                {\"sku\": \"A\", \"unit_price\": 25000, \"qty\": 2},",
+        "                {\"sku\": \"B\", \"unit_price\": 10, \"qty\": 1},",
+        "            ],",
+        "        }",
+        ">       assert render_receipt(order) == (",
+        "            \"ORDER O-9\\nA x2 50000\\nB x1 10\\nSUBTOTAL 50010\\nDISCOUNT 5001\\nTOTAL 45009\"",
+        "        )",
+        "E       AssertionError: assert 'ORDER O-9\\nA...\\nTOTAL 45009' == 'ORDER O-9\\nA...\\nTOTAL 45009'",
+        "E         ",
+        "E         Skipping 43 identical leading characters in diff, use -v to show",
+        "E           ",
+        "E         - DISCOUNT 5001",
+        "E         + DISCOUNT -5001",
+        "E         ?          +",
+        "E           TOTAL 45009",
+        "",
+        "tests/integration/test_receipt_pricing.py:14: AssertionError",
+        "=========================== short test summary info ============================",
+        "FAILED tests/integration/test_receipt_pricing.py::test_TEST_013_receipt_uses_real_price_order",
+        "1 failed, 2 passed in 0.06s"
+      ]
+    }
+  },
+  "ok": true
+}

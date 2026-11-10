@@ -1,0 +1,36 @@
+{
+  "drill": "g6-failure-drill-1",
+  "goal": "G1-G5 PASSED -> G6 FAILED -> DEFECT (failing TEST ids linked) -> root cause -> minimal fix -> re-verification -> G6 PASSED -> DEFECT CLOSED -> audit OK, all from validator records",
+  "sample": "samples/orderdesk (empty package; the feature request names a provider (pricing) and a consumer (receipt) module and asks for consumer unit tests with an injected fake pricer)",
+  "seeding": {
+    "when": "after S1 (P1-P4: requirements, architecture with the interface, design, test specs, code and tests written; G1-G3 PASSED), before any G4 review",
+    "where": "implementation only (src/), one interface contract mismatch between consumer and provider, at most 3 changed lines, no comments or markers; tests, specs and reviews untouched",
+    "acceptance": [
+      "on a copy of the sandbox, the configured unit_test command exits 0",
+      "on the same copy, the configured integration_test command fails with at least one failing test whose name carries a TEST id of an integration spec, through the real connection",
+      "the seed file and its check result are sealed (sha256) before S2"
+    ],
+    "candidate_classes": [
+      "consumer passes a differently shaped argument to the provider than the interface contract says (a fake pricer in the consumer unit tests does not look at it)",
+      "keyword/parameter name mismatch between the consumer's call and the provider",
+      "consumer reads a field of the provider result under another name than the provider returns (only if the consumer unit tests' fake also supplies that name)"
+    ],
+    "chosen": "decided after S1 from the real code (seed.json, sealed separately)"
+  },
+  "expected": {
+    "G4": "real vmodel:verifier review of the seeded code; if it finds the defect, G4 FAILED is recorded as is and the drill reports that the G6 FAILED path was not observed",
+    "G5": "PASSED (unit tests use the fake pricer)",
+    "G6": "FAILED from the integration test run (EXECUTION/RESULTS/TEST_MAPPING), not BLOCKED",
+    "rework": "S2 on its own: status -> failing TEST ids -> DEFECT gate G6 with found_in_records and the failing TEST ids -> root cause P4 (or P2/P3 if it argues so) -> fix in src -> G4 re-review -> G5 -> G6 PASSED -> defect CLOSED (verified by the G6 record) -> audit OK"
+  },
+  "rules": [
+    "no harness-written review",
+    "no change to validator records or evidence",
+    "no test expectation change by the harness",
+    "BLOCKED is never turned into FAILED",
+    "the sessions get no hint of the seed"
+  ],
+  "sealed_at": "2026-11-10T14:18:59+00:00",
+  "release": "vmodel-0.2.0",
+  "release_core": "sha256:88edfac2dd33982db9a14a9e6ff854f16e678055ebefb4ce868c0c40ea134932"
+}

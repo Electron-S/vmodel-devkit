@@ -1,0 +1,5 @@
+/vmodel:start 주문 가격 계산과 영수증 출력 기능을 추가해 주세요.
+- 가격 계산 모듈 src/orderdesk/pricing.py: price_order(lines) — lines는 {"sku": str, "unit_price": int, "qty": int} 사전의 목록입니다. 줄마다 금액(unit_price × qty)을 계산하고 소계, 할인, 합계를 돌려줍니다. 금액은 모두 원 단위 정수입니다. 소계가 50,000원 이상이면 소계의 10%를 할인합니다(원 미만 버림). qty가 1 미만이거나 unit_price가 음수면 ValueError를 냅니다.
+- 영수증 모듈 src/orderdesk/receipt.py: render_receipt(order, pricer=price_order) — order는 {"order_id": str, "lines": [...]} 입니다. 가격 계산 결과로 영수증 텍스트를 만듭니다. 첫 줄 "ORDER <order_id>", 품목마다 "<sku> x<qty> <금액>", 끝에 "SUBTOTAL <소계>", "DISCOUNT <할인>", "TOTAL <합계>" 줄이 옵니다.
+- 영수증 모듈의 단위 테스트는 가짜 가격 계산기를 주입해서 실제 가격 계산 모듈 없이 돌게 해 주세요. 두 모듈을 실제로 연결한 동작은 통합 테스트(tests/integration/)에서 확인해 주세요.
+이번 세션에서는 P4(구현과 단위·통합 테스트 코드 작성)까지만 진행하고, G4 리뷰를 요청하기 전에 멈춰 주세요. G4부터는 다음 세션에서 이어서 합니다. 마지막에 Gate별 결과와 만든 파일 목록을 짧게 보고해 주세요.
