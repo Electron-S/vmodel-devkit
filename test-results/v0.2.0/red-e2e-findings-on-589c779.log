@@ -1,0 +1,20 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/43cdb556-8cbb-4e88-9bf3-ce8c6609a0de/scratchpad/red-589c779/plugins/vmodel",
+    "release_manifest": null
+  },
+  "git_head": "342ae34",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "marker": "RED-TARGET",
+  "tests": 2,
+  "expectations_met": 2,
+  "violations": 0,
+  "seconds": 8.9
+}
+
+OK  expect=FAIL got=FAIL    test_g6_e2e_findings.E2EReportHeadingRed.test_E2E_B_report_heading_says_na
+      AssertionError: 'PASSED (R' unexpectedly found in ' PASSED (R00011)' : RED-TARGET ### G6 — PASSED (R00011)
+OK  expect=FAIL got=FAIL    test_g6_e2e_findings.E2ESameFileRed.test_E2E_A_provider_and_consumer_in_one_module
+      AssertionError: 'BLOCKED' != 'PASSED'
