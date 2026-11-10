@@ -33,9 +33,10 @@ class GuardQuoted5Char(_Guard):
                 f'"{VMP}" new-wi \\\n  --title "t" \\\n  --request "x > 0"',
                 f'"{VMP}" new-wi --title "t" --request "통화 기호 \'$\'를 붙이고 금액 > 0"']
         self.assert_allowed(bash)
-        for c in (f'{VMP} new-wi --title "t" --request "Add a copy button (UI) > 0"',
-                  f"{VMP} new-wi --title 't' --request 'install (twice) > 0'"):
+        for c in (f'{VMP} new-wi --title "t" --request "Add a copy button (UI) #1"',
+                  f"{VMP} new-wi --title 't' --request 'install (twice); done'"):
             self.assertIsNone(self.decide(c, tool="PowerShell"), c)
+        # (review 20: quoted & | < > ^ % stay refused under PowerShell - it runs vmodel.cmd; test_guard_quoted6)
 
 
 class GuardQuoted5PerfAccept(_Guard):

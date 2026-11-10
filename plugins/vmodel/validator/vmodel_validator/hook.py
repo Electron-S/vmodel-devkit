@@ -140,6 +140,8 @@ def _call_tokens(head: str, tool: str) -> list[str] | None:
 
 
 def _plain_call(text: str, tool: str) -> bool:
+    if tool != "Bash" and any(ch in text for ch in "&|<>^%"):  # PowerShell runs bin/vmodel as vmodel.cmd (PATHEXT),
+        return False                                           # and cmd.exe parses the arguments again (review 20)
     if not PLAIN_CALL.get(tool, PLAIN_CALL["PowerShell"]).fullmatch(text):
         return False
     toks = _call_tokens(text, tool)
@@ -157,7 +159,7 @@ def _is_validator_call(cmd: str, tool: str = "Bash") -> bool:
     if _plain_call(c, tool):
         head = c
     else:
-        m = SAFE_TAIL.search(c)
+        m = SAFE_TAIL.search(c) if "|" in c or "2>&1" in c else None  # no tail to find: skip the (quadratic) search
         head = c[: m.start()] if m else c
         if "\n" in c or "\r" in c or (SHELL_META if tool == "Bash" else PS_META).search(head):
             if not _plain_call(head, tool) or "\n" in c[len(head):] or "\r" in c[len(head):]:
