@@ -694,7 +694,9 @@ def report_markdown(project: Project, wi: str) -> str:
         if not last:
             continue
         rec = last.record
-        md.append(f"### {gate} — {rec['status']} ({last.id})")
+        shown = "N/A (recorded PASSED, no integration test executed)" if (
+            rec.get("applicability") == "not_applicable" and rec["status"] == "PASSED") else rec["status"]
+        md.append(f"### {gate} — {shown} ({last.id})")  # REQ-G6-17: never a bare PASSED for N/A (E2E-B)
         md.append("")
         md.append("Mechanical / execution checks (decided by the validator):")
         md.append("")

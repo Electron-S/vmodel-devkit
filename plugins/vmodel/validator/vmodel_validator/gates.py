@@ -1946,8 +1946,9 @@ def read_runtime_trace(trace_dir: Path, prior_errors: list[str] | None = None, p
                 anchors = (anchor,) if isinstance(anchor, str) else tuple(
                     sorted(x for x in anchor if isinstance(x, str))) if isinstance(anchor, list) else ()
                 if isinstance(t, str) and (c is None or isinstance(c, str)):
-                    raw_edges.append((t, str(r.get("p") or ""), f.name, r["e"], str(r.get("f") or ""), c, anchors, ts,
-                                      spawned))
+                    start = r.get("s") if isinstance(r.get("s"), str) else str(r.get("f") or "")
+                    raw_edges.append((t, str(r.get("p") or ""), f.name, r["e"], str(r.get("f") or ""), c, anchors, start,
+                                      ts, spawned))
             elif isinstance(r.get("m"), str):
                 ran_files.add(r["m"])
                 ran.add((r["m"], str(r.get("f"))))
@@ -1975,7 +1976,7 @@ def read_runtime_trace(trace_dir: Path, prior_errors: list[str] | None = None, p
         return new
 
     events = [(t, phase_of(t, ph, ts, sp), fn, m, func) for t, ph, fn, m, func, ts, sp in raw_events]
-    edges = [(t, phase_of(t, ph, ts, sp), fn, e, func, c, a) for t, ph, fn, e, func, c, a, ts, sp in raw_edges]
+    edges = [(t, phase_of(t, ph, ts, sp), fn, e, func, c, a, st) for t, ph, fn, e, func, c, a, st, ts, sp in raw_edges]
     return {"active": procs > 0, "processes": procs, "spawned_processes": spawned_files, "methods": sorted(methods),
             "truncated": truncated, "ran_files": sorted(ran_files),
             "tests": {t: sorted(v) for t, v in sorted(tests.items())}, "edges": len(edges),
@@ -2018,14 +2019,14 @@ def trace_by_test(rt: dict) -> dict[str, dict]:
             d["ran"].add((label, func))
         if phase == "call":
             d["call"].setdefault((label, func), set()).add(proc)
-    for nodeid, phase, proc, provider, func, consumer, anchors in rt.get("_edges") or []:
+    for nodeid, phase, proc, provider, func, consumer, anchors, start in rt.get("_edges") or []:
         d = entry(nodeid)
         if d is None or phase == "detached":
             continue
         if consumer is None:
-            d["prov_runs"].add((provider, func, anchors))
+            d["prov_runs"].add((provider, func, anchors, start))
             if phase == "call":
-                d["prov_calls"].setdefault((provider, func), set()).add(proc)
+                d["prov_calls"].setdefault((provider, func, start), set()).add(proc)
         else:
             d["edges"].add((provider, func, consumer, anchors))
     return out
@@ -2260,7 +2261,7 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
     if_view = []
     levels_data: dict[str, dict] = {}
     ran_all: set[tuple[str, str]] = set(rt.get("_ran") or set())
-    ran_entries = {(e, fn) for _t, _ph, _f, e, fn, c, _a in rt.get("_edges") or [] if c is None}  # interface entries
+    ran_entries = {(e, fn, st) for _t, _ph, _f, e, fn, c, _a, st in rt.get("_edges") or [] if c is None}
     capped = set(rt.get("edge_scan_capped") or [])
     if not rt["active"]:  # the validator injected its tracer: no trace at all is missing evidence (review N4)
         blocks.append("no runtime trace was written although the validator injected its tracer (Python started with "
@@ -2288,7 +2289,14 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
         # the stack that started its thread / submitted its pool work item); a provider file that is also a consumer
         # file cannot show one, so there the provider running in the test is the most that can be observed
         needs_edge = bool(cons_rels) and not (prov_rels & cons_rels)
-        prov_anywhere = any(is_prov(e, fn) for e, fn in ran_entries) if ran_entries else \
+        # E2E-A (589c779): when the provider file is also a consumer file the entry (outermost function of that file)
+        # is the consumer's own function, so there the function that started is what can be observed
+        same_file = bool(prov_rels & cons_rels)
+
+        def pfn(entry_fn: str, start_fn: str, _sf=same_file) -> str:
+            return start_fn if _sf else entry_fn
+
+        prov_anywhere = any(is_prov(e, pfn(fn, st)) for e, fn, st in ran_entries) if ran_entries else \
             any(is_prov(lab, fn) for lab, fn in ran_all)
         covered_by, tests_view = [], {}
         credited: list[str] = []  # passed tests with a call path whose function ran: their level decides
@@ -2297,7 +2305,7 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
             st = executed.get(tid, "not executed")
             seen = ran.get(tid, empty)
             call_files = seen["call"]
-            prov_here = any(is_prov(e, fn) for e, fn, _a in seen["prov_runs"]) or \
+            prov_here = any(is_prov(e, pfn(fn, st)) for e, fn, _a, st in seen["prov_runs"]) or \
                 any(is_prov(lab, fn) for lab, fn in seen["ran"] if not seen["prov_runs"])
             cons_here = (not cons_rels) or any(lab in cons_rels for lab, _fn in seen["ran"])
             # review 5 N7: only what the test itself ran counts: the anchor (outermost test-file function on the stack)
@@ -2314,7 +2322,7 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
             if needs_edge:
                 linked = [a for e, fn, c, a in seen["edges"] if is_prov(e, fn) and c in cons_rels]
             else:
-                linked = [a for e, fn, a in seen["prov_runs"] if is_prov(e, fn)] if cons_here else []
+                linked = [a for e, fn, a, st in seen["prov_runs"] if is_prov(e, pfn(fn, st))] if cons_here else []
             # review 6 M5 (decision): a connection run only by a requested fixture does not count when the test
             # function itself patches the provider; the test body's own run always counts
             direct = any(set(a) & own_fns for a in linked)
@@ -2370,9 +2378,9 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
                     kind = (declared.get((iid, tid)) or {}).get("kind")
                     calls = seen["prov_calls"]  # entries of the provider during the call (review 6 M1)
                     if kind in ("subprocess", "ipc"):  # proof must come from another process (review F6)
-                        p_ok = any(is_prov(*k) and v - procs for k, v in calls.items())
+                        p_ok = any(is_prov(k[0], pfn(k[1], k[2])) and v - procs for k, v in calls.items())
                     else:
-                        p_ok = any(is_prov(*k) for k in calls)
+                        p_ok = any(is_prov(k[0], pfn(k[1], k[2])) for k in calls)
                     where = " in a process other than the test's" if kind in ("subprocess", "ipc") else ""
                     cand = ("test_level", None) if p_ok and cons_call else \
                         ("insufficient", f"runtime path ({kind}) declared at G4 and the provider ran{where} during the "

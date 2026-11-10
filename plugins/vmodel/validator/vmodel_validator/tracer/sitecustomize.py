@@ -11,7 +11,8 @@ and class bodies are not counted, so importing a module is not execution.
 
 Connections (D44, reviews 5-6): for a provider file named in the spec's "providers", each time one of its functions
 starts the tracer walks the call stack (and takes what was inherited from the stack that started the thread or
-submitted the pool work item it runs in). It writes {"e": provider file, "f": entry, "a": anchors} (the provider ran)
+submitted the pool work item it runs in). It writes {"e": provider file, "f": entry, "s": started function, "a":
+anchors} (the provider ran)
 and {"e", "f": entry, "c": consumer file, "a"} (a consumer called it). The entry is the outermost provider-file function
 between the starting function and the consumer (for "ran": on the whole stack): the interface function actually
 called, so a helper run by a constructor is recorded as the constructor (review 6 M1). The anchors are the functions of
@@ -224,7 +225,8 @@ def _vmodel_trace_install():
             cons[c] = entry  # a consumer that started this thread / submitted this work item
         anchors = tuple(sorted(set(anchors) | inh_a))
         a = list(anchors)
-        write(("r", test, phase, lab, entry, anchors), {"t": test, "p": phase, "e": lab, "f": entry, "a": a})
+        write(("r", test, phase, lab, entry, func, anchors), {"t": test, "p": phase, "e": lab, "f": entry, "s": func,
+                                                              "a": a})
         for c, c_entry in cons.items():
             if c in want:
                 write(("e", test, phase, lab, c_entry, c, anchors), {"t": test, "p": phase, "e": lab, "f": c_entry,
