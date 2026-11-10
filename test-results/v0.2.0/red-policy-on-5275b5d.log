@@ -1,0 +1,29 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/7cecc96f-20f2-42ed-ab37-b71618f25fbb/scratchpad/red-5275b5d/plugins/vmodel",
+    "release_manifest": null
+  },
+  "git_head": "d9cae51",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "marker": "RED-TARGET",
+  "tests": 8,
+  "expectations_met": 8,
+  "violations": 0,
+  "seconds": 36.3
+}
+
+OK  expect=ok   got=ok      test_g6_policy.PolicyControlChar.test_C1_requested_server_fixture_with_the_tests_request
+OK  expect=ok   got=ok      test_g6_policy.PolicyControlChar.test_C2_grandchild_process_started_through_the_tests_child
+OK  expect=ok   got=ok      test_g6_policy.PolicyControlChar.test_C3_unrelated_autouse_fixture_and_the_tests_own_subprocess
+OK  expect=FAIL got=FAIL    test_g6_policy.PolicyFixtureRed.test_B1_autouse_fixture_thread_runs_the_provider_itself
+      AssertionError: 'test_level' == 'test_level' : RED-TARGET an autouse fixture's thread ran the provider: {'consumer_modules': None, 'consumers': ['EXTERNAL'], 'covered': True, 'covered_by': ['TEST-012'], 'id': 'IF-002', 'provider': 'ARCH-002', 'provider_modules': ['src/pipeline/report.py'], 'provider_symbols': ['main', 'summarize'], 'tests': {'TEST-012': {'evidence_level': 'test_level', 'evidence_r
+OK  expect=FAIL got=FAIL    test_g6_policy.PolicyFixtureRed.test_B2_autouse_fixture_child_process_runs_the_provider_itself
+      AssertionError: 'test_level' == 'test_level' : RED-TARGET a child process an autouse fixture started ran the provider: {'consumer_modules': None, 'consumers': ['EXTERNAL'], 'covered': True, 'covered_by': ['TEST-012'], 'id': 'IF-002', 'provider': 'ARCH-002', 'provider_modules': ['src/pipeline/report.py'], 'provider_symbols': ['main', 'summarize'], 'tests': {'TEST-012': {'evidence_level': 'test_leve
+OK  expect=FAIL got=FAIL    test_g6_policy.PolicyFixtureRed.test_B3_autouse_server_fixture_cannot_prove_the_tests_request
+      AssertionError: 'test_level' == 'test_level' : RED-TARGET credited through an autouse fixture's server: {'consumer_modules': None, 'consumers': ['EXTERNAL'], 'covered': True, 'covered_by': ['TEST-012'], 'id': 'IF-002', 'provider': 'ARCH-002', 'provider_modules': ['src/pipeline/report.py'], 'provider_symbols': ['main', 'summarize'], 'tests': {'TEST-012': {'evidence_level': 'test_level', 'evidence_r
+OK  expect=FAIL got=FAIL    test_g6_policy.PolicyPatchRed.test_A1_api_test_that_patches_a_provider_function
+      AssertionError: 'test_level' != 'insufficient'
+OK  expect=FAIL got=FAIL    test_g6_policy.PolicyPatchRed.test_A2_subprocess_test_that_patches_the_interface_symbol
+      AssertionError: 'test_level' != 'insufficient'
