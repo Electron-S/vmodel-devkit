@@ -20,8 +20,10 @@ WRITE_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit"}
 READ_TOOLS = {"Read"}
 SHELL_TOOLS = {"Bash", "PowerShell"}
 SHELL_META = re.compile(r"[;&|`<>]|\$\(")
-# D46 (review 16): an unquoted newline or CR also separates commands in a validator call
+# D46 (reviews 16-17): an unquoted newline or CR also separates commands in a validator call; in PowerShell a
+# parenthesised argument ((...), @(...), $(...)) is an expression that runs
 CALL_META = re.compile(r"[;&|`<>\n\r]|\$\(")
+PS_CALL_META = re.compile(r"[;&|`<>\n\r(]")
 # Commands that write, move or delete (POSIX shell, Git, PowerShell/cmd). fd duplication ("2>&1", ">&2", "2>&-") is
 # not a write; "&>file", "&>>file", ">&file", "1>&file" and "x2>&file" (digits ending an ordinary word) are, as bash
 # creates the file ("2>&file" is an error).
@@ -117,17 +119,35 @@ def _core_markers() -> list[str]:
 SAFE_TAIL = re.compile(r"(\s+2>&1)?(\s*\|\s*(head|tail|grep|less|cat|wc)(\s+[^;&|`<>$]*)?)*\s*$")
 
 
+def _bash_continued(s: str) -> str | None:
+    """`s` as bash reads it before word splitting: backslash-newline (line continuation) removed outside single quotes,
+    also inside double quotes, where it can join "$" and "(" (review 16/17). None when a quote is not closed."""
+    out, i, n, quote = [], 0, len(s), None
+    while i < n:
+        ch = s[i]
+        if quote != "'" and ch == "\\" and i + 1 < n:
+            if s[i + 1] != "\n":
+                out.append(s[i:i + 2])
+            i += 2
+            continue
+        if ch in "'\"" and quote in (None, ch):
+            quote = None if quote == ch else ch
+        out.append(ch)
+        i += 1
+    return None if quote else "".join(out)
+
+
 def _quoted_text_masked(s: str) -> str | None:
-    """`s` with the characters inside quotes replaced by '_' (bash rules): single-quoted text is literal; double-quoted
-    text is literal except command substitution (` and $( are kept, so they still count as shell syntax) and backslash
-    escapes. None (not a validator call) when a quote is not closed, for $'...' / $"..." quoting and for any
-    backslash-newline (line continuation can join "$" and "(") (review 16). (Drill S1, 2026-11-10: a request text with
+    """`s` with the characters inside quotes replaced by '_' (bash rules, after _bash_continued): single-quoted text is
+    literal; double-quoted text is literal except command substitution (` and $( are kept, so they still count as
+    shell syntax) and backslash escapes. None (not a validator call) when a quote is not closed and for $'...' /
+    $"..." quoting outside quotes, which follows other rules (review 16). (Drill S1, 2026-11-10: a request text with
     < or > inside quotes was read as a redirection, so `vmodel new-wi --request "..."` was denied as a Core write.)"""
-    if "$'" in s or '$"' in s or "\\\n" in s or "\\\r" in s:
-        return None
     out, i, n = [], 0, len(s)
     while i < n:
         ch = s[i]
+        if ch == "$" and i + 1 < n and s[i + 1] in "'\"":
+            return None
         if ch == "\\" and i + 1 < n:
             out.append(s[i:i + 2])
             i += 2
@@ -171,12 +191,17 @@ def _is_validator_call(cmd: str, tool: str = "Bash") -> bool:
     contain < > ; & |.
     """
     c = cmd.strip()
-    masked = _quoted_text_masked(c) if tool == "Bash" else c  # PowerShell quoting differs: no masking (review 16)
-    if masked is None:
+    if tool == "Bash":
+        c = _bash_continued(c) or ""
+        masked = _quoted_text_masked(c) if c else None
+        meta = CALL_META
+    else:  # PowerShell quoting differs: no masking, and a parenthesised argument runs (reviews 16-17)
+        masked, meta = c, PS_CALL_META
+    if not masked or "\n" in masked or "\r" in masked:  # also a newline in the read-only tail (review 17)
         return False
     m = SAFE_TAIL.search(masked)
     head = c[: m.start()] if m else c
-    if CALL_META.search(masked[: m.start()] if m else masked):
+    if meta.search(masked[: m.start()] if m else masked):
         return False
     try:
         toks = shlex.split(head, posix=True)
