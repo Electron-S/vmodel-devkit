@@ -14,6 +14,10 @@ import unittest
 from helpers import PLUGIN
 from test_guard_redirects import _Guard
 
+# PowerShell needs `& "path"` for a path with spaces (Windows harness), which is not a plain call; there the
+# validator is called by name, as on the PATH (same command shape on WSL, where the path has no spaces)
+VMP_PS = str(PLUGIN / "bin" / "vmodel") if " " not in str(PLUGIN) else "vmodel"
+
 VM = f'"{PLUGIN / "bin" / "vmodel"}"'
 
 
@@ -26,8 +30,8 @@ class GuardQuoted4DenyRed(_Guard):
 
 class GuardQuoted4AllowRed(_Guard):
     def test_powershell_quoted_text_with_parentheses(self):
-        cmds = [f'{PLUGIN / "bin" / "vmodel"} new-wi --title "t" --request "Add a copy button (UI)"',
-                f"{PLUGIN / 'bin' / 'vmodel'} new-wi --title 't' --request 'install it (twice)'"]
+        cmds = [f'{VMP_PS} new-wi --title "t" --request "Add a copy button (UI)"',
+                f"{VMP_PS} new-wi --title 't' --request 'install it (twice)'"]
         # (review 20: a quoted > is refused under PowerShell after all - it runs vmodel.cmd; test_guard_quoted6)
         denied = {c[-45:]: self.decide(c, tool="PowerShell") for c in cmds}
         self.assertEqual({c: r for c, r in denied.items() if r is not None}, {}, "RED-TARGET should be allowed")

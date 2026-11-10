@@ -12,6 +12,10 @@ import unittest
 from helpers import PLUGIN
 from test_guard_redirects import _Guard
 
+# PowerShell needs `& "path"` for a path with spaces (Windows harness), which is not a plain call; there the
+# validator is called by name, as on the PATH (same command shape on WSL, where the path has no spaces)
+VMP_PS = str(PLUGIN / "bin" / "vmodel") if " " not in str(PLUGIN) else "vmodel"
+
 VMP = str(PLUGIN / "bin" / "vmodel")
 
 
@@ -25,8 +29,8 @@ class GuardQuoted6Red(_Guard):
 
 class GuardQuoted6Char(_Guard):
     def test_powershell_quoted_text_without_cmd_metacharacters_stays_allowed(self):
-        for c in (f'{VMP} new-wi --title "t" --request "Add a copy button (UI); #1 — 첫 줄"',
-                  f"{VMP} new-wi --title 't' --request 'install it (twice)'"):
+        for c in (f'{VMP_PS} new-wi --title "t" --request "Add a copy button (UI); #1 — 첫 줄"',
+                  f"{VMP_PS} new-wi --title 't' --request 'install it (twice)'"):
             self.assertIsNone(self.decide(c, tool="PowerShell"), c)
 
 

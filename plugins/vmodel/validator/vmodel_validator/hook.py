@@ -118,13 +118,14 @@ SAFE_TAIL = re.compile(r"(\s+2>&1)?(\s*\|\s*(head|tail|grep|less|cat|wc)(\s+[^;&
 # --- D46 (drill S1 2026-11-10, reviews 16-19) ---------------------------------------------------------------------
 # A validator call may carry quoted text (a request with < > ; | & ( ) #) only when the whole call is in this narrow
 # grammar: plain words outside quotes, single-quoted text without quote-like characters, double-quoted text without
-# command substitution, backticks, ${ $[ or quote-like characters (bash: only \" and \\ escapes). Masking quoted text
+# command substitution, backticks, ${ $[ or quote-like characters (bash: a backslash escapes any character but a newline;
+# a quoted Windows path keeps its backslashes). Masking quoted text
 # by hand kept disagreeing with bash, PowerShell and cmd.exe (ANSI-C $'', comments, typographic quotes, .cmd
 # re-parsing), so anything outside the grammar is judged as before, with an unquoted newline and, in PowerShell, a
 # parenthesised argument also counting as shell syntax.
 _PLAIN_WORD = r"[A-Za-z0-9_./:=+\-]"  # one character per repetition: no nested quantifier (no ReDoS)
 _PLAIN_SQ = "'[^'\u2018-\u201f]*'"
-_PLAIN_DQ = {"Bash": '"(?:[^"$`\\\\\u2018-\u201f]|\\$(?![({\\[])|\\\\["\\\\])*"',
+_PLAIN_DQ = {"Bash": '"(?:[^"$`\\\\\u2018-\u201f]|\\$(?![({\\[])|\\\\[^\\n\\r\u2018-\u201f])*"',
              "PowerShell": '"(?:[^"$`\u2018-\u201f]|\\$(?![({\\[]))*"'}
 _PLAIN_SEP = {"Bash": r"(?:[ \t]+\\\n[ \t]*|[ \t]+)", "PowerShell": r"[ \t]+"}
 PLAIN_CALL = {k: re.compile(rf"(?:{_PLAIN_WORD}|{_PLAIN_SQ}|{dq})+(?:{_PLAIN_SEP[k]}(?:{_PLAIN_WORD}|{_PLAIN_SQ}|{dq})+)*")
