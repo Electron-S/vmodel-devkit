@@ -20,6 +20,8 @@ WRITE_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit"}
 READ_TOOLS = {"Read"}
 SHELL_TOOLS = {"Bash", "PowerShell"}
 SHELL_META = re.compile(r"[;&|`<>]|\$\(")
+# D46 (review 16): an unquoted newline or CR also separates commands in a validator call
+CALL_META = re.compile(r"[;&|`<>\n\r]|\$\(")
 # Commands that write, move or delete (POSIX shell, Git, PowerShell/cmd). fd duplication ("2>&1", ">&2", "2>&-") is
 # not a write; "&>file", "&>>file", ">&file", "1>&file" and "x2>&file" (digits ending an ordinary word) are, as bash
 # creates the file ("2>&file" is an error).
@@ -116,10 +118,13 @@ SAFE_TAIL = re.compile(r"(\s+2>&1)?(\s*\|\s*(head|tail|grep|less|cat|wc)(\s+[^;&
 
 
 def _quoted_text_masked(s: str) -> str | None:
-    """`s` with the characters inside quotes replaced by '_': single-quoted text is literal; double-quoted text is
-    literal except command substitution (` and $( are kept, so they still count as shell syntax) and backslash escapes.
-    None when a quote is not closed. (Drill S1, 2026-11-10: a request text with < or > inside quotes was read as a
-    redirection, so `vmodel new-wi --request "..."` was denied as a Validator Core write.)"""
+    """`s` with the characters inside quotes replaced by '_' (bash rules): single-quoted text is literal; double-quoted
+    text is literal except command substitution (` and $( are kept, so they still count as shell syntax) and backslash
+    escapes. None (not a validator call) when a quote is not closed, for $'...' / $"..." quoting and for any
+    backslash-newline (line continuation can join "$" and "(") (review 16). (Drill S1, 2026-11-10: a request text with
+    < or > inside quotes was read as a redirection, so `vmodel new-wi --request "..."` was denied as a Core write.)"""
+    if "$'" in s or '$"' in s or "\\\n" in s or "\\\r" in s:
+        return None
     out, i, n = [], 0, len(s)
     while i < n:
         ch = s[i]
@@ -158,7 +163,7 @@ def _quoted_text_masked(s: str) -> str | None:
     return "".join(out)
 
 
-def _is_validator_call(cmd: str) -> bool:
+def _is_validator_call(cmd: str, tool: str = "Bash") -> bool:
     """A single plain vmodel invocation, optionally followed by 2>&1 and read-only filters.
 
     Quoted executable paths may contain spaces (e.g. "C:\\Users\\x\\vmodel 한글\\bin\\vmodel"). Shell metacharacters
@@ -166,12 +171,12 @@ def _is_validator_call(cmd: str) -> bool:
     contain < > ; & |.
     """
     c = cmd.strip()
-    masked = _quoted_text_masked(c)
+    masked = _quoted_text_masked(c) if tool == "Bash" else c  # PowerShell quoting differs: no masking (review 16)
     if masked is None:
         return False
     m = SAFE_TAIL.search(masked)
     head = c[: m.start()] if m else c
-    if SHELL_META.search(masked[: m.start()] if m else masked):
+    if CALL_META.search(masked[: m.start()] if m else masked):
         return False
     try:
         toks = shlex.split(head, posix=True)
@@ -232,7 +237,7 @@ def guard(payload: dict) -> dict | None:
     if tool in SHELL_TOOLS:
         cmd = str(ti.get("command") or "")
         low = cmd.lower().replace("\\", "/")
-        validator_call = _is_validator_call(cmd)
+        validator_call = _is_validator_call(cmd, tool)
         writes = shell_writes(cmd, tool)
         if USER_ONLY.search(cmd):
             return _deny("init/install/uninstall/unblock/configure-tests and 'lock --accept-current' are user-only actions; "

@@ -338,16 +338,30 @@ class UpgradeSettingsInvariant(Base):
             self.assertIn('"deny"', self.decide(sb, "Edit", {"file_path": str(target)}), target)
         self.assertIn('"deny"', self.decide(sb, "Bash", {"command": f"echo x >> {PLUGIN / 'bin' / 'vmodel'}"}))
         # the guard itself is unchanged since the 0.1.4 release, except that 0.2.0 adds the user-only
-        # 'configure-tests' command (REQ-G6-28, D42) to USER_ONLY and its deny message
+        # 'configure-tests' command (REQ-G6-28, D42) to USER_ONLY and its deny message, and D46 (drill S1, review 16)
+        # recognises quoted text in a validator call: CALL_META, _quoted_text_masked, _is_validator_call and its call
+        # site. Those documented changes are undone below; anything else still has to be byte-identical.
         rel = "validator/vmodel_validator/hook.py"
         base = old_release("0.1.4")
         if base is not None:
             now = (PLUGIN / rel).read_text(encoding="utf-8")
+            old = (base / rel).read_text(encoding="utf-8")
             if "configure-tests" in now:
                 now = now.replace('|unblock|configure-tests)\\b|accept-current",\n                       re.IGNORECASE)',
                                   '|unblock)\\b|accept-current", re.IGNORECASE)')
                 now = now.replace("init/install/uninstall/unblock/configure-tests and", "init/install/uninstall/unblock and")
-            self.assertEqual(now, (base / rel).read_text(encoding="utf-8"))
+            if "_quoted_text_masked" in now:
+                def func(text: str, name: str) -> str:  # a top-level def up to the next top-level statement
+                    i = text.index(f"\ndef {name}(")
+                    return text[i:text.index("\n\n\n", i)]
+
+                now = now.replace("# D46 (review 16): an unquoted newline or CR also separates commands in a validator "
+                                  "call\nCALL_META = re.compile(r\"[;&|`<>\\n\\r]|\\$\\(\")\n", "", 1)
+                now = now.replace("validator_call = _is_validator_call(cmd, tool)",
+                                  "validator_call = _is_validator_call(cmd)", 1)
+                now = now.replace(func(now, "_quoted_text_masked") + "\n\n", "", 1)
+                now = now.replace(func(now, "_is_validator_call"), func(old, "_is_validator_call"), 1)
+            self.assertEqual(now, old)
 
 
 @unittest.skipUnless(POSIX, "re-pinning needs a pty (POSIX only)")
