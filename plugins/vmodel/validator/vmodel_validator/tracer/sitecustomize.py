@@ -131,6 +131,7 @@ def _vmodel_trace_install():
 
         def _child():
             try:
+                state["sysenv"] = {"lock": threading.Lock(), "active": [], "base": None}
                 if state.get("fork"):
                     os.environ[ORIGIN] = state["fork"]  # also for a program the child execs (os.spawn*, pty.spawn)
                 open_out()
@@ -273,15 +274,19 @@ def _vmodel_trace_install():
         k = (test, phase, lab)
         if k in state["kdone"]:
             return
-        n = state["scans"].get(("k", k), 0)
+        sk = ("k", k, threading.get_ident())  # per thread: another thread's runs cannot use up this one's budget
+        n = state["scans"].get(sk, 0)
         if n >= scan_limit:
             return
-        state["scans"][("k", k)] = n + 1
+        state["scans"][sk] = n + 1
         _c, _e, anchors = stack_info(frame)
         anchors = tuple(sorted(set(anchors) | inherited()[1]))
         write(("k", test, phase, lab, anchors), {"t": test, "p": phase, "k": lab, "a": list(anchors)})
         if own_anchor(test) in anchors:
             state["kdone"].add(k)
+        elif n + 1 == scan_limit:
+            write(("kcap", test, phase, lab, threading.get_ident()),
+                  {"edge_scan_capped": True, "t": test, "p": phase, "k": lab})
 
     def record(code, frame=None):
         """None: not watched; True: watched (recorded when it is a function)."""
@@ -401,25 +406,41 @@ def _vmodel_trace_install():
 
         subprocess.Popen.__init__ = init
 
-        env_lock = threading.Lock()
         original_system = os.system
+        state["sysenv"] = {"lock": threading.Lock(), "active": [], "base": None}
+
+        def set_env(token, add):
+            """The token of the latest running os.system call in os.environ (bookkeeping under a short lock, never
+            held while a command runs: review 13 found deadlocks); the previous value once none runs."""
+            s = state["sysenv"]
+            with s["lock"]:
+                if add:
+                    if not s["active"]:
+                        s["base"] = os.environ.get(ORIGIN)
+                    s["active"].append(token)
+                elif token in s["active"]:
+                    s["active"].remove(token)
+                if s["active"]:
+                    os.environ[ORIGIN] = s["active"][-1]
+                elif s["base"] is None:
+                    os.environ.pop(ORIGIN, None)
+                else:
+                    os.environ[ORIGIN] = s["base"]
 
         @functools.wraps(original_system)
         def system(command):
             try:
                 token = new_spawn(sys._getframe(1), "os.system")
+                set_env(token, True)
             except Exception:
                 return original_system(command)
-            with env_lock:  # serialises os.system calls while the token is in the process environment
-                prev = os.environ.get(ORIGIN)
-                os.environ[ORIGIN] = token
+            try:
+                return original_system(command)
+            finally:
                 try:
-                    return original_system(command)
-                finally:
-                    if prev is None:
-                        os.environ.pop(ORIGIN, None)
-                    else:
-                        os.environ[ORIGIN] = prev
+                    set_env(token, False)
+                except Exception:
+                    pass
 
         os.system = system
 

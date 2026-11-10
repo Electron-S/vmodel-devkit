@@ -2303,7 +2303,9 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
     levels_data: dict[str, dict] = {}
     ran_all: set[tuple[str, str]] = set(rt.get("_ran") or set())
     ran_entries = {(e, fn, st) for _t, _ph, _f, e, fn, c, _a, st, _o in rt.get("_edges") or [] if c is None}
-    capped = set(rt.get("edge_scan_capped") or [])
+    # TEST ids of the capped pytest node ids (review 13: the node ids were compared with TEST ids, so the "not certain"
+    # note never showed)
+    capped = {i for n in rt.get("edge_scan_capped") or [] for i in test_ids_in_text(test_function_of(n))}
     if not rt["active"]:  # the validator injected its tracer: no trace at all is missing evidence (review N4)
         blocks.append("no runtime trace was written although the validator injected its tracer (Python started with "
                       "-I/-E/-S, PYTHONPATH replaced, or the trace removed): which test functions ran and whether the "
@@ -2428,7 +2430,8 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
                     p_ok = any(set(a) & anchors for a in runs)
                     # review 12 H2: and the consumer evidence must be the test's own consumer run as well
                     cons_own = (not cons_rels) or any(lab in cons_rels and set(a) & anchors
-                                                      for _proc, lab, a in seen["cons_calls"])
+                                                      for _proc, lab, a in seen["cons_calls"]) or \
+                        (same_file and p_ok)  # review 13 SF1: one module, the provider run is the consumer's too
                     where = " in a process other than the test's" if other else ""
                     started_by = sorted({x for a in runs for x in a} - anchors)
                     cand = ("insufficient", f"runtime path ({kind}) declared at G4 and the provider ran{where} during the "
@@ -2451,6 +2454,8 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
                         ("insufficient", f"runtime path ({kind}) declared at G4, but no provider function{sym_text} ran{where} "
                                          "during this test's call or anywhere in the run (the child not traced: "
                                          "-I/-E/-S, replaced PYTHONPATH or environment?)")
+                    if cand[0] != "test_level" and tid in capped:  # review 13 C5
+                        cand = (cand[0], cand[1] + "; the call-stack scan limit was reached, so this is not certain")
                 else:
                     fails.append(f"{tid} ({iid}): {fv['function']} has no call path into the interface "
                                  f"({fv['path']})")
