@@ -1,0 +1,24 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/7cecc96f-20f2-42ed-ab37-b71618f25fbb/scratchpad/red-c451a13/plugins/vmodel",
+    "release_manifest": null
+  },
+  "git_head": "c451a13",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "marker": "RED-TARGET",
+  "tests": 4,
+  "expectations_met": 4,
+  "violations": 0,
+  "seconds": 30.3
+}
+
+OK  expect=FAIL got=FAIL    test_g6_review13.R13SameFileRed.test_SF1_same_module_runtime_path
+      AssertionError: Tuples differ: ('BLOCKED', 'insufficient') != ('PASSED', 'test_level')
+OK  expect=FAIL got=FAIL    test_g6_review13.R13ScanCapRed.test_C5_consumer_noise_from_an_autouse_thread_before_the_tests_own_run
+      AssertionError: 'insufficient' != 'test_level'
+OK  expect=FAIL got=FAIL    test_g6_review13.R13SystemRed.test_two_os_system_calls_that_wait_for_each_other
+      AssertionError: 'DONE' not found in 'HUNG\n' : RED-TARGET HUNG
+OK  expect=FAIL got=FAIL    test_g6_review13.R13SystemRed.test_worker_forked_while_another_thread_is_in_os_system
+      AssertionError: 'RESULT [0]' not found in 'HUNG\n' : RED-TARGET HUNG
