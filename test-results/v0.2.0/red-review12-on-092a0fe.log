@@ -1,0 +1,37 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/7cecc96f-20f2-42ed-ab37-b71618f25fbb/scratchpad/red-092a0fe/plugins/vmodel",
+    "release_manifest": null
+  },
+  "git_head": "7c7b446",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "marker": "RED-TARGET",
+  "tests": 12,
+  "expectations_met": 12,
+  "violations": 0,
+  "seconds": 45.9
+}
+
+OK  expect=FAIL got=FAIL    test_g6_review12.R12ConsumerRed.test_H2_consumer_ran_only_in_an_autouse_fixtures_thread
+      AssertionError: Lists differ: [True, True] != [False, False]
+OK  expect=ok   got=ok      test_g6_review12.R12ControlChar.test_asyncio_subprocess_in_the_test_body
+OK  expect=ok   got=ok      test_g6_review12.R12ControlChar.test_fork_pool_in_the_test_body
+OK  expect=ok   got=ok      test_g6_review12.R12ControlChar.test_requested_fixture_starting_a_server_process
+OK  expect=FAIL got=FAIL    test_g6_review12.R12PatchRed.test_H1a_autouse_fixture_patches_the_provider_static_path
+      AssertionError: 'test_level' == 'test_level' : RED-TARGET {'consumer_modules': None, 'consumers': ['EXTERNAL'], 'covered': True, 'covered_by': ['TEST-012'], 'id': 'IF-002', 'provider': 'ARCH-002', 'provider_modules': ['src/pipeline/report.py'], 'provider_symbols': ['main'], 'tests': {'TEST-012': {'evidence_level': 'test_level', 'evidence_reason': None, 'function': 'tests/integration/test_pipeline.
+OK  expect=FAIL got=FAIL    test_g6_review12.R12PatchRed.test_H1b_usefixtures_fixture_patches_the_provider_static_path
+      AssertionError: 'test_level' == 'test_level' : RED-TARGET {'consumer_modules': None, 'consumers': ['EXTERNAL'], 'covered': True, 'covered_by': ['TEST-012'], 'id': 'IF-002', 'provider': 'ARCH-002', 'provider_modules': ['src/pipeline/report.py'], 'provider_symbols': ['main'], 'tests': {'TEST-012': {'evidence_level': 'test_level', 'evidence_reason': None, 'function': 'tests/integration/test_pipeline.
+OK  expect=FAIL got=FAIL    test_g6_review12.R12PatchRed.test_H1c_autouse_fixture_patches_the_provider_runtime_path
+      AssertionError: 'test_level' == 'test_level' : RED-TARGET {'consumer_modules': None, 'consumers': ['EXTERNAL'], 'covered': True, 'covered_by': ['TEST-012'], 'id': 'IF-002', 'provider': 'ARCH-002', 'provider_modules': ['src/pipeline/report.py'], 'provider_symbols': ['main', 'summarize'], 'tests': {'TEST-012': {'evidence_level': 'test_level', 'evidence_reason': None, 'function': 'tests/integration/t
+OK  expect=FAIL got=FAIL    test_g6_review12.R12RegressionRed.test_M1a_spawn_pool_in_the_test_body
+      AssertionError: Tuples differ: ('BLOCKED', 'suite_level') != ('PASSED', 'test_level')
+OK  expect=FAIL got=FAIL    test_g6_review12.R12RegressionRed.test_M1b_forkserver_pool_in_the_test_body
+      AssertionError: Tuples differ: ('BLOCKED', 'suite_level') != ('PASSED', 'test_level')
+OK  expect=FAIL got=FAIL    test_g6_review12.R12RegressionRed.test_M1c_os_system_in_the_test_body
+      AssertionError: Tuples differ: ('BLOCKED', 'suite_level') != ('PASSED', 'test_level')
+OK  expect=FAIL got=FAIL    test_g6_review12.R12RegressionRed.test_M2_server_fixture_applied_with_usefixtures
+      AssertionError: Tuples differ: ('BLOCKED', 'suite_level') != ('PASSED', 'test_level')
+OK  expect=FAIL got=FAIL    test_g6_review12.R12RegressionRed.test_M3_fork_pool_created_in_a_thread_the_test_started
+      AssertionError: Tuples differ: ('BLOCKED', 'suite_level') != ('PASSED', 'test_level')
