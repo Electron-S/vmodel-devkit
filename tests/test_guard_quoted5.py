@@ -38,5 +38,23 @@ class GuardQuoted5Char(_Guard):
             self.assertIsNone(self.decide(c, tool="PowerShell"), c)
 
 
+class GuardQuoted5PerfAccept(_Guard):
+    def test_long_commands_outside_the_grammar_are_decided_quickly(self):
+        """The first D46 grammar nested a quantifier ([word chars]+)+ and backtracked exponentially on a long
+        non-matching command (found while running the guard suites, before release)."""
+        import sys
+        import time
+        sys.path.insert(0, str(PLUGIN / "validator"))
+        try:
+            from vmodel_validator import hook
+        finally:
+            sys.path.remove(str(PLUGIN / "validator"))
+        for tool in ("Bash", "PowerShell"):
+            for cmd in ("a" * 20000 + "!", "ab " * 7000 + "!", '"a" ' * 5000 + "$(", "a\\\n " * 5000 + "!"):
+                t0 = time.perf_counter()
+                hook._is_validator_call(cmd, tool)
+                self.assertLess(time.perf_counter() - t0, 2.0, (tool, cmd[:30]))
+
+
 if __name__ == "__main__":
     unittest.main()

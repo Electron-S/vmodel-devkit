@@ -20,10 +20,6 @@ WRITE_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit"}
 READ_TOOLS = {"Read"}
 SHELL_TOOLS = {"Bash", "PowerShell"}
 SHELL_META = re.compile(r"[;&|`<>]|\$\(")
-# D46 (reviews 16-17): an unquoted newline or CR also separates commands in a validator call; in PowerShell a
-# parenthesised argument ((...), @(...), $(...)) is an expression that runs
-CALL_META = re.compile(r"[;&|`<>\n\r]|\$\(")
-PS_CALL_META = re.compile(r"[;&|`<>\n\r(]")
 # Commands that write, move or delete (POSIX shell, Git, PowerShell/cmd). fd duplication ("2>&1", ">&2", "2>&-") is
 # not a write; "&>file", "&>>file", ">&file", "1>&file" and "x2>&file" (digits ending an ordinary word) are, as bash
 # creates the file ("2>&file" is an error).
@@ -119,97 +115,54 @@ def _core_markers() -> list[str]:
 SAFE_TAIL = re.compile(r"(\s+2>&1)?(\s*\|\s*(head|tail|grep|less|cat|wc)(\s+[^;&|`<>$]*)?)*\s*$")
 
 
-def _bash_continued(s: str) -> str | None:
-    """`s` as bash reads it before word splitting: backslash-newline (line continuation) removed outside single quotes,
-    also inside double quotes, where it can join "$" and "(" (review 16/17). None when a quote is not closed."""
-    out, i, n, quote = [], 0, len(s), None
-    while i < n:
-        ch = s[i]
-        if quote != "'" and ch == "\\" and i + 1 < n:
-            if s[i + 1] != "\n":
-                out.append(s[i:i + 2])
-            i += 2
-            continue
-        if ch in "'\"" and quote in (None, ch):
-            quote = None if quote == ch else ch
-        out.append(ch)
-        i += 1
-    return None if quote else "".join(out)
+# --- D46 (drill S1 2026-11-10, reviews 16-19) ---------------------------------------------------------------------
+# A validator call may carry quoted text (a request with < > ; | & ( ) #) only when the whole call is in this narrow
+# grammar: plain words outside quotes, single-quoted text without quote-like characters, double-quoted text without
+# command substitution, backticks, ${ $[ or quote-like characters (bash: only \" and \\ escapes). Masking quoted text
+# by hand kept disagreeing with bash, PowerShell and cmd.exe (ANSI-C $'', comments, typographic quotes, .cmd
+# re-parsing), so anything outside the grammar is judged as before, with an unquoted newline and, in PowerShell, a
+# parenthesised argument also counting as shell syntax.
+_PLAIN_WORD = r"[A-Za-z0-9_./:=+\-]"  # one character per repetition: no nested quantifier (no ReDoS)
+_PLAIN_SQ = "'[^'\u2018-\u201f]*'"
+_PLAIN_DQ = {"Bash": '"(?:[^"$`\\\\\u2018-\u201f]|\\$(?![({\\[])|\\\\["\\\\])*"',
+             "PowerShell": '"(?:[^"$`\u2018-\u201f]|\\$(?![({\\[]))*"'}
+_PLAIN_SEP = {"Bash": r"(?:[ \t]+\\\n[ \t]*|[ \t]+)", "PowerShell": r"[ \t]+"}
+PLAIN_CALL = {k: re.compile(rf"(?:{_PLAIN_WORD}|{_PLAIN_SQ}|{dq})+(?:{_PLAIN_SEP[k]}(?:{_PLAIN_WORD}|{_PLAIN_SQ}|{dq})+)*")
+              for k, dq in _PLAIN_DQ.items()}
+PS_META = re.compile(r"[;&|`<>(]|\$\(")
 
 
-def _quoted_text_masked(s: str, powershell: bool = False) -> str | None:
-    """`s` with the characters inside quotes replaced by '_' (bash rules after _bash_continued, or PowerShell rules):
-    single-quoted text is literal; double-quoted text is literal except command substitution (`, $( are kept, so they
-    still count as shell syntax) and, in bash only, backslash escapes. None (not a validator call) when a quote is not
-    closed, for bash $'...' / $"..." quoting outside quotes (review 16), and for a comment (# starting a word outside
-    quotes: a quote inside it would hide the next line, review 18). (Drill S1, 2026-11-10: a request text with < or >
-    inside quotes was read as a redirection, so `vmodel new-wi --request "..."` was denied as a Core write.)"""
-    out, i, n = [], 0, len(s)
-    while i < n:
-        ch = s[i]
-        if ch == "#" and (i == 0 or s[i - 1] in " \t\n\r;&|()<>{}"):
-            return None
-        if not powershell and ch == "$" and i + 1 < n and s[i + 1] in "'\"":
-            return None
-        if not powershell and ch == "\\" and i + 1 < n:
-            out.append(s[i:i + 2])
-            i += 2
-        elif ch == "'":
-            j = s.find("'", i + 1)
-            if j < 0:
-                return None
-            out.append("'" + "_" * (j - i - 1) + "'")
-            i = j + 1
-        elif ch == '"':
-            out.append('"')
-            i += 1
-            while i < n and s[i] != '"':
-                if not powershell and s[i] == "\\" and i + 1 < n:
-                    out.append("__")
-                    i += 2
-                elif s.startswith("$(", i):
-                    out.append("$(")
-                    i += 2
-                elif s[i] == "`":
-                    out.append("`")
-                    i += 1
-                else:
-                    out.append("_")
-                    i += 1
-            if i >= n:
-                return None
-            out.append('"')
-            i += 1
-        else:
-            out.append(ch)
-            i += 1
-    return "".join(out)
+def _call_tokens(head: str, tool: str) -> list[str] | None:
+    try:  # bash removes backslash-newline (line continuation) before splitting words
+        return shlex.split(head.replace("\\\n", "") if tool == "Bash" else head, posix=True)
+    except ValueError:
+        return None
+
+
+def _plain_call(text: str, tool: str) -> bool:
+    if not PLAIN_CALL.get(tool, PLAIN_CALL["PowerShell"]).fullmatch(text):
+        return False
+    toks = _call_tokens(text, tool)
+    return bool(toks) and not toks[0].lower().endswith((".cmd", ".bat"))  # cmd.exe parses its arguments again
+# --- end D46 -------------------------------------------------------------------------------------------------------
 
 
 def _is_validator_call(cmd: str, tool: str = "Bash") -> bool:
     """A single plain vmodel invocation, optionally followed by 2>&1 and read-only filters.
 
-    Quoted executable paths may contain spaces (e.g. "C:\\Users\\x\\vmodel 한글\\bin\\vmodel"). Shell metacharacters
-    count only outside quotes (and command substitution everywhere): quoted arguments such as a request text may
-    contain < > ; & |.
+    Quoted executable paths may contain spaces (e.g. "C:\\Users\\x\\vmodel 한글\\bin\\vmodel"). Quoted arguments may
+    contain shell metacharacters only within the D46 grammar.
     """
     c = cmd.strip()
-    if tool == "Bash":
-        c = _bash_continued(c) or ""
-        masked = _quoted_text_masked(c) if c else None
-        meta = CALL_META
-    else:  # PowerShell quoting: no backslash escape, and a parenthesised argument runs (reviews 16-18)
-        masked, meta = _quoted_text_masked(c, powershell=True), PS_CALL_META
-    if not masked or "\n" in masked or "\r" in masked:  # also a newline in the read-only tail (review 17)
-        return False
-    m = SAFE_TAIL.search(masked)
-    head = c[: m.start()] if m else c
-    if meta.search(masked[: m.start()] if m else masked):
-        return False
-    try:
-        toks = shlex.split(head, posix=True)
-    except ValueError:
-        return False
+    if _plain_call(c, tool):
+        head = c
+    else:
+        m = SAFE_TAIL.search(c)
+        head = c[: m.start()] if m else c
+        if "\n" in c or "\r" in c or (SHELL_META if tool == "Bash" else PS_META).search(head):
+            if not _plain_call(head, tool) or "\n" in c[len(head):] or "\r" in c[len(head):]:
+                return False
+    toks = _call_tokens(head, tool)
     if not toks:
         return False
     first = toks[0]
