@@ -1,0 +1,19 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/7cecc96f-20f2-42ed-ab37-b71618f25fbb/scratchpad/red-18bbcb8/plugins/vmodel",
+    "release_manifest": null
+  },
+  "git_head": "69c5fa7",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "marker": "RED-TARGET",
+  "tests": 2,
+  "expectations_met": 2,
+  "violations": 0,
+  "seconds": 0.8
+}
+
+OK  expect=ok   got=ok      test_guard_quoted7.GuardQuoted7Char.test_backslash_newline_and_substitution_stay_outside_the_grammar
+OK  expect=FAIL got=FAIL    test_guard_quoted7.GuardQuoted7Red.test_windows_path_and_escaped_characters_are_plain
+      AssertionError: False is not true : RED-TARGET "C:\Users\x\vmodel 한글 테스트\bin\vmodel" new-wi --title "t" --request "x > 0"
