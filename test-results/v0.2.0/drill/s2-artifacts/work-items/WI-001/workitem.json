@@ -1,0 +1,7 @@
+{
+  "id": "WI-001",
+  "title": "주문 가격 계산과 영수증",
+  "request": "주문 가격 계산(pricing.price_order)과 영수증 출력(receipt.render_receipt) 기능 추가. 영수증 단위 테스트는 가짜 가격 계산기 주입, 통합 테스트는 tests/integration/. P4까지만 진행.",
+  "profile": "STANDARD",
+  "created_at": "2026-11-10T14:19:14.612Z"
+}

@@ -1,0 +1,26 @@
+{
+  "work_item": "WI-001",
+  "units": [
+    {"id": "DESIGN-001", "component": "ARCH-001", "module": "src/orderdesk/pricing.py", "name": "price_order",
+     "kind": "function", "signature": "def price_order(lines: list[dict]) -> dict",
+     "description": "각 줄을 검증하고 amount=unit_price*qty, subtotal=합, 소계>=50000이면 discount=subtotal*10//100, total=subtotal-discount",
+     "requirements": ["REQ-001", "REQ-002", "REQ-003"],
+     "contract": {
+       "preconditions": ["lines는 sku, unit_price, qty 키를 가진 dict의 목록"],
+       "postconditions": ["반환 dict의 키는 lines, subtotal, discount, total", "lines 각 항목은 sku, unit_price, qty, amount를 가진다", "total == subtotal - discount, 모두 int"]},
+     "errors": [
+       {"exception": "ValueError", "condition": "어떤 줄의 qty가 1 미만"},
+       {"exception": "ValueError", "condition": "어떤 줄의 unit_price가 음수"}],
+     "boundary_conditions": ["빈 목록 -> 모두 0", "소계 49999 -> 할인 0", "소계 50000 -> 할인 5000", "소계 50009 -> 할인 5000(버림)", "qty 1, unit_price 0 허용"]},
+    {"id": "DESIGN-002", "component": "ARCH-002", "module": "src/orderdesk/receipt.py", "name": "render_receipt",
+     "kind": "function", "signature": "def render_receipt(order: dict, pricer=price_order) -> str",
+     "description": "pricer(order['lines'])를 호출해 'ORDER <id>', 품목 줄 '<sku> x<qty> <amount>', SUBTOTAL, DISCOUNT, TOTAL 줄을 '\\n'으로 이어 붙여 돌려준다",
+     "requirements": ["REQ-004", "REQ-005"],
+     "contract": {
+       "preconditions": ["order에 order_id, lines가 있다", "pricer는 price_order와 같은 형식의 dict를 돌려주는 호출 가능 객체"],
+       "postconditions": ["첫 줄은 ORDER <order_id>", "마지막 세 줄은 SUBTOTAL, DISCOUNT, TOTAL", "품목 줄 순서는 pricer 결과의 lines 순서"]},
+     "errors": [
+       {"exception": "ValueError", "condition": "pricer가 낸 ValueError는 그대로 전달"}],
+     "boundary_conditions": ["lines가 비면 품목 줄 없이 ORDER, SUBTOTAL, DISCOUNT, TOTAL 네 줄", "pricer 인자를 생략하면 price_order 사용"]}
+  ]
+}

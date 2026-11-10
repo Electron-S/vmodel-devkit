@@ -1,0 +1,15 @@
+{"gate": "G3", "work_item": "WI-001", "reviewer": "vmodel:verifier", "target_hash": "sha256:29cd6efc7f0142bb723dfc46326781f412477dee73c18a66f00c18694b555617",
+ "reviewed_at": "2026-11-10T00:00:00Z", "verdict": "approve",
+ "summary": "Both design units are implementable and their contracts (errors, boundaries, postconditions) are precise. Unit tests TEST-001..012 have concrete expected values and cover normal, abnormal and boundary cases; integration tests TEST-013/014 exercise IF-001 with the real provider; system tests TEST-015..018 cover every acceptance criterion. Only minor remarks.",
+ "checklist": [
+  {"item": "Units implementable as specified", "result": "ok", "note": "DESIGN-001/002 signatures, formula (subtotal*10//100) and output format are unambiguous."},
+  {"item": "Contracts precise and complete", "result": "ok", "note": "Errors and boundaries listed; ASM-003 fixes text format."},
+  {"item": "Unit tests detect contract violations", "result": "ok", "note": "Boundaries 49999/50000/50009, qty 0, price -1, price 0, empty list, order of lines, ValueError passthrough all have exact expected results. TEST-013 arithmetic verified (50010 -> 5001 -> 45009)."},
+  {"item": "Integration specs cover interfaces", "result": "ok", "note": "TEST-013 (normal) and TEST-014 (error) use default pricer, so real price_order runs."},
+  {"item": "System specs cover every acceptance criterion", "result": "ok", "note": "AC-001-1..AC-004-2 are all referenced by TEST-015..018."},
+  {"item": "Nothing designed that no requirement asks for", "result": "ok", "note": "No extra behaviour."}
+ ],
+ "findings": [
+  {"id": "F-1", "severity": "minor", "description": "TEST-012 must import pricing.price_order to compare the default, which slightly conflicts with the REQ-005 wish for receipt unit tests to run without the pricing module; acceptable since receipt itself imports it for the default.", "related": ["TEST-012", "REQ-005"], "status": "open"},
+  {"id": "F-2", "severity": "minor", "description": "Boundary qty=1 with negative qty (e.g. -1) and unit_price boundary 0 vs -1 only partly covered; qty < 0 is not tested separately from qty 0.", "related": ["TEST-002", "DESIGN-001"], "status": "open"}
+ ]}

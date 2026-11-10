@@ -1,0 +1,42 @@
+{
+  "work_item": "WI-001",
+  "requirements": [
+    {"id": "REQ-001", "type": "functional", "title": "줄 금액과 소계 계산", "priority": "must", "status": "active",
+     "description": "price_order(lines)는 각 줄의 금액(unit_price x qty)과 소계(줄 금액 합)를 원 단위 정수로 계산해 돌려준다.",
+     "source": "user request",
+     "acceptance_criteria": [
+       {"id": "AC-001-1", "criterion": "줄 [{'sku':'A','unit_price':1000,'qty':3}] 이면 줄 금액 3000, subtotal 3000"},
+       {"id": "AC-001-2", "criterion": "빈 목록이면 subtotal 0, discount 0, total 0"}]},
+    {"id": "REQ-002", "type": "functional", "title": "대량 주문 할인", "priority": "must", "status": "active",
+     "description": "소계가 50,000원 이상이면 소계의 10%를 할인(원 미만 버림)하고 total = subtotal - discount. 미만이면 할인 0.",
+     "source": "user request",
+     "acceptance_criteria": [
+       {"id": "AC-002-1", "criterion": "소계 50000이면 discount 5000, total 45000"},
+       {"id": "AC-002-2", "criterion": "소계 49999이면 discount 0, total 49999"},
+       {"id": "AC-002-3", "criterion": "소계 50009이면 discount 5000(버림), total 45009"}]},
+    {"id": "REQ-003", "type": "functional", "title": "입력 검증", "priority": "must", "status": "active",
+     "description": "qty가 1 미만이거나 unit_price가 음수인 줄이 있으면 price_order는 ValueError를 낸다.",
+     "source": "user request",
+     "acceptance_criteria": [
+       {"id": "AC-003-1", "criterion": "qty 0 이면 ValueError"},
+       {"id": "AC-003-2", "criterion": "unit_price -1 이면 ValueError"},
+       {"id": "AC-003-3", "criterion": "unit_price 0, qty 1 은 허용(금액 0)"}]},
+    {"id": "REQ-004", "type": "functional", "title": "영수증 출력", "priority": "must", "status": "active",
+     "description": "render_receipt(order, pricer=price_order)는 pricer 결과로 영수증 텍스트를 만든다. 첫 줄 'ORDER <order_id>', 품목마다 '<sku> x<qty> <금액>', 끝에 'SUBTOTAL <소계>', 'DISCOUNT <할인>', 'TOTAL <합계>' 줄. 줄은 개행으로 구분한다.",
+     "source": "user request",
+     "acceptance_criteria": [
+       {"id": "AC-004-1", "criterion": "주문 O-1, 줄 A x2 단가 1000 이면 'ORDER O-1','A x2 2000','SUBTOTAL 2000','DISCOUNT 0','TOTAL 2000' 순서의 텍스트"},
+       {"id": "AC-004-2", "criterion": "소계 50000 주문이면 DISCOUNT 5000, TOTAL 45000 줄이 출력"}]},
+    {"id": "REQ-005", "type": "constraint", "title": "가격 계산기 주입 가능", "priority": "must", "status": "active",
+     "description": "영수증 모듈은 pricer 인자로 가격 계산기를 주입받으며 기본값은 price_order. 영수증 단위 테스트는 가짜 pricer로 가격 모듈 없이 실행, 두 모듈의 연동은 tests/integration/ 에서 검증. 외부 패키지 없이 표준 라이브러리만 사용.",
+     "source": "user request",
+     "acceptance_criteria": []}
+  ],
+  "conflict_analysis": {"performed": true, "method": "pairwise review of all requirements", "conflicts": []},
+  "open_issues": [],
+  "assumptions": [
+    {"id": "ASM-001", "description": "price_order 반환값은 dict: {'lines': [{'sku','unit_price','qty','amount'}...], 'subtotal': int, 'discount': int, 'total': int}. 요청에 반환 형식이 명시되지 않아 영수증이 쓰기 좋은 형태로 정함.", "impact": "영수증과 가짜 pricer가 이 형식을 따른다."},
+    {"id": "ASM-002", "description": "빈 lines는 오류가 아니라 모두 0을 돌려준다. 정수가 아닌 값(타입) 검증은 요구되지 않아 하지 않는다.", "impact": "빈 주문은 허용."},
+    {"id": "ASM-003", "description": "영수증 줄은 '\\n'으로 이어 붙이고 끝에 개행은 붙이지 않는다. 금액은 천 단위 구분 없이 정수 그대로 출력한다.", "impact": "텍스트 형식 고정."}
+  ]
+}

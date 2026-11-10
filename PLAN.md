@@ -1,6 +1,6 @@
 # PLAN
 
-현재 목표: **v0.2.0 릴리스 후보(G6 Integration Verification)** — 사용자 결정 D1~D8(2026-11-09)로 구현·검증 완료, 사용자 확정(병합·태그) 대기(브랜치 `g6-dev`, D42, `docs/g6/WORKITEM.md`, TEST_RESULTS §14). 확정 버전은 0.1.5(태그 `v0.1.5`, `main`). 원격 푸시·유료 E2E는 승인되지 않았다.
+현재 목표: **v0.2.0 릴리스 후보(G6 Integration Verification), 판정 RELEASE CONDITIONAL** — 2026-11-10 사용자 지시("G6 최종 실패·재작업 실전 드릴")로 보수 정책 A·B 확정(D45, 경로 B 적용과 독립 검토 12~15회차), 드릴 S1이 찾은 guard 거짓 거부 수정(D46, 검토 16~22회차), 실제 드릴 3세션(D47: G4가 시드를 정당하게 검출해 G6 FAILED 경로는 미관찰). 후보 코드 `20d2139`, 릴리스 core `88edfac2…`(브랜치 `g6-dev`, TEST_RESULTS §16). 확정 버전은 0.1.5(태그 `v0.1.5`, `main`). main 병합·`v0.2.0` 태그·원격 푸시·G7 개발은 하지 않았다.
 
 | 마일스톤 | 내용 | 완료 기준 (테스트) | 상태 |
 |---|---|---|---|
@@ -12,7 +12,7 @@
 | R0.1.3 | 재작업 결함 F1~F4 수정, 실제 재작업 세션 검증 | 하네스 103/103(WSL), Windows 실패 0, drill-3 실제 세션 1회, audit OK | 완료, 태그 `v0.1.3` |
 | R0.1.4 | 결함 검증 상태 표시, guard 읽기 오탐, 실패 TEST 추적·증거 참조 (아래 §v0.1.4), 표시 상태 6종(D37), 실제 세션 1회 | 재현 테스트 RED 확인 후 수정, 기존 하네스 포함 전체 통과, Gate 판정 불변, 새 릴리스, 실제 세션에서 guard 우회 0 | 완료(2026-11-09, TEST_RESULTS §10·§11, DECISIONS D36·D37), 태그 `v0.1.4`, main fast-forward. 푸시는 미승인 |
 | R0.1.5 | 업그레이드 시 DevKit 권한 규칙 이동(D38) | 0.1.4 릴리스 대상 RED, GREEN, 전체 회귀, 독립 검토, 실제 릴리스 사본 0.1.4 → 0.1.5 재현 | 완료(2026-11-09, TEST_RESULTS §12·§13, D38·D40), 태그 `v0.1.5`, main fast-forward. 푸시는 미승인 |
-| M5 | G6 Integration Verification (아래 §확장) | 하네스 + 새 픽스처(IF 있는 2컴포넌트 `pipeline`, 단일 `single`) | 구현·검증 완료, v0.2.0 후보(브랜치 `g6-dev`, D41·D42, TEST_RESULTS §14). 사용자 확정·E2E 승인 대기 |
+| M5 | G6 Integration Verification (아래 §확장) | 하네스 + 새 픽스처(IF 있는 2컴포넌트 `pipeline`, 단일 `single`) + 실제 E2E | v0.2.0 후보(브랜치 `g6-dev`, D41~D47, TEST_RESULTS §14~§16), RELEASE CONDITIONAL: 실제 세션의 G6 FAILED → DEFECT → CLOSED 미관찰(D47 선택지), 남은 공백 D45 8항·D46(사용자 판단) |
 | M6 | G7 System Verification, STANDARD WI의 COMPLETED | 하네스 + 새 샘플 | 계획 (사용자 결정 전 착수 금지) |
 | M7 | Extension 실제 세션 E2E | 실제 Claude 세션(비용 승인 후) | 계획 |
 

@@ -1,0 +1,16 @@
+{"gate": "G1", "work_item": "WI-001", "reviewer": "vmodel:verifier", "target_hash": "sha256:157b236f33ae100fad8010b7261acf82a215335bbddd04e26071ce7d11f869e0",
+ "reviewed_at": "2026-11-10T14:30:00Z", "verdict": "approve",
+ "summary": "Requirements cover price_order, discount, validation, receipt and pricer injection from the request. Acceptance criteria are concrete with boundary values (49999/50000/50009, qty 0, price -1/0). Two minor gaps: REQ-005 has no acceptance criteria and the order input structure for render_receipt is not stated.",
+ "checklist": [
+  {"item": "Every part of the request covered", "result": "ok", "note": "pricing, receipt, fake pricer injection, integration in tests/integration/ all in REQ-001..005; 'P4 only' is a process scope"},
+  {"item": "Requirements atomic, unambiguous, testable", "result": "ok", "note": "REQ-004 order structure not defined explicitly (minor F-2)"},
+  {"item": "Acceptance criteria concrete and measurable", "result": "issue", "note": "REQ-005 has empty acceptance_criteria (minor F-1)"},
+  {"item": "Non-functional needs and constraints captured", "result": "ok", "note": "stdlib only, injectable pricer"},
+  {"item": "Conflicts analysed", "result": "ok", "note": "pairwise review recorded, none found"},
+  {"item": "Critical decisions to user", "result": "na", "note": "no security or data-loss decisions"},
+  {"item": "Assumptions reasonable and recorded", "result": "ok", "note": "ASM-001..003 cover return format, empty list, text format"}
+ ],
+ "findings": [
+  {"id": "F-1", "severity": "minor", "description": "REQ-005 (constraint) has no acceptance criteria; add measurable ones, e.g. render_receipt works with a fake pricer without importing pricing, and default pricer is price_order.", "related": ["REQ-005"], "status": "open"},
+  {"id": "F-2", "severity": "minor", "description": "The shape of the 'order' argument of render_receipt (order_id, lines keys sku/unit_price/qty) is implied only by AC-004-1; state it as an assumption.", "related": ["REQ-004"], "status": "open"}
+ ]}

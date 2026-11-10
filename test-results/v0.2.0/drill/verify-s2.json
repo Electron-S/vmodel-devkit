@@ -1,0 +1,410 @@
+{
+  "release": "/home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.2.0",
+  "status_exit": 0,
+  "audit": {
+    "exit": 0,
+    "tail": [
+      "audit: validator 0.2.0 release core 88edfac2dd33; 13 ledger entries; 4 evidence record(s) checked",
+      "audit OK"
+    ]
+  },
+  "gate_sequence": [
+    "R00003 WI-001 G1 PASSED",
+    "R00005 WI-001 G2 PASSED",
+    "R00007 WI-001 G3 PASSED",
+    "R00009 WI-001 G4 FAILED",
+    "R00011 WI-001 G4 PASSED",
+    "R00012 WI-001 G5 PASSED",
+    "R00013 WI-001 G6 PASSED applicability=required"
+  ],
+  "reviews": [
+    "R00002 G1 approve",
+    "R00004 G2 approve",
+    "R00006 G3 approve",
+    "R00008 G4 reject",
+    "R00010 G4 approve"
+  ],
+  "verify_evidence": [
+    {
+      "record": "R00009",
+      "gate": "G4",
+      "path": ".vmodel/evidence/WI-001/G4/20261110T142626162730Z-lint-2e895a/record.json",
+      "exit": 0,
+      "result": "evidence OK"
+    },
+    {
+      "record": "R00011",
+      "gate": "G4",
+      "path": ".vmodel/evidence/WI-001/G4/20261110T142715716902Z-lint-aa585f/record.json",
+      "exit": 0,
+      "result": "evidence OK"
+    },
+    {
+      "record": "R00012",
+      "gate": "G5",
+      "path": ".vmodel/evidence/WI-001/G5/20261110T142717469706Z-unit-59b930/record.json",
+      "exit": 0,
+      "result": "evidence OK"
+    },
+    {
+      "record": "R00013",
+      "gate": "G6",
+      "path": ".vmodel/evidence/WI-001/G6/20261110T142720147769Z-integration-d60704/record.json",
+      "exit": 0,
+      "result": "evidence OK"
+    }
+  ],
+  "g6_records": [
+    {
+      "record": "R00013",
+      "status": "PASSED",
+      "applicability": "required",
+      "blocked_reason": null,
+      "if_coverage": {
+        "status": "pass",
+        "detail": "1/1 interface(s) test-level verified (passed integration tests whose own execution shows the connection)",
+        "items": []
+      },
+      "interfaces": [
+        {
+          "id": "IF-001",
+          "verification": "test_level",
+          "covered_by": [
+            "TEST-013",
+            "TEST-014"
+          ],
+          "tests": {
+            "TEST-013": {
+              "status": "passed",
+              "path": "static",
+              "evidence_level": "test_level",
+              "reason": ""
+            },
+            "TEST-014": {
+              "status": "passed",
+              "path": "static",
+              "evidence_level": "test_level",
+              "reason": ""
+            }
+          }
+        }
+      ],
+      "executed_tests": {
+        "TEST-013": "passed",
+        "TEST-014": "passed"
+      },
+      "failed_cases": [],
+      "runtime_trace": {
+        "active": true,
+        "processes": 1,
+        "spawned_processes": 0,
+        "truncated": false,
+        "test_boundaries": 12,
+        "boundary_clock": "perf_counter_ns",
+        "edges": 4,
+        "errors": []
+      }
+    }
+  ],
+  "work_items": [
+    {
+      "id": "WI-001",
+      "status": "PARTIALLY_VERIFIED",
+      "gate_summary": {
+        "passed_current": [
+          "G1",
+          "G2",
+          "G3",
+          "G4",
+          "G5",
+          "G6"
+        ],
+        "na": [],
+        "not_evaluated": [],
+        "review_required": [],
+        "in_progress": [],
+        "not_started": [],
+        "stale": [],
+        "failed": [],
+        "blocked": [],
+        "not_implemented": [
+          "G7"
+        ]
+      },
+      "gates": {
+        "G1": "PASSED",
+        "G2": "PASSED",
+        "G3": "PASSED",
+        "G4": "PASSED",
+        "G5": "PASSED",
+        "G6": "PASSED",
+        "G7": "NOT_IMPLEMENTED"
+      },
+      "next_action": "G1-G6 verified. G7+ are extension gates (not implemented); report PARTIALLY_VERIFIED.",
+      "defects": [
+        {
+          "id": "DEFECT-001",
+          "closure_state": "CLOSED",
+          "gate": "G4",
+          "root_cause_phase": "P4",
+          "verified_by": "R00011",
+          "failing_tests": []
+        }
+      ]
+    }
+  ],
+  "architecture": {
+    "WI-001": {
+      "components": [
+        "ARCH-001",
+        "ARCH-002"
+      ],
+      "interfaces": [
+        {
+          "id": "IF-001",
+          "provider": "ARCH-001",
+          "consumers": [
+            "ARCH-002"
+          ],
+          "signature": "def price_order(lines: list[dict]) -> dict"
+        }
+      ]
+    }
+  },
+  "tests": {
+    "WI-001": [
+      [
+        "TEST-001",
+        "unit",
+        [
+          "DESIGN-001",
+          "REQ-001"
+        ]
+      ],
+      [
+        "TEST-002",
+        "unit",
+        [
+          "DESIGN-001",
+          "REQ-003"
+        ]
+      ],
+      [
+        "TEST-003",
+        "unit",
+        [
+          "DESIGN-001",
+          "REQ-003"
+        ]
+      ],
+      [
+        "TEST-004",
+        "unit",
+        [
+          "DESIGN-001",
+          "REQ-001"
+        ]
+      ],
+      [
+        "TEST-005",
+        "unit",
+        [
+          "DESIGN-001",
+          "REQ-002"
+        ]
+      ],
+      [
+        "TEST-006",
+        "unit",
+        [
+          "DESIGN-001",
+          "REQ-002"
+        ]
+      ],
+      [
+        "TEST-007",
+        "unit",
+        [
+          "DESIGN-001",
+          "REQ-002"
+        ]
+      ],
+      [
+        "TEST-008",
+        "unit",
+        [
+          "DESIGN-001",
+          "REQ-003"
+        ]
+      ],
+      [
+        "TEST-009",
+        "unit",
+        [
+          "DESIGN-002",
+          "REQ-004",
+          "REQ-005"
+        ]
+      ],
+      [
+        "TEST-010",
+        "unit",
+        [
+          "DESIGN-002"
+        ]
+      ],
+      [
+        "TEST-011",
+        "unit",
+        [
+          "DESIGN-002",
+          "REQ-004"
+        ]
+      ],
+      [
+        "TEST-012",
+        "unit",
+        [
+          "DESIGN-002",
+          "REQ-005"
+        ]
+      ],
+      [
+        "TEST-013",
+        "integration",
+        [
+          "IF-001"
+        ]
+      ],
+      [
+        "TEST-014",
+        "integration",
+        [
+          "IF-001"
+        ]
+      ],
+      [
+        "TEST-015",
+        "system",
+        [
+          "REQ-001"
+        ]
+      ],
+      [
+        "TEST-016",
+        "system",
+        [
+          "REQ-002"
+        ]
+      ],
+      [
+        "TEST-017",
+        "system",
+        [
+          "REQ-003"
+        ]
+      ],
+      [
+        "TEST-018",
+        "system",
+        [
+          "REQ-004"
+        ]
+      ]
+    ]
+  },
+  "defects_file": {
+    "WI-001": [
+      {
+        "id": "DEFECT-001",
+        "gate": "G4",
+        "found_in_records": [
+          "R00009"
+        ],
+        "description": "render_receipt prints the discount negated ('DISCOUNT -5001') instead of 'DISCOUNT <discount>' required by REQ-004/AC-004-2 and DESIGN-002 (G4 review finding F-1).",
+        "failed_checks": [
+          "G4.REVIEW"
+        ],
+        "root_cause_phase": "P4",
+        "root_cause": "Implementation formatted the DISCOUNT line with -result['discount'] instead of result['discount']; unit tests only used discount 0 so it was not caught, TEST-013 would have failed.",
+        "fix_scope": [
+          "src/orderdesk/receipt.py"
+        ],
+        "related": [
+          "REQ-004",
+          "DESIGN-002",
+          "TEST-013"
+        ],
+        "status": "fixed"
+      }
+    ]
+  },
+  "review_keys": {
+    "WI-001": {
+      "G2": {
+        "verdict": "approve",
+        "integration_applicability": null,
+        "interfaces": null
+      },
+      "G3": {
+        "verdict": "approve",
+        "integration_applicability": null,
+        "interfaces": null
+      },
+      "G4": {
+        "verdict": "approve",
+        "integration_applicability": null,
+        "interfaces": [
+          {
+            "id": "IF-001",
+            "result": "ok",
+            "provider_symbols": [
+              "price_order"
+            ],
+            "note": "TEST-013 (normal path, non-zero discount) and TEST-014 (ValueError path) drive the real price_order via render_receipt; no mocks."
+          }
+        ]
+      }
+    }
+  },
+  "trace": {
+    "WI-001": [
+      "   CODE: src/orderdesk/receipt.py:render_receipt",
+      "   TEST: TEST-009(unit:passed), TEST-010(unit:passed), TEST-011(unit:passed), TEST-012(unit:passed)",
+      "Interfaces (integration results from R00013):",
+      "IF-001 price_order: ARCH-001 -> ARCH-002 (covered: yes, Test-level Verified)",
+      "   TEST: TEST-013(passed, static, Test-level Verified), TEST-014(passed, static, Test-level Verified)",
+      "Reverse (TEST -> REQ):",
+      "   TEST-001 -> REQ-001, REQ-002, REQ-003",
+      "   TEST-002 -> REQ-001, REQ-002, REQ-003",
+      "   TEST-003 -> REQ-001, REQ-002, REQ-003",
+      "   TEST-004 -> REQ-001, REQ-002, REQ-003",
+      "   TEST-005 -> REQ-001, REQ-002, REQ-003",
+      "   TEST-006 -> REQ-001, REQ-002, REQ-003",
+      "   TEST-007 -> REQ-001, REQ-002, REQ-003",
+      "   TEST-008 -> REQ-001, REQ-002, REQ-003",
+      "   TEST-009 -> REQ-004, REQ-005",
+      "   TEST-010 -> REQ-004, REQ-005",
+      "   TEST-011 -> REQ-004, REQ-005",
+      "   TEST-012 -> REQ-004, REQ-005",
+      "   TEST-013 -> (none)",
+      "   TEST-014 -> (none)",
+      "   TEST-015 -> REQ-001",
+      "   TEST-016 -> REQ-002",
+      "   TEST-017 -> REQ-003",
+      "   TEST-018 -> REQ-004",
+      "Dangling references: none"
+    ]
+  },
+  "report_g6_lines": {
+    "WI-001": []
+  },
+  "session": {
+    "subtype": "success",
+    "total_cost_usd": 0.40099200000000007,
+    "num_turns": 21,
+    "duration_ms": 114219
+  },
+  "session_result_text": "WI-001은 G1~G6을 모두 통과해 최종 상태가 `PARTIALLY_VERIFIED`입니다. G7(시스템 검증)은 이 DevKit 버전에 구현되어 있지 않아, 완전한 V-Model 완료는 아닙니다.\n\n**Gate별 결과**\n| Gate | 결과 | 비고 |\n|---|---|---|\n| G1~G3 | PASSED | 이전 세션에서 이미 통과해 있었습니다. |\n| G4 구현 | PASSED | 첫 시도는 FAILED였고(R00009), 수정 후 PASSED(R00011)입니다. |\n| G5 단위 | PASSED | 단위 테스트 13개 통과, 테스트 명세 12개 모두 매핑됐습니다. |\n| G6 통합 | PASSED | 통합 테스트 3개 통과, 명세 2개(TEST-013, TEST-014)가 매핑됐고 인터페이스 IF-001은 테스트 수준에서 검증됐습니다. N/A가 아니라 실제로 실행됐습니다. |\n\n**처리한 내용**\n- G4 검증자가 `render_receipt`의 결함을 지적했습니다. 할인 줄을 `DISCOUNT -5001`처럼 음수로 출력했는데, REQ-004와 DESIGN-002는 `DISCOUNT 5001`을 요구합니다.\n- 원인은 `src/orderdesk/receipt.py`에서 할인 값에 `-`를 붙인 구현 오류(P4)였습니다. 단위 테스트는 할인이 0인 경우만 써서 놓쳤고, 통합 테스트 TEST-013이 잡았을 것입니다.\n- 결함 기록(DEFECT-001)을 `defects.json`에 남기고 `-`를 제거했습니다. 재검토에서 승인됐고, 검증기가 DEFECT-001을 `CLOSED`(R00011이 검증)로 확인했습니다.\n\n**감사(audit) 결과**\n- 장부(ledger)는 정상이고 항목은 13개입니다.\n- 검증기 무결성은 OK입니다.\n- 결함 추적 점검은 오류 0개, 경고 0개입니다. 증거 오류나 연결되지 않은 실패 TEST는 없습니다.\n\n**확인하실 점**\n- 검증자가 남긴 참고 사항(F-2)이 있습니다. `render_receipt` 단위 테스트는 가짜 pricer로 할인이 0인 경우만 검증하므로, 할인이 0이 아닌 단위 테스트를 추가하면 좋습니다. 통과 후 테스트 파일을 바꾸면 G4/G5가 다시 무효가 되어 이번에는 추가하지 않았습니다.\n- G4 통과 후 G5와 G6가 통과했는데, 결함 수정 이후 코드에는 별도의 단위 테스트 변경이 없습니다.\n\n**경로**\n- 보고서: `.vmodel/reports/WI-001.md`\n- G5 증거: `.vmodel/evidence/WI-001/G5/20261110T142717469706Z-unit-59b930/record.json`\n- G6 증거: `.vmodel/evidence/WI-001/G6/20261110T142720147769Z-integration-d60704/record.json`",
+  "guard_denials": []
+}

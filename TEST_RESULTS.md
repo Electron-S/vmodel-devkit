@@ -791,3 +791,31 @@ E2E-B (`samples/textstats`, 단일 함수 기능, 37턴, 3.4분)
 | 20 | `6f332f1` | 문법 경로는 단일 호출로만 실행됨 확인, PowerShell의 PATHEXT `vmodel.cmd` 선택 1 | `test_guard_quoted6` RED 1/1 → `18bbcb8` |
 | 21 | `18bbcb8` | 해결 확인, fa815b3 대비 회귀·충돌 없음 | 검토 종료. 기존 공백(PowerShell `del,`)은 문서화 |
 `test_upgrade_settings`의 guard 불변 Invariant는 D46 블록과 `_is_validator_call`·호출부만 되돌려 나머지를 0.1.4와 바이트 비교하도록 갱신했다(다른 규칙 변이를 잡는지 확인). 남은 제약: PowerShell 도구에서는 따옴표 안 `& | < > ^ %`가 있는 Validator 호출이 여전히 거부될 수 있다(bash에서는 허용).
+
+### 16.7 드릴 S1(유료 2/3)·시딩·S2(유료 3/3): G4에서 정당하게 검출 → G6 FAILED 경로는 미관찰
+공통: `scripts/e2e/g6_drill.py`, sonnet(`claude-sonnet-5-5`), 회당 `--max-budget-usd 2`, `--permission-mode auto --permission-prompts none`, `--setting-sources project,local`, `--no-session-persistence`, `--plugin-dir dist/vmodel-0.2.0`(코드 `20d2139`, core `88edfac2…`), 임시 샌드박스 `g6drill3/work/한글 드릴 프로젝트`·전용 `VMODEL_HOME`. 봉인 계획·시드·프롬프트·트랜스크립트는 작업 폴더 밖 `work-sealed/`. `--dangerously-skip-permissions` 쓰지 않음. 실제 업무 프로젝트·기존 서명 원장·릴리스 불변(세션 전후 릴리스 트리 해시 같음). 산출물 `test-results/v0.2.0/drill/`.
+- **S1**($0.640, 35턴, 3.4분): 요청(가격 계산 provider `pricing.price_order` + 영수증 consumer `receipt.render_receipt`, consumer 단위 테스트는 가짜 pricer 주입)대로 P1~P4. G1 R00003·G2 R00005·G3 R00007 PASSED(실제 `vmodel:verifier` 리뷰 R00002/4/6 approve, `vmodel:test-designer`가 TEST-001~014 작성), 코드·단위 13·통합 2 작성 후 지시대로 G4 전에 멈춤. guard 거부 0(1차 시도의 `<order_id>` 요청문이 통과), 작업 폴더 밖 접근 0, 원장 7건 audit OK.
+- **시딩**(봉인 `seed.json` sha256 `a9215206…`, 확인 기록 `seed-check.json` sha256 `9bad3873…`): S1의 소비 측 단위 테스트가 provider 호출 인자를 확인(`calls == [raw]`)해 인자 모양 불일치는 단위에서 잡히므로, 필드 의미 불일치를 골랐다. `receipt.py` 한 글자: `DISCOUNT {result['discount']}` → `DISCOUNT {-result['discount']}`(consumer가 IF-001의 `discount`를 부호 있는 조정값으로 오해; provider 계약은 양수 할인액, `total == subtotal - discount`). 사본에서 확인: 시딩 전 단위·통합 모두 통과, 시딩 후 단위 13 통과(가짜 pricer는 모두 할인 0, `-0`은 `0`), 통합 TEST-013 실패(`DISCOUNT -5001` ≠ `5001`, 실제 연결), TEST-014 통과. 명세·테스트·리뷰는 건드리지 않았고 주석·위장 없음. S1이 커밋하지 않아 시드는 S1 구현과 구분되지 않는다.
+- **S2**($0.401, 21턴, 1.9분, 에이전트·서브에이전트 pytest 차단, 프롬프트는 "WI-001을 이어서 끝까지"뿐): G4 verifier가 **코드와 REQ-004를 읽고 시드를 찾았다**(R00008 reject, F-1 major "`render_receipt`가 할인을 음수로 출력, REQ-004 AC-004-2·DESIGN-002와 다름, TEST-013이 실제 `price_order`로 실패할 것", 테스트는 실행하지 않음) → G4 FAILED R00009(`G4.REVIEW`) → 에이전트가 스스로 DEFECT-001(gate G4, `found_in_records` R00009, root_cause_phase P4, fix_scope `receipt.py`, related REQ-004·DESIGN-002·TEST-013, `status: fixed`를 수정과 같은 단계에) → `-` 한 글자 제거(테스트·명세 변경 없음) → G4 재리뷰 R00010 approve → G4 PASSED R00011 → G5 PASSED R00012(단위 13) → **G6 PASSED R00013**(통합 TEST-013·014 실행·통과, IF-001 Test-level Verified, 실행 계측 연결 4·경계 12·오류 0) → DEFECT-001 **CLOSED**(verified by R00011) → WI PARTIALLY_VERIFIED, audit OK(원장 13건, 증거 4건 verify OK), defect trace 오류·경고 0, guard 거부 0, 작업 폴더 밖·봉인 폴더·저장소 접근 0.
+- **판정**: 사용자 지시("G4에서 정당하게 결함을 발견하면 숨기지 말고 기록, 이 경우 G6 FAILED 전체 경로를 확인하지 못한 것으로 보고")에 따라 **G6 FAILED → DEFECT → CLOSED 경로는 실제 세션에서 관찰되지 않았다.** 실제로 확인된 것은 G1~G3 PASSED → G4 FAILED(리뷰) → DEFECT → 근본 원인 → 최소 수정 → G4·G5 재검증 → G6 실제 통합 실행 PASSED(Test-level) → DEFECT CLOSED → audit OK다. BLOCKED·FAILED를 바꾸거나 서명 증거·테스트 기대값을 고친 일은 없다.
+- **실제 실행 비용**: 1차 S1 $0.107 + S1 $0.640 + S2 $0.401 = **$1.148**(CLI `total_cost_usd`, 추정치). 승인: 2회 + 추가 1회(사용자), 회당 상한 $2.
+
+### 16.8 최종 품질 점검 (최종 후보 코드 `20d2139`, 릴리스 기록 `8874005`)
+| 항목 | 결과 |
+|---|---|
+| 기존 G6 거짓 PASS 방지 테스트 | `test_g6_evidence`·`test_g6_review4~9`·`test_g6_e2e_findings` 등 기존 모듈 모두 최종 회귀에서 통과 |
+| Mock·Fixture 보수 정책(D45) | `test_g6_policy`(8)·`test_g6_review12`(12)·`test_g6_review13`(4)·`test_g6_review14`(4) 통과, 대조군(요청한 fixture 서버·자식, fork·spawn 풀, asyncio 자식, 손자 프로세스, 무관한 autouse fixture) Test-level 유지 |
+| guard(D46) | `test_guard_quoted`~`quoted7`, `test_guard_redirects`, `test_hooks` 통과(WSL·Windows), 0.1.4 이후 guard 불변 Invariant는 D46 블록만 되돌려 비교 |
+| 기존 Gate 판정 호환 | `test_g6_compat`(C1/C2: G1~G5 판정·manifest 불변), T17(0.1.5 원장·증거의 새 코어 검증), T20(0.1.5 → 0.2.0 재고정) 통과 |
+| Ledger·Evidence 무결성 | 드릴 샌드박스 audit OK(원장 13건), verify-evidence 4/4 OK(릴리스 Validator), 하네스 무결성 시험 통과 |
+| 전체 회귀 WSL2 Ubuntu 24.04, Python 3.12.3(깨끗한 worktree `20d2139`) | **474 통과**, skip 1(xdist 시험 환경 변수 없음), 1415초 (`wsl-harness-20d2139.log`) |
+| 전체 회귀 Windows 11, Python 3.13.14 venv, cp949, 한글·공백 경로(`20d2139`) | **474 실행, 실패 0**, skip 55(pty 필요한 사용자 전용 경로 45, 심볼릭 링크 권한 2, ruff 없음 1, xdist 1, POSIX 전용 fork·fifo·forkserver 5, 기타 1) (`windows-harness-20d2139.log`). 직전 `18bbcb8`에서는 guard 허용 시험 8개 실패(Windows 경로) → D46 수정 |
+| 릴리스 사본과 소스 | `release_check.py` OK: 소스 = 0.2.0 기록 = dist 재계산 core `sha256:88edfac2dd33982db9a14a9e6ff854f16e678055ebefb4ce868c0c40ea134932`, 0.1.0~0.1.5 사본·기록 불변, 태그 `v0.1.2`~`v0.1.5` 불변, `v0.2.0` 태그 없음, `main` = `78517d5` (`release-check-final-20d2139.json`). `claude plugin validate --strict` 소스·릴리스 통과. **드릴 S1·S2가 쓴 릴리스 core와 최종 후보가 같다**(봉인 계획의 `release_core`) |
+
+### 16.9 판정: RELEASE CONDITIONAL (유지)
+지시 §5 기준("실제 G6 FAILED → DEFECT → 수정 → CLOSED 경로가 성공하고 모든 필수 검증이 통과하면 READY, 실패하거나 일부만 확인하면 CONDITIONAL")에 따라 **CONDITIONAL**이다. 필수 검증(§16.8)은 모두 통과했지만, 실제 세션의 G6 FAILED 경로는 G4가 시드를 정당하게 검출해 관찰되지 않았다(D47).
+조건(사용자 판단):
+1. 실제 G6 FAILED → DEFECT → CLOSED 경로: D47의 선택지(G4가 읽어서는 못 보는 유형으로 재드릴 / 명시 표시한 G4 승인 주입 / 하네스 검증으로 수용). 추가 유료 세션 승인 필요.
+2. 보수 정책의 남은 공백(D45 8항): 정적 patch 탐지가 닿지 않는 fixture 경로 A1~A5(거짓 PASS 가능), 조건부 autouse patch의 보수적 BLOCKED(A6), 요청 주체(H3)·자식 명령 문자열 patch(H4), 공유 스레드 풀 작업자의 예산 소진(거짓 BLOCKED, "확실하지 않음" 표시).
+3. guard의 남은 제약·공백(D46): PowerShell 도구에서 따옴표 안 `& | < > ^ %`가 있는 Validator 호출은 거부될 수 있음, PowerShell `del,` 형태 쓰기 미탐지(0.1.x부터).
+4. §15.7의 이전 항목(데이터 전달형 테스트 등 문서화한 보수적 BLOCKED, 같은 프로세스 신뢰 경계, macOS 미검증).

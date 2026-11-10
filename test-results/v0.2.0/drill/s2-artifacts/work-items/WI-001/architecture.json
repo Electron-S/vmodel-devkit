@@ -1,0 +1,26 @@
+{
+  "work_item": "WI-001",
+  "components": [
+    {"id": "ARCH-001", "name": "pricing", "responsibility": "줄 금액, 소계, 할인, 합계 계산과 입력 검증",
+     "requirements": ["REQ-001", "REQ-002", "REQ-003"], "location": "src/orderdesk/pricing.py"},
+    {"id": "ARCH-002", "name": "receipt", "responsibility": "가격 계산 결과를 영수증 텍스트로 변환 (pricer 주입 가능)",
+     "requirements": ["REQ-004", "REQ-005"], "location": "src/orderdesk/receipt.py"}
+  ],
+  "interfaces": [
+    {"id": "IF-001", "name": "price_order", "provider": "ARCH-001", "consumers": ["ARCH-002"],
+     "description": "price_order(lines) -> dict(lines, subtotal, discount, total); receipt가 기본 pricer로 호출",
+     "signature": "def price_order(lines: list[dict]) -> dict"}
+  ],
+  "data_flows": [
+    {"from": "ARCH-002", "to": "ARCH-001", "data": "주문 줄 목록", "via": "IF-001"},
+    {"from": "ARCH-001", "to": "ARCH-002", "data": "가격 계산 결과 dict", "via": "IF-001"}
+  ],
+  "nfr_mapping": [
+    {"requirement": "REQ-005", "approach": "render_receipt의 pricer 인자(기본 price_order)로 의존성 주입, 표준 라이브러리만 사용", "components": ["ARCH-001", "ARCH-002"]}
+  ],
+  "tradeoffs": [
+    {"topic": "계산기 결합 방식", "options": ["receipt가 pricing을 직접 호출", "pricer 인자 주입"],
+     "decision": "pricer 인자 주입(기본값 price_order)", "rationale": "단위 테스트에서 가짜 계산기를 쓸 수 있다"}
+  ],
+  "integration_test_strategy": {"approach": "tests/integration/ 에서 pricer를 넘기지 않고 render_receipt를 호출해 실제 price_order가 실행되게 한다", "interfaces_covered": ["IF-001"]}
+}

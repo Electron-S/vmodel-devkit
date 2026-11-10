@@ -1,0 +1,8 @@
+{"work_item": "WI-001", "defects": [
+  {"id": "DEFECT-001", "gate": "G4", "found_in_records": ["R00009"],
+   "description": "render_receipt prints the discount negated ('DISCOUNT -5001') instead of 'DISCOUNT <discount>' required by REQ-004/AC-004-2 and DESIGN-002 (G4 review finding F-1).",
+   "failed_checks": ["G4.REVIEW"], "root_cause_phase": "P4",
+   "root_cause": "Implementation formatted the DISCOUNT line with -result['discount'] instead of result['discount']; unit tests only used discount 0 so it was not caught, TEST-013 would have failed.",
+   "fix_scope": ["src/orderdesk/receipt.py"], "related": ["REQ-004", "DESIGN-002", "TEST-013"],
+   "status": "fixed"}
+]}

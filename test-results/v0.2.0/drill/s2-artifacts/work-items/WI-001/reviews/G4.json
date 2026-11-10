@@ -1,0 +1,16 @@
+{"gate": "G4", "work_item": "WI-001", "reviewer": "vmodel:verifier", "target_hash": "sha256:bbdf1e6581c68d8ccbddc29855296df27c67cf02c87f7d2aedffd095305b3d0f",
+ "reviewed_at": "2026-11-10T14:27:00Z", "verdict": "approve",
+ "summary": "Re-review after DEFECT-001. render_receipt now prints result['discount'] unsigned as DESIGN-002/REQ-004 require; the fix is limited to src/orderdesk/receipt.py (fix_scope). price_order matches DESIGN-001. Unit and integration tests are meaningful; TEST-013 now exercises a non-zero discount through the real provider.",
+ "checklist": [
+  {"item": "Code matches design contracts", "result": "ok", "note": "price_order and render_receipt signatures, errors and boundaries match DESIGN-001/002; discount sign fixed."},
+  {"item": "No unrequested behaviour / dead code", "result": "ok", "note": "none found"},
+  {"item": "Unit tests faithful, meaningful assertions", "result": "ok", "note": "TEST-009..012 exact-string assertions, ValueError propagation, default pricer check. Unit tests only use discount 0 (the original gap), but TEST-013 covers the non-zero case."},
+  {"item": "Defect check", "result": "ok", "note": "DEFECT-001 cites R00009 validly, root cause explains the failing case, fix within fix_scope, no test changes, no defect errors/warnings."},
+  {"item": "Integration tests connect consumer and provider", "result": "ok", "note": "TEST-013/014 call real render_receipt with default real price_order; wiring shows static reach of provider and consumer; integration_test config runs tests/integration; unit_test ignores it."}
+ ],
+ "findings": [
+  {"id": "F-2", "severity": "info", "description": "Unit tests for render_receipt never use a non-zero discount; the sign defect was only detectable by the integration test. Consider a non-zero-discount fake-pricer unit test in future.", "related": ["DESIGN-002", "TEST-009"], "status": "open"}
+ ],
+ "interfaces": [
+  {"id": "IF-001", "result": "ok", "provider_symbols": ["price_order"], "note": "TEST-013 (normal path, non-zero discount) and TEST-014 (ValueError path) drive the real price_order via render_receipt; no mocks."}
+ ]}

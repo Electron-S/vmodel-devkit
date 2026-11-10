@@ -1,0 +1,15 @@
+{"gate": "G2", "work_item": "WI-001", "reviewer": "vmodel:verifier", "target_hash": "sha256:c7a9606fa167713731ea03e05a2755b1d4c8c26b99acfed80337c3367dfe0ece",
+ "reviewed_at": "2026-11-10T14:30:00Z", "verdict": "approve",
+ "summary": "Two components cover REQ-001..005, with a single interface IF-001 (price_order) linking receipt to pricing. Data flows are consistent, the injection trade-off is justified, and the integration strategy exercises IF-001 via the default pricer. Only minor remarks.",
+ "checklist": [
+  {"item": "Every requirement realised by a component", "result": "ok", "note": "REQ-001..003 -> ARCH-001, REQ-004/005 -> ARCH-002"},
+  {"item": "Interfaces precise", "result": "ok", "note": "IF-001 has signature; return dict shape fixed in ASM-001"},
+  {"item": "Data flows consistent", "result": "ok", "note": "both flows go via IF-001"},
+  {"item": "NFR approach credible", "result": "ok", "note": "REQ-005 via pricer injection with default, stdlib only"},
+  {"item": "Trade-offs justified", "result": "ok", "note": "injection vs direct call"},
+  {"item": "Integration strategy covers all interfaces", "result": "ok", "note": "render_receipt without pricer runs real price_order"}
+ ],
+ "findings": [
+  {"id": "F-1", "severity": "minor", "description": "IF-001 error path (ValueError from price_order propagating through render_receipt) is not stated in the interface description or integration strategy; should be defined at G3.", "related": ["IF-001", "REQ-003"], "status": "open"},
+  {"id": "F-2", "severity": "info", "description": "REQ-005 has no acceptance criteria; it is verified via the architecture/test structure.", "related": ["REQ-005"], "status": "open"}
+ ]}
