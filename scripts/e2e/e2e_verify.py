@@ -34,9 +34,15 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--work", required=True)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--project-name", default="한글 샘플 프로젝트")
+    ap.add_argument("--transcript-dir", help="where the session transcripts are (default: --work)")
+    ap.add_argument("--release", help="release copy to judge with (default: dist/vmodel-<source version>)")
     args = ap.parse_args()
+    global RELEASE
+    if args.release:
+        RELEASE = Path(args.release)
     work = Path(args.work)
-    proj = work / "한글 샘플 프로젝트"
+    proj = work / args.project_name
     env = {"VMODEL_HOME": str(work / "vmodel-home"), "VMODEL_GUARD_LOG": str(work / "guard-log.jsonl")}
     out: dict = {"release": str(RELEASE)}
     code, st = vm(env, proj, "status", "--json")
@@ -114,7 +120,7 @@ def main() -> int:
         rcode, report = vm(env, proj, "report", w["id"])
         out.setdefault("report_g6_lines", {})[w["id"]] = [ln for ln in report.splitlines()
                                                          if "G6" in ln or "interface" in ln.lower()][:20]
-    tr = sorted(work.glob("transcript-*.jsonl"))
+    tr = sorted(Path(args.transcript_dir or work).glob("transcript-*.jsonl"))
     if tr:
         final, denials = {}, []
         for line in tr[-1].read_text("utf-8", errors="replace").splitlines():
