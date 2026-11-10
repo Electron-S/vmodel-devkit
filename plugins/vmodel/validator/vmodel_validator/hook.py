@@ -137,18 +137,21 @@ def _bash_continued(s: str) -> str | None:
     return None if quote else "".join(out)
 
 
-def _quoted_text_masked(s: str) -> str | None:
-    """`s` with the characters inside quotes replaced by '_' (bash rules, after _bash_continued): single-quoted text is
-    literal; double-quoted text is literal except command substitution (` and $( are kept, so they still count as
-    shell syntax) and backslash escapes. None (not a validator call) when a quote is not closed and for $'...' /
-    $"..." quoting outside quotes, which follows other rules (review 16). (Drill S1, 2026-11-10: a request text with
-    < or > inside quotes was read as a redirection, so `vmodel new-wi --request "..."` was denied as a Core write.)"""
+def _quoted_text_masked(s: str, powershell: bool = False) -> str | None:
+    """`s` with the characters inside quotes replaced by '_' (bash rules after _bash_continued, or PowerShell rules):
+    single-quoted text is literal; double-quoted text is literal except command substitution (`, $( are kept, so they
+    still count as shell syntax) and, in bash only, backslash escapes. None (not a validator call) when a quote is not
+    closed, for bash $'...' / $"..." quoting outside quotes (review 16), and for a comment (# starting a word outside
+    quotes: a quote inside it would hide the next line, review 18). (Drill S1, 2026-11-10: a request text with < or >
+    inside quotes was read as a redirection, so `vmodel new-wi --request "..."` was denied as a Core write.)"""
     out, i, n = [], 0, len(s)
     while i < n:
         ch = s[i]
-        if ch == "$" and i + 1 < n and s[i + 1] in "'\"":
+        if ch == "#" and (i == 0 or s[i - 1] in " \t\n\r;&|()<>{}"):
             return None
-        if ch == "\\" and i + 1 < n:
+        if not powershell and ch == "$" and i + 1 < n and s[i + 1] in "'\"":
+            return None
+        if not powershell and ch == "\\" and i + 1 < n:
             out.append(s[i:i + 2])
             i += 2
         elif ch == "'":
@@ -161,7 +164,7 @@ def _quoted_text_masked(s: str) -> str | None:
             out.append('"')
             i += 1
             while i < n and s[i] != '"':
-                if s[i] == "\\" and i + 1 < n:
+                if not powershell and s[i] == "\\" and i + 1 < n:
                     out.append("__")
                     i += 2
                 elif s.startswith("$(", i):
@@ -195,8 +198,8 @@ def _is_validator_call(cmd: str, tool: str = "Bash") -> bool:
         c = _bash_continued(c) or ""
         masked = _quoted_text_masked(c) if c else None
         meta = CALL_META
-    else:  # PowerShell quoting differs: no masking, and a parenthesised argument runs (reviews 16-17)
-        masked, meta = c, PS_CALL_META
+    else:  # PowerShell quoting: no backslash escape, and a parenthesised argument runs (reviews 16-18)
+        masked, meta = _quoted_text_masked(c, powershell=True), PS_CALL_META
     if not masked or "\n" in masked or "\r" in masked:  # also a newline in the read-only tail (review 17)
         return False
     m = SAFE_TAIL.search(masked)
