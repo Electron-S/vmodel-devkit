@@ -115,15 +115,63 @@ def _core_markers() -> list[str]:
 SAFE_TAIL = re.compile(r"(\s+2>&1)?(\s*\|\s*(head|tail|grep|less|cat|wc)(\s+[^;&|`<>$]*)?)*\s*$")
 
 
+def _quoted_text_masked(s: str) -> str | None:
+    """`s` with the characters inside quotes replaced by '_': single-quoted text is literal; double-quoted text is
+    literal except command substitution (` and $( are kept, so they still count as shell syntax) and backslash escapes.
+    None when a quote is not closed. (Drill S1, 2026-11-10: a request text with < or > inside quotes was read as a
+    redirection, so `vmodel new-wi --request "..."` was denied as a Validator Core write.)"""
+    out, i, n = [], 0, len(s)
+    while i < n:
+        ch = s[i]
+        if ch == "\\" and i + 1 < n:
+            out.append(s[i:i + 2])
+            i += 2
+        elif ch == "'":
+            j = s.find("'", i + 1)
+            if j < 0:
+                return None
+            out.append("'" + "_" * (j - i - 1) + "'")
+            i = j + 1
+        elif ch == '"':
+            out.append('"')
+            i += 1
+            while i < n and s[i] != '"':
+                if s[i] == "\\" and i + 1 < n:
+                    out.append("__")
+                    i += 2
+                elif s.startswith("$(", i):
+                    out.append("$(")
+                    i += 2
+                elif s[i] == "`":
+                    out.append("`")
+                    i += 1
+                else:
+                    out.append("_")
+                    i += 1
+            if i >= n:
+                return None
+            out.append('"')
+            i += 1
+        else:
+            out.append(ch)
+            i += 1
+    return "".join(out)
+
+
 def _is_validator_call(cmd: str) -> bool:
     """A single plain vmodel invocation, optionally followed by 2>&1 and read-only filters.
 
-    Quoted executable paths may contain spaces (e.g. "C:\\Users\\x\\vmodel 한글\\bin\\vmodel").
+    Quoted executable paths may contain spaces (e.g. "C:\\Users\\x\\vmodel 한글\\bin\\vmodel"). Shell metacharacters
+    count only outside quotes (and command substitution everywhere): quoted arguments such as a request text may
+    contain < > ; & |.
     """
     c = cmd.strip()
-    m = SAFE_TAIL.search(c)
+    masked = _quoted_text_masked(c)
+    if masked is None:
+        return False
+    m = SAFE_TAIL.search(masked)
     head = c[: m.start()] if m else c
-    if SHELL_META.search(head):
+    if SHELL_META.search(masked[: m.start()] if m else masked):
         return False
     try:
         toks = shlex.split(head, posix=True)
