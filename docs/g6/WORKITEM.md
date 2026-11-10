@@ -299,6 +299,32 @@ Q1 닫힘(BLOCKED), P1 PASSED 유지, 7회차 R4 BLOCKED·R1 PASSED 유지. 새 
 - E2E-B: 보고서 Gate별 절 제목이 N/A 평가에 "G6 — PASSED"(REQ-G6-17). "N/A (recorded PASSED, no integration test executed)"로.
 11회차 확인: 문제 없음. 두 파일 IF 판정 불변(Q1·P1·R4·R1·R2 대조·M1·M2·M7 같은 결과), 같은 파일 IF는 문서화한 약화만.
 
+### 7.13 보수 정책 A·B 확정과 경로 B 적용 (D45, 2026-11-10)
+사용자가 보수 판단 2가지를 정책 A(provider patch)·B(autouse fixture)로 승인했다. 확인해 보니 D44는 두 규칙을 경로 A에만 적용했고, 경로 B(G4 선언 런타임 경로)는 call 구간의 provider 실행만 봐서 거짓 PASS가 났다. `tests/test_g6_policy.py`로 고정(RED 대상 `5275b5d`, Red 5/5 마커 일치, 대조군 Char 3/3 양쪽 통과, 로그 `test-results/v0.2.0/red-policy-on-5275b5d.log`) 후 수정 `092a0fe`.
+- A1·A2: provider를 patch한 api·subprocess 테스트가 Test-level → 경로 무관 `insufficient`.
+- B1·B2: autouse fixture의 스레드·자식 프로세스가 혼자 provider를 실행 → Test-level(거짓 PASS) → `suite_level`.
+- B3: autouse fixture 서버에 테스트가 요청 → 증거로 묶을 수 없어 `suite_level`(보수, 해결은 fixture를 매개변수로 요청).
+- 구현: 계측이 `subprocess.Popen`마다 spawn 줄(시작한 스택의 앵커)과 자식 환경 변수 `VMODEL_TRACE_ORIGIN` 토큰을 남기고, Validator가 토큰 사슬로 프로세스 출처 앵커를 이어 경로 B 판정에만 쓴다.
+
+독립 검토 12회차(`092a0fe`, 같은 검토자, 별도 컨텍스트, 읽기 전용 worktree): HIGH 4(H1~H4, 모두 `5275b5d`에도 있던 거짓 PASS), MEDIUM 3(M1~M3, `092a0fe`가 만든 회귀 5모양), LOW 4(L1~L4). 검토자 프로브를 내가 `092a0fe` 대상으로 다시 돌려 전부 재현했다. `tests/test_g6_review12.py`로 고정(RED 9/9, 대조군 3/3, 로그 `red-review12-on-092a0fe.log`) 후 수정 `c451a13`.
+| 지적 | 처리 |
+|---|---|
+| H1 autouse·usefixtures fixture의 provider patch 미탐지 | 수정(wiring) |
+| H2 autouse 스레드의 consumer 실행을 consumer 증거로 셈 | 수정(계측 `k` 줄 + 경로 B 판정) |
+| H3 서버에 요청을 보낸 주체를 모름 | 문서화(D45 5항) |
+| H4 자식 명령 문자열 안의 patch | 문서화(D45 5항) |
+| M1 multiprocessing spawn/forkserver·os.system 출처 없음 | 수정(출처 토큰 확장) |
+| M2 usefixtures가 요청한 fixture가 아님 | 수정(wiring) |
+| M3 스레드에서 만든 fork 자식이 상속 앵커를 잃음 | 수정(fork 전 훅) |
+| L1~L3 자식 환경 변수 변화 | 문서화(D45 대가) |
+| L4 Popen 서명 | 수정(`functools.wraps`) |
+
+독립 검토 13회차(`c451a13`, 변경분만): 새 거짓 PASS 0, 12회차 수정이 만든 회귀 3(SF1, C5, `os.system` 교착 2모양), 정적 patch 탐지가 닿지 않는 fixture 적용 경로 5(A1~A5, 기존 공백), 보수 판단 1(A6), LOW 3. 회귀는 `tests/test_g6_review13.py`로 고정(RED 4/4, 로그 `red-review13-on-c451a13.log`) 후 수정 `9497d14`. A1~A6은 D45 8항(사용자 판단 필요), LOW(`os.system` 중 토큰 노출, `preexec_fn` 자식의 머리줄만 있는 추적 파일, `__getstate__`로 속성을 거르는 `Process` 하위 클래스는 출처 없음)는 문서화.
+
+독립 검토 14회차(`9497d14`, 변경분만): `os.system` 교착 수정 확인(Linux·Windows·중첩), 새 거짓 PASS 1(SF2, 13회차 SF1 수정이 만듦), C5 미완 2(스레드 ID 재사용, provider 쪽 공유 예산), LOW 1(상한 목록 20개 절단). `tests/test_g6_review14.py`로 고정(RED 4/4, 로그 `red-review14-on-9497d14.log`) 후 수정 `fa815b3`.
+
+독립 검토 15회차(`fa815b3`, 변경분만): 14회차 지적 4건 해결 확인, 새 거짓 PASS·회귀·충돌 없음. 공유 스레드 풀 작업자의 예산 소진(거짓 BLOCKED, "확실하지 않음" 표시)은 D45에 문서화하고 검토를 닫았다(회차마다 새 형태가 나와 범위를 묶음).
+
 ## 8. 실전 E2E 계획 (D8, 실행은 별도 승인)
 - 예산: sonnet 최대 2회, 회당 `--max-budget-usd 2`, 합계 $4 상한. `--permission-mode auto`, `--setting-sources project,local`, `--plugin-dir dist/vmodel-0.2.0`, `--dangerously-skip-permissions` 금지. 실행 전 모델 호출 없는 준비(setup)와 기대 판정 확인을 먼저 한다.
 - 시나리오 A (Provider/Consumer, G6 실패 → 결함 → 수정 → 재검증): 기존 코드가 있는 프로젝트(점수 파서 모듈과 그 통합 테스트가 이미 `tests/integration/`에 있어 `init`이 실제 경로를 등록 — D3 규칙을 그대로 지킴)에 "파서 결과를 소비하는 요약 보고 CLI를 추가해줘"를 요청한다. 파서의 오류 계약(형식 오류 줄 번호)과 소비 측 처리 사이의 불일치를 하나 미리 심어(D26 블라인드 시딩, 세션 프롬프트에 알리지 않음) 단위 테스트는 통과하고 IF 통합 테스트에서 드러나게 한다. 기대: G1~G5 PASSED → G6 FAILED(TEST_MAPPING·RESULTS) → DEFECT(gate G6, IF·TEST 연결) → 수정 → G4 재리뷰 → G5 → G6 PASSED, 결함 CLOSED. 관찰: placeholder·import-only 테스트를 쓰는지, 통합 테스트가 경로 A인지, verifier가 `interfaces` 항목을 쓰는지, guard 우회 0.

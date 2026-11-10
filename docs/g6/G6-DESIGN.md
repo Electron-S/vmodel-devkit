@@ -23,6 +23,12 @@ SPEC §5 5항의 기존 규칙상 Validator Core 해시가 바뀌면 모든 PASS
 - G5 판정: `integration_test`가 **없는** config에서는 0.1.5와 같다. 있으면 G5.SCOPE와 NO_WEAKENING 범위가 바뀐다(결정 1).
 - G4 판정: IF도 integration 명세도 없는 WI에서는 0.1.5와 같다. IF나 integration 명세가 있는 WI에서는 결정 2에 따라 바뀐다(통합 테스트 코드, 연결 확인, 리뷰의 IF 항목). 이 차이는 의도된 변경이며 테스트 C5가 목록으로 고정한다.
 
+### 1.3 확정 보수 정책 A·B (2026-11-10, 사용자 승인, DECISIONS D45)
+구현 중 바뀐 판정 규칙의 정본은 D42~D45다. 이 설계의 "목 대체 판단은 G4 리뷰"(결정 2, §4.6 patch warn)는 D44·D45로 다음과 같이 확정됐다.
+- **A. Provider patch**: patch된 provider 실행만으로는 실제 연결 검증이 아니다. 테스트 함수가 인터페이스 심볼이나 provider 모듈에 정의된 함수·클래스·메서드를 patch하면 그 테스트는 경로 A·B 모두 Test-level이 아니다. 다른 독립적이고 유효한 증거(patch하지 않은 다른 테스트의 Test-level 증거)가 있으면 IF는 덮인다. 근거가 없으면 BLOCKED(`integration_evidence_insufficient`). G4 patch 경고는 그대로 둔다.
+- **B. Autouse fixture**: autouse·요청하지 않은 fixture 자체가 만든 연결(그 fixture 코드, 그 fixture가 시작한 스레드·서버·프로세스)은 개별 테스트의 증거가 아니다. 테스트 함수나 그 테스트가 요청한 fixture·setUp이 실행했거나 시작한 연결은 증거다. fixture 사용 자체는 막지 않는다.
+- 근거가 불충분하면(출처를 이을 수 없는 프로세스 등) 통과가 아니라 BLOCKED다.
+
 ## 2. G6 Requirements
 
 ID는 이 설계 안에서만 쓰는 번호다(구현 세션의 WORKITEM에서 그대로 쓴다). 각 요구사항의 수용 기준은 §6의 테스트로 검증한다.
