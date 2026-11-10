@@ -1,0 +1,19 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/7cecc96f-20f2-42ed-ab37-b71618f25fbb/scratchpad/red-6f332f1/plugins/vmodel",
+    "release_manifest": null
+  },
+  "git_head": "6f332f1",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "marker": "RED-TARGET",
+  "tests": 2,
+  "expectations_met": 2,
+  "violations": 0,
+  "seconds": 2.3
+}
+
+OK  expect=ok   got=ok      test_guard_quoted6.GuardQuoted6Char.test_powershell_quoted_text_without_cmd_metacharacters_stays_allowed
+OK  expect=FAIL got=FAIL    test_guard_quoted6.GuardQuoted6Red.test_powershell_resolves_vmodel_to_the_batch_file
+      AssertionError: Lists differ: ["vmodel status 'x>.vmodel/state/ledger.js[491 chars]py"'] != []
