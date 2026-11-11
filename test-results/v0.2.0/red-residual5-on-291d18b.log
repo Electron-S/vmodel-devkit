@@ -1,0 +1,21 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/7cecc96f-20f2-42ed-ab37-b71618f25fbb/scratchpad/red-291d18b/plugins/vmodel",
+    "release_manifest": null
+  },
+  "git_head": "291d18b",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "marker": "RED-TARGET",
+  "tests": 3,
+  "expectations_met": 3,
+  "violations": 0,
+  "seconds": 21.5
+}
+
+OK  expect=ok   got=ok      test_g6_residual5.WholeObjectChar.test_a_configuration_constant_stays_a_warning
+OK  expect=FAIL got=FAIL    test_g6_residual5.WholeObjectRed.test_a_mock_object_replaces_the_providers_object
+      AssertionError: 'test_level' == 'test_level' : RED-TARGET {'consumer_modules': None, 'consumers': ['EXTERNAL'], 'covered': True, 'covered_by': ['TEST-012'], 'id': 'IF-002', 'provider': 'ARCH-002', 'provider_modules': ['src/pipeline/report.py'], 'provider_symbols': ['main'], 'tests': {'TEST-012': {'evidence_level': 'test_level', 'evidence_reason': None, 'function': 'tests/integration/test_pipeline.
+OK  expect=FAIL got=FAIL    test_g6_residual5.WholeObjectRed.test_autouse_fixture_replaces_the_providers_object_with_a_test_fake
+      AssertionError: 'test_level' == 'test_level' : RED-TARGET {'consumer_modules': None, 'consumers': ['EXTERNAL'], 'covered': True, 'covered_by': ['TEST-012'], 'id': 'IF-002', 'provider': 'ARCH-002', 'provider_modules': ['src/pipeline/report.py'], 'provider_symbols': ['main'], 'tests': {'TEST-012': {'evidence_level': 'test_level', 'evidence_reason': None, 'function': 'tests/integration/test_pipeline.
