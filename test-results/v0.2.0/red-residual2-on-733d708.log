@@ -1,0 +1,22 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/7cecc96f-20f2-42ed-ab37-b71618f25fbb/scratchpad/red-733d708/plugins/vmodel",
+    "release_manifest": null
+  },
+  "git_head": "733d708",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "marker": "RED-TARGET",
+  "tests": 3,
+  "expectations_met": 3,
+  "violations": 0,
+  "seconds": 9.7
+}
+
+OK  expect=FAIL got=FAIL    test_g6_residual2.Residual2GuardRed.test_read_only_commands_naming_a_cmd_builtin
+      AssertionError: {'cat .vmodel/work-items/WI-001/requiremen[645 chars]ned'} != {}
+OK  expect=FAIL got=FAIL    test_g6_residual2.Residual2ProviderRed.test_R1b_class_fallback_rebound_by_an_import
+      AssertionError: Tuples differ: ('BLOCKED', 'insufficient') != ('PASSED', 'test_level')
+OK  expect=FAIL got=FAIL    test_g6_residual2.Residual2ProviderRed.test_R1c_plain_def_rebound_inside_a_function
+      AssertionError: Tuples differ: ('BLOCKED', 'insufficient') != ('PASSED', 'test_level')
