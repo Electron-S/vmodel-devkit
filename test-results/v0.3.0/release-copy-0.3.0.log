@@ -1,0 +1,18 @@
+.............................................................................................F
+======================================================================
+FAIL: test_upgrade_requires_user_repin_and_stales_previous_passes (test_integrity.Upgrade.test_upgrade_requires_user_repin_and_stales_previous_passes)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/cyyoo/develop/vmodel-devkit/tests/test_integrity.py", line 175, in test_upgrade_requires_user_repin_and_stales_previous_passes
+    self.assertIn(b"re-pinned", buf)
+AssertionError: b're-pinned' not found in b"yes\r\nType 'yes' to re-pin the validator core hash (all previous PASS results become STALE): vmodel: error: validator integrity check failed: modified release file: validator/vmodel_validator/__init__.py\r\n"
+
+----------------------------------------------------------------------
+Ran 94 tests in 454.733s
+
+FAILED (failures=1)
+
+real	7m36.406s
+user	6m15.771s
+sys	0m30.918s
+EXIT 1

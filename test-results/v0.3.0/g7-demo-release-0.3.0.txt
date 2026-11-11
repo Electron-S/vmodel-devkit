@@ -1,0 +1,316 @@
+====================================================================================================
+A. gradecalc: CLI + HTTP API system tests (separate processes), G6 N/A
+====================================================================================================
+config system_test: {"argv": ["{python}", "-m", "pytest", "-q", "-p", "no:cacheprovider", "tests/system", "--junitxml={junit}"], "timeout_s": 300}
+config unit_test.argv: ["{python}", "-m", "pytest", "-q", "-p", "no:cacheprovider", "--ignore=tests/system", "--junitxml={junit}"]
+$ vmodel status WI-001   (exit 0)
+Project: /tmp/vmodel-test-jpo2p55x/한글 경로 sandbox/proj
+Validator: 0.3.0 (release) core 8abab9ec86fe integrity OK
+Ledger: OK (11 entries)
+
+WI-001 [IN_PROGRESS] G7 demo (profile STANDARD); defect checks: 0 error(s), 0 warning(s)
+  gates: G1-G5 PASSED (current), G6 N/A, G7 not evaluated
+  G1 Requirements                     PASSED           R00003 @ 2026-11-11T07:21:17.582Z
+  G2 Architecture                     PASSED           R00005 @ 2026-11-11T07:21:18.295Z
+  G3 Detailed Design & Test Planning  PASSED           R00007 @ 2026-11-11T07:21:18.977Z
+  G4 Implementation                   PASSED           R00009 @ 2026-11-11T07:21:19.670Z
+  G5 Unit Verification                PASSED           R00010 @ 2026-11-11T07:21:20.614Z
+  G6 Integration Verification         N/A              R00011 @ 2026-11-11T07:21:20.857Z
+      - N/A: recorded PASSED R00011, no integration test executed (single component; no interface to integrate); external endpoints reviewed: CLI 사용자, HTTP 클라이언트
+  G7 System Verification              IN_PROGRESS     
+      - not evaluated yet: no system verification has run
+  next: run 'vmodel gate WI-001 G7' (not evaluated yet: no system verification has run)
+
+Implemented gates: G1-G7 (G6 integration verification is N/A only for a confirmed single-component work item without interfaces; G7 runs the system_test command and needs every acceptance criterion of the active functional requirements met: every system test naming it passed in that run). A STANDARD work item is COMPLETED only when G1-G7 are PASSED for the current inputs. COMPLETED is automated verification, not user acceptance or a deployment approval. LITE and STRICT profiles are not implemented.
+
+$ vmodel gate WI-001 G7   (exit 0)
+WI-001 G7 PASSED  record R00012  manifest 24d28315106c
+  [pass   ] G7.PREREQ                    G6 PASSED (or N/A) for the current manifest hash
+  [pass   ] G7.CONFIG                    system_test configured
+  [pass   ] G7.EXECUTION                 exit code 0, junit produced
+  [pass   ] G7.RESULTS                   6 passed, 0 skipped of 6
+  [pass   ] G7.SCOPE                     no unit or integration test in this run
+  [pass   ] G7.TEST_MAPPING              6 system test spec(s) passed
+  [pass   ] G7.AC_COVERAGE               6/6 acceptance criteria met (every system test spec naming them passed in this run)
+  [pass   ] G7.NO_WEAKENING              first G7 run; baseline recorded
+  [pass   ] G7.INPUTS_UNCHANGED          inputs unchanged during the run
+  evidence: .vmodel/evidence/WI-001/G7/20261111T072121335872Z-system-cb86b6/record.json (5672a408813a)
+
+evidence record (signed): {
+ "kind": "system_test",
+ "command_source": "system_test",
+ "command": [
+  "/usr/bin/python3",
+  "-m",
+  "pytest",
+  "-q",
+  "-p",
+  "no:cacheprovider",
+  "tests/system",
+  "--junitxml=/tmp/vmodel-test-jpo2p55x/한글 경로 sandbox/proj/.vmodel/evidence/WI-001/G7/20261111T072123047217Z-system-7d9cc0/junit.xml"
+ ],
+ "exit_code": 0,
+ "timed_out": false,
+ "duration_s": 1.269,
+ "junit_summary": {
+  "tests": 6,
+  "passed": 6,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0
+ },
+ "files": {
+  "stdout.bin": {
+   "sha256": "sha256:80de463114d45de2dd3220352b6c7abc9da2d8a489ab83c05b522da225eeba47",
+   "bytes": 98
+  },
+  "stderr.bin": {
+   "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "bytes": 0
+  },
+  "junit.xml": {
+   "sha256": "sha256:fe9aa5f9e16785088cbfaa6e25f8a38db7accb763cd11cc61335ca7d05e98527",
+   "bytes": 896
+  }
+ },
+ "manifest_hash": "sha256:24d28315106c8ccf1eb3ba7edb5e821a1ac0171312d189c01e5c1a2c2f177b74",
+ "config_sha256": "sha256:7895e8556986258a5d7647eb517e148ee0013ff24fecf07af01414bb9d1e07d1",
+ "system_test_sha256": "sha256:0a52e9d8b87ea7d67fdeb29d95b255dd5e507f9955f47251528b4a56540e9b12",
+ "git": {
+  "available": true,
+  "head": null,
+  "dirty": null,
+  "note": "not a git repository"
+ },
+ "validator": {
+  "version": "0.3.0",
+  "core_hash": "sha256:8abab9ec86fef66fb6e21b8b13aa29bc27bd29adbb76a2df75608dd1ceee4bb5"
+ }
+}
+ledger record executed_tests: {"TEST-101": "passed", "TEST-102": "passed", "TEST-103": "passed", "TEST-104": "passed", "TEST-105": "passed", "TEST-106": "passed"}
+ledger record requirements_coverage: {"REQ-001": {"acceptance_criteria": {"AC-001-1": {"tests": {"TEST-101": "passed"}, "verified": true}, "AC-001-2": {"tests": {"TEST-102": "passed"}, "verified": true}, "AC-001-3": {"tests": {"TEST-103": "passed"}, "verified": true}}, "categories": {"abnormal": ["TEST-103"], "boundary": ["TEST-102"], "normal": ["TEST-101"]}, "priority": "must", "type": "functional"}, "REQ-002": {"acceptance_criteria": {"AC-002-1": {"tests": {"TEST-104": "passed"}, "verified": true}, "AC-002-2": {"tests": {"TEST-105": "passed"}, "verified": true}}, "categories": {"abnormal": ["TEST-105"], "normal": ["TEST-104"]}, "priority": "must", "type": "functional"}, "REQ-003": {"acceptance_criteria": {"AC-003-1": {"tests": {"TEST-106": "passed"}, "verified": true}}, "categories": {"abnormal": ["TEST-106"]}, "priority": "should", "type": "non-functional"}}
+ledger record basis_records: {"G5": "R00010", "G6": "R00011"}
+$ vmodel verify-evidence /tmp/vmodel-test-jpo2p55x/한글 경로 sandbox/proj/.vmodel/evidence/WI-001/G7/20261111T072123047217Z-system-7d9cc0/record.json   (exit 0)
+evidence OK
+
+$ vmodel trace WI-001   (exit 0)
+Traceability WI-001 (results from R00010)
+REQ-001 [functional/active] CLI 등급 계산
+   AC: AC-001-1, AC-001-2, AC-001-3
+   ARCH: ARCH-001   DESIGN: DESIGN-001, DESIGN-002
+   CODE: src/gradecalc/grading.py:grade, src/gradecalc/cli.py:main
+   TEST: TEST-001(unit:passed), TEST-002(unit:passed), TEST-003(unit:passed), TEST-004(unit:passed), TEST-005(unit:passed), TEST-006(unit:passed), TEST-101(system:passed), TEST-102(system:passed), TEST-103(system:passed)
+REQ-002 [functional/active] HTTP 등급 API
+   AC: AC-002-1, AC-002-2
+   ARCH: ARCH-001   DESIGN: DESIGN-001, DESIGN-003
+   CODE: src/gradecalc/grading.py:grade, src/gradecalc/server.py:handle
+   TEST: TEST-001(unit:passed), TEST-002(unit:passed), TEST-003(unit:passed), TEST-007(unit:passed), TEST-008(unit:passed), TEST-009(unit:passed), TEST-104(system:passed), TEST-105(system:passed)
+REQ-003 [non-functional/active] 한국어 오류 메시지
+   AC: AC-003-1
+   ARCH: -   DESIGN: -
+   CODE: -
+   TEST: TEST-106(system:passed)
+Interfaces (integration results from N/A (no interfaces)):
+Acceptance criteria (system results from R00013):
+   AC-001-1 (REQ-001): TEST-101(passed) verified
+   AC-001-2 (REQ-001): TEST-102(passed) verified
+   AC-001-3 (REQ-001): TEST-103(passed) verified
+   AC-002-1 (REQ-002): TEST-104(passed) verified
+   AC-002-2 (REQ-002): TEST-105(passed) verified
+   AC-003-1 (REQ-003): TEST-106(passed) verified
+Reverse (TEST -> REQ):
+   TEST-001 -> REQ-001, REQ-002
+   TEST-002 -> REQ-001, REQ-002
+   TEST-003 -> REQ-001, REQ-002
+   TEST-004 -> REQ-001
+   TEST-005 -> REQ-001
+   TEST-006 -> REQ-001
+   TEST-007 -> REQ-002
+   TEST-008 -> REQ-002
+   TEST-009 -> REQ-002
+   TEST-101 -> REQ-001
+   TEST-102 -> REQ-001
+   TEST-103 -> REQ-001
+   TEST-104 -> REQ-002
+   TEST-105 -> REQ-002
+   TEST-106 -> REQ-003
+Dangling references: none
+
+$ vmodel status WI-001   (exit 0)
+Project: /tmp/vmodel-test-jpo2p55x/한글 경로 sandbox/proj
+Validator: 0.3.0 (release) core 8abab9ec86fe integrity OK
+Ledger: OK (13 entries)
+
+WI-001 [COMPLETED] G7 demo (profile STANDARD); defect checks: 0 error(s), 0 warning(s)
+  gates: G1, G2, G3, G4, G5, G7 PASSED (current), G6 N/A
+  G1 Requirements                     PASSED           R00003 @ 2026-11-11T07:21:17.582Z
+  G2 Architecture                     PASSED           R00005 @ 2026-11-11T07:21:18.295Z
+  G3 Detailed Design & Test Planning  PASSED           R00007 @ 2026-11-11T07:21:18.977Z
+  G4 Implementation                   PASSED           R00009 @ 2026-11-11T07:21:19.670Z
+  G5 Unit Verification                PASSED           R00010 @ 2026-11-11T07:21:20.614Z
+  G6 Integration Verification         N/A              R00011 @ 2026-11-11T07:21:20.857Z
+      - N/A: recorded PASSED R00011, no integration test executed (single component; no interface to integrate); external endpoints reviewed: CLI 사용자, HTTP 클라이언트
+  G7 System Verification              PASSED           R00013 @ 2026-11-11T07:21:24.439Z
+      - AC 6/6 met: all their system tests passed (6 system test(s) passed, 3 requirement(s))
+  next: all gates passed: G1-G7 verified, G6 N/A (no integration test executed); report COMPLETED (automated verification, not user acceptance or a deployment approval)
+
+Implemented gates: G1-G7 (G6 integration verification is N/A only for a confirmed single-component work item without interfaces; G7 runs the system_test command and needs every acceptance criterion of the active functional requirements met: every system test naming it passed in that run). A STANDARD work item is COMPLETED only when G1-G7 are PASSED for the current inputs. COMPLETED is automated verification, not user acceptance or a deployment approval. LITE and STRICT profiles are not implemented.
+
+$ vmodel audit   (exit 0)
+audit: validator 0.3.0 release core 8abab9ec86fe; 13 ledger entries; 3 evidence record(s) checked
+audit OK
+
+====================================================================================================
+B. gradecalc: CLI entry bug -> G7 FAILED -> DEFECT -> fix -> G7 PASSED, defect CLOSED
+====================================================================================================
+seeded: src/gradecalc/cli.py __main__ calls main() without SystemExit (exit code always 0); the unit tests call main() directly and still pass
+G4: PASSED
+G5: PASSED
+G6: PASSED
+$ vmodel status WI-001   (exit 0)
+Project: /tmp/vmodel-test-f2xe17_8/한글 경로 sandbox/proj
+Validator: 0.3.0 (release) core 8abab9ec86fe integrity OK
+Ledger: OK (16 entries)
+
+WI-001 [IN_PROGRESS] G7 demo (profile STANDARD); defect checks: 0 error(s), 0 warning(s)
+  gates: G1-G5 PASSED (current), G6 N/A, G7 FAILED
+  G1 Requirements                     PASSED           R00003 @ 2026-11-11T07:21:26.533Z
+  G2 Architecture                     PASSED           R00005 @ 2026-11-11T07:21:27.221Z
+  G3 Detailed Design & Test Planning  PASSED           R00007 @ 2026-11-11T07:21:27.964Z
+  G4 Implementation                   PASSED           R00013 @ 2026-11-11T07:21:30.653Z
+  G5 Unit Verification                PASSED           R00014 @ 2026-11-11T07:21:31.613Z
+  G6 Integration Verification         N/A              R00015 @ 2026-11-11T07:21:31.847Z
+      - N/A: recorded PASSED R00015, no integration test executed (single component; no interface to integrate); external endpoints reviewed: CLI 사용자, HTTP 클라이언트
+  G7 System Verification              FAILED           R00016 @ 2026-11-11T07:21:33.425Z
+      x G7.EXECUTION fail: test command exit code 1
+          ....FF                                                                   [100%]
+          =================================== FAILURES ===================================
+          ___________________ test_TEST_103_cli_rejects_invalid_scores ___________________
+              def test_TEST_103_cli_rejects_invalid_scores():
+                  for bad in ("abc", "101", "-1"):
+      x G7.RESULTS fail: 2 failed, 0 error(s) of 6
+          tests.system.test_cli_system::test_TEST_103_cli_rejects_invalid_scores [failed] AssertionError: ('abc', 0)
+          tests.system.test_cli_system::test_TEST_106_cli_error_message_is_korean [failed] assert 0 == 2
+      x G7.TEST_MAPPING fail: system test specs not verified by passing tests
+          TEST-103: failed
+          TEST-106: failed
+      x G7.AC_COVERAGE fail: acceptance criteria not verified (4/6 acceptance criteria met (every system test spec naming them passed in this run))
+          AC-001-3 (REQ-001): TEST-103 failed
+          AC-003-1 (REQ-003, non-functional): TEST-106 failed
+      failing tests: TEST-103, TEST-106
+  next: G7 FAILED: run /vmodel:rework (record a DEFECT for R00016, fix, re-evaluate)
+
+Implemented gates: G1-G7 (G6 integration verification is N/A only for a confirmed single-component work item without interfaces; G7 runs the system_test command and needs every acceptance criterion of the active functional requirements met: every system test naming it passed in that run). A STANDARD work item is COMPLETED only when G1-G7 are PASSED for the current inputs. COMPLETED is automated verification, not user acceptance or a deployment approval. LITE and STRICT profiles are not implemented.
+
+$ vmodel gate WI-001 G7   (exit 3)
+WI-001 G7 BLOCKED  (not recorded: precondition)
+  ! rework record missing: R00016 (G7 FAILED) must be referenced by a DEFECT in defects.json (found_in_records) with root_cause_phase, root_cause and fix_scope
+
+DEFECT-001 cites R00016, fix restored, defects.json status fixed
+G4: PASSED
+G5: PASSED
+G6: PASSED
+$ vmodel status WI-001   (exit 0)
+Project: /tmp/vmodel-test-f2xe17_8/한글 경로 sandbox/proj
+Validator: 0.3.0 (release) core 8abab9ec86fe integrity OK
+Ledger: OK (20 entries)
+
+WI-001 [IN_PROGRESS] G7 demo (profile STANDARD); defect checks: 0 error(s), 0 warning(s)
+  gates: G1-G5 PASSED (current), G6 N/A, G7 FAILED
+  G1 Requirements                     PASSED           R00003 @ 2026-11-11T07:21:26.533Z
+  G2 Architecture                     PASSED           R00005 @ 2026-11-11T07:21:27.221Z
+  G3 Detailed Design & Test Planning  PASSED           R00007 @ 2026-11-11T07:21:27.964Z
+  G4 Implementation                   PASSED           R00018 @ 2026-11-11T07:21:34.561Z
+  G5 Unit Verification                PASSED           R00019 @ 2026-11-11T07:21:35.502Z
+  G6 Integration Verification         N/A              R00020 @ 2026-11-11T07:21:35.742Z
+      - N/A: recorded PASSED R00020, no integration test executed (single component; no interface to integrate); external endpoints reviewed: CLI 사용자, HTTP 클라이언트
+  G7 System Verification              FAILED           R00016 @ 2026-11-11T07:21:33.425Z
+      - inputs changed since this evaluation; re-evaluate
+      * changed: .vmodel/work-items/WI-001/defects.json
+      * changed: src/gradecalc/cli.py
+      x G7.EXECUTION fail: test command exit code 1
+          ....FF                                                                   [100%]
+          =================================== FAILURES ===================================
+          ___________________ test_TEST_103_cli_rejects_invalid_scores ___________________
+              def test_TEST_103_cli_rejects_invalid_scores():
+                  for bad in ("abc", "101", "-1"):
+      x G7.RESULTS fail: 2 failed, 0 error(s) of 6
+          tests.system.test_cli_system::test_TEST_103_cli_rejects_invalid_scores [failed] AssertionError: ('abc', 0)
+          tests.system.test_cli_system::test_TEST_106_cli_error_message_is_korean [failed] assert 0 == 2
+      x G7.TEST_MAPPING fail: system test specs not verified by passing tests
+          TEST-103: failed
+          TEST-106: failed
+      x G7.AC_COVERAGE fail: acceptance criteria not verified (4/6 acceptance criteria met (every system test spec naming them passed in this run))
+          AC-001-3 (REQ-001): TEST-103 failed
+          AC-003-1 (REQ-003, non-functional): TEST-106 failed
+      failing tests: TEST-103, TEST-106
+  DEFECT-001 FIX_APPLIED [claimed fixed; not verified yet] G7 root cause P4; failing tests (ledger): TEST-103, TEST-106
+  next: G7 FAILED: run /vmodel:rework (record a DEFECT for R00016, fix, re-evaluate)
+
+Implemented gates: G1-G7 (G6 integration verification is N/A only for a confirmed single-component work item without interfaces; G7 runs the system_test command and needs every acceptance criterion of the active functional requirements met: every system test naming it passed in that run). A STANDARD work item is COMPLETED only when G1-G7 are PASSED for the current inputs. COMPLETED is automated verification, not user acceptance or a deployment approval. LITE and STRICT profiles are not implemented.
+
+$ vmodel gate WI-001 G7   (exit 0)
+WI-001 G7 PASSED  record R00021  manifest 238997e99529
+  [pass   ] G7.PREREQ                    G6 PASSED (or N/A) for the current manifest hash
+  [pass   ] G7.CONFIG                    system_test configured
+  [pass   ] G7.EXECUTION                 exit code 0, junit produced
+  [pass   ] G7.RESULTS                   6 passed, 0 skipped of 6
+  [pass   ] G7.SCOPE                     no unit or integration test in this run
+  [pass   ] G7.TEST_MAPPING              6 system test spec(s) passed
+  [pass   ] G7.AC_COVERAGE               6/6 acceptance criteria met (every system test spec naming them passed in this run)
+  [pass   ] G7.NO_WEAKENING              no system test lost since R00016
+  [pass   ] G7.INPUTS_UNCHANGED          inputs unchanged during the run
+  evidence: .vmodel/evidence/WI-001/G7/20261111T072136239646Z-system-ef5489/record.json (0804219f3e27)
+
+$ vmodel status WI-001   (exit 0)
+Project: /tmp/vmodel-test-f2xe17_8/한글 경로 sandbox/proj
+Validator: 0.3.0 (release) core 8abab9ec86fe integrity OK
+Ledger: OK (21 entries)
+
+WI-001 [COMPLETED] G7 demo (profile STANDARD); defect checks: 0 error(s), 0 warning(s)
+  gates: G1, G2, G3, G4, G5, G7 PASSED (current), G6 N/A
+  G1 Requirements                     PASSED           R00003 @ 2026-11-11T07:21:26.533Z
+  G2 Architecture                     PASSED           R00005 @ 2026-11-11T07:21:27.221Z
+  G3 Detailed Design & Test Planning  PASSED           R00007 @ 2026-11-11T07:21:27.964Z
+  G4 Implementation                   PASSED           R00018 @ 2026-11-11T07:21:34.561Z
+  G5 Unit Verification                PASSED           R00019 @ 2026-11-11T07:21:35.502Z
+  G6 Integration Verification         N/A              R00020 @ 2026-11-11T07:21:35.742Z
+      - N/A: recorded PASSED R00020, no integration test executed (single component; no interface to integrate); external endpoints reviewed: CLI 사용자, HTTP 클라이언트
+  G7 System Verification              PASSED           R00021 @ 2026-11-11T07:21:37.629Z
+      - AC 6/6 met: all their system tests passed (6 system test(s) passed, 3 requirement(s))
+  DEFECT-001 CLOSED [claimed fixed; verified by R00021, G7 PASSED] G7 root cause P4; failing tests (ledger): TEST-103, TEST-106
+  next: all gates passed: G1-G7 verified, G6 N/A (no integration test executed); report COMPLETED (automated verification, not user acceptance or a deployment approval)
+
+Implemented gates: G1-G7 (G6 integration verification is N/A only for a confirmed single-component work item without interfaces; G7 runs the system_test command and needs every acceptance criterion of the active functional requirements met: every system test naming it passed in that run). A STANDARD work item is COMPLETED only when G1-G7 are PASSED for the current inputs. COMPLETED is automated verification, not user acceptance or a deployment approval. LITE and STRICT profiles are not implemented.
+
+====================================================================================================
+C. gradecalc without system_test: G7 BLOCKED misconfigured, nothing executed
+====================================================================================================
+$ vmodel status WI-001   (exit 0)
+Project: /tmp/vmodel-test-9v96seyj/한글 경로 sandbox/proj
+Validator: 0.3.0 (release) core 8abab9ec86fe integrity OK
+Ledger: OK (11 entries)
+
+WI-001 [IN_PROGRESS] G7 demo (profile STANDARD); defect checks: 0 error(s), 0 warning(s)
+  gates: G1-G5 PASSED (current), G6 N/A, G7 not evaluated
+  G1 Requirements                     PASSED           R00003 @ 2026-11-11T07:21:39.024Z
+  G2 Architecture                     PASSED           R00005 @ 2026-11-11T07:21:39.751Z
+  G3 Detailed Design & Test Planning  PASSED           R00007 @ 2026-11-11T07:21:40.495Z
+  G4 Implementation                   PASSED           R00009 @ 2026-11-11T07:21:41.202Z
+  G5 Unit Verification                PASSED           R00010 @ 2026-11-11T07:21:42.165Z
+  G6 Integration Verification         N/A              R00011 @ 2026-11-11T07:21:42.393Z
+      - N/A: recorded PASSED R00011, no integration test executed (single component; no interface to integrate); external endpoints reviewed: CLI 사용자, HTTP 클라이언트
+  G7 System Verification              IN_PROGRESS     
+      - not evaluated yet: no system verification has run
+  next: G7 needs the system_test command: ask the user to run 'vmodel configure-tests --system tests/system' in a terminal (the agent cannot edit .vmodel/config.json; the unit_test and integration_test commands are never used instead). Then re-run G4-G6 (config changed) and 'vmodel gate WI-001 G7'
+
+Implemented gates: G1-G7 (G6 integration verification is N/A only for a confirmed single-component work item without interfaces; G7 runs the system_test command and needs every acceptance criterion of the active functional requirements met: every system test naming it passed in that run). A STANDARD work item is COMPLETED only when G1-G7 are PASSED for the current inputs. COMPLETED is automated verification, not user acceptance or a deployment approval. LITE and STRICT profiles are not implemented.
+
+$ vmodel gate WI-001 G7   (exit 3)
+WI-001 G7 BLOCKED  record R00012  manifest 62b014f19183
+  [pass   ] G7.PREREQ                    G6 PASSED (or N/A) for the current manifest hash
+  [BLOCKED] G7.CONFIG                    system_test is not usable: the user must add or fix it in .vmodel/config.json ('vmodel configure-tests --system <path>' in a terminal; the agent cannot edit it). The unit_test and integration_test commands are never used instead
+            - system_test is not configured in .vmodel/config.json
+  blocked reason: misconfigured
+
+G7 evidence directories: []

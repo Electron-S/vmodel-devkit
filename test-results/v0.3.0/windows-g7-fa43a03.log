@@ -1,0 +1,63 @@
+python 3.13.14 Windows-11-10.0.26300-SP0 preferred=cp949 cwd=C:\Users\cyyoo\AppData\Local\Temp\vmodel 한글 테스트\devkit-0.3.0-fa43a03
+test_T17_020_signed_ledger_and_evidence_verify_with_this_core (test_g7_compat.CompatAccept.test_T17_020_signed_ledger_and_evidence_verify_with_this_core) ... ok
+test_T20_020_project_upgrades_configures_system_test_and_completes (test_g7_compat.CompatAccept.test_T20_020_project_upgrades_configures_system_test_and_completes) ... skipped 'a POSIX pty is needed'
+test_C1_C2_gradecalc_mixed_unit_command_with_a_rework (test_g7_compat.CompatInvariant.test_C1_C2_gradecalc_mixed_unit_command_with_a_rework) ... ok
+test_C1_C2_pipeline_split_integration_unit_command_also_runs_system_tests (test_g7_compat.CompatInvariant.test_C1_C2_pipeline_split_integration_unit_command_also_runs_system_tests) ... ok
+test_T14_core_change_stales_every_pass_including_g7 (test_g7_compat.CoreChangeAccept.test_T14_core_change_stales_every_pass_including_g7) ... skipped 'pytest and a POSIX pty are needed'
+test_T03_invalid_system_test_blocks_misconfigured (test_g7_config.ConfigRed.test_T03_invalid_system_test_blocks_misconfigured) ... ok
+test_T03_misconfigured_block_needs_no_defect_and_is_not_counted (test_g7_config.ConfigRed.test_T03_misconfigured_block_needs_no_defect_and_is_not_counted) ... ok
+test_T03_missing_system_test_blocks_without_running_anything (test_g7_config.ConfigRed.test_T03_missing_system_test_blocks_without_running_anything) ... ok
+test_T03_preview_names_the_missing_command_before_the_first_evaluation (test_g7_config.ConfigRed.test_T03_preview_names_the_missing_command_before_the_first_evaluation) ... ok
+test_configure_tests_needs_a_terminal (test_g7_config.ConfigureTestsRed.test_configure_tests_needs_a_terminal) ... skipped 'pytest and a POSIX pty are needed'
+test_configure_tests_refuses_unit_scope_and_overlap (test_g7_config.ConfigureTestsRed.test_configure_tests_refuses_unit_scope_and_overlap) ... skipped 'pytest and a POSIX pty are needed'
+test_configure_tests_system_writes_a_signed_record_then_the_config (test_g7_config.ConfigureTestsRed.test_configure_tests_system_writes_a_signed_record_then_the_config) ... skipped 'pytest and a POSIX pty are needed'
+test_init_without_system_folder_leaves_system_test_out (test_g7_config.InitChar.test_init_without_system_folder_leaves_system_test_out) ... ok
+test_init_refuses_a_system_path_without_tests (test_g7_config.InitRed.test_init_refuses_a_system_path_without_tests) ... ok
+test_init_refuses_overlapping_integration_and_system_paths (test_g7_config.InitRed.test_init_refuses_overlapping_integration_and_system_paths) ... ok
+test_init_registers_tests_system (test_g7_config.InitRed.test_init_registers_tests_system) ... ok
+test_next_action_asks_for_the_system_tests_before_the_command (test_g7_config.NoSystemTestsYetRed.test_next_action_asks_for_the_system_tests_before_the_command) ... ok
+test_T01_T09_T10_system_tests_pass_with_signed_evidence (test_g7_gate.GateRed.test_T01_T09_T10_system_tests_pass_with_signed_evidence) ... ok
+test_T02_real_defect_fails_g7 (test_g7_gate.GateRed.test_T02_real_defect_fails_g7) ... ok
+test_T06_exit_zero_without_junit_is_not_a_pass (test_g7_gate.GateRed.test_T06_exit_zero_without_junit_is_not_a_pass) ... ok
+test_T06_fake_pass_files_are_not_evidence (test_g7_gate.GateRed.test_T06_fake_pass_files_are_not_evidence) ... ok
+test_T07_exit_zero_with_empty_junit_fails (test_g7_gate.GateRed.test_T07_exit_zero_with_empty_junit_fails) ... ok
+test_T07_no_test_collected_fails (test_g7_gate.GateRed.test_T07_no_test_collected_fails) ... ok
+test_T08_boundary_scenario_failure_fails_g7 (test_g7_gate.GateRed.test_T08_boundary_scenario_failure_fails_g7) ... ok
+test_T08_normal_boundary_error_scenarios_are_recorded_and_judged (test_g7_gate.GateRed.test_T08_normal_boundary_error_scenarios_are_recorded_and_judged) ... ok
+test_T19_korean_output_of_a_failed_run_is_readable (test_g7_gate.GateRed.test_T19_korean_output_of_a_failed_run_is_readable) ... ok
+test_a_process_left_running_by_a_system_test_neither_hangs_nor_times_out_g7 (test_g7_gate.GateRed.test_a_process_left_running_by_a_system_test_neither_hangs_nor_times_out_g7) ... ok
+test_command_that_cannot_start_is_blocked_tool_unavailable (test_g7_gate.GateRed.test_command_that_cannot_start_is_blocked_tool_unavailable) ... ok
+test_R3_option_values_are_not_paths (test_g7_review.OverlapChar.test_R3_option_values_are_not_paths) ... skipped 'pytest and a POSIX pty are needed'
+test_R3_integration_command_without_folder_or_dot_overlaps_the_system_folder (test_g7_review.OverlapRed.test_R3_integration_command_without_folder_or_dot_overlaps_the_system_folder) ... skipped 'pytest and a POSIX pty are needed'
+test_R2_next_action_does_not_claim_completed_for_an_unimplemented_profile (test_g7_review.ProfileRed.test_R2_next_action_does_not_claim_completed_for_an_unimplemented_profile) ... ok
+test_R1_new_ac_is_not_verified_by_an_older_run (test_g7_review.TraceRecordRed.test_R1_new_ac_is_not_verified_by_an_older_run) ... ok
+test_R1_remapped_ac_keeps_the_recorded_failure (test_g7_review.TraceRecordRed.test_R1_remapped_ac_keeps_the_recorded_failure) ... ok
+test_S1_non_pytest_system_command_is_a_note_not_a_refusal (test_g7_review2.ConfigureReview2Red.test_S1_non_pytest_system_command_is_a_note_not_a_refusal) ... skipped 'pytest and a POSIX pty are needed'
+test_S2_pyargs_is_a_flag (test_g7_review2.ConfigureReview2Red.test_S2_pyargs_is_a_flag) ... skipped 'pytest and a POSIX pty are needed'
+test_T11_failed_g7_needs_a_defect_then_the_fix_is_verified_and_closed (test_g7_rework.ReworkRed.test_T11_failed_g7_needs_a_defect_then_the_fix_is_verified_and_closed) ... ok
+test_T12_closure_is_withdrawn_when_g7_is_stale_or_blocked (test_g7_rework.ReworkRed.test_T12_closure_is_withdrawn_when_g7_is_stale_or_blocked) ... ok
+test_T12_defect_schema_accepts_g7_and_p7 (test_g7_rework.ReworkRed.test_T12_defect_schema_accepts_g7_and_p7) ... ok
+test_T12_failed_reverification_and_unknown_results (test_g7_rework.ReworkRed.test_T12_failed_reverification_and_unknown_results) ... ok
+test_T12_three_identical_g7_failures_block (test_g7_rework.ReworkRed.test_T12_three_identical_g7_failures_block) ... ok
+test_G5_no_weakening_accepts_system_tests_moving_to_g7 (test_g7_scope.MixedRed.test_G5_no_weakening_accepts_system_tests_moving_to_g7) ... ok
+test_status_warns_that_the_unit_command_ran_system_tests (test_g7_scope.MixedRed.test_status_warns_that_the_unit_command_ran_system_tests) ... ok
+test_T04_unit_test_relabelled_as_system_test_fails_g4 (test_g7_scope.ScopeChar.test_T04_unit_test_relabelled_as_system_test_fails_g4) ... ok
+test_G5_scope_fails_when_the_unit_command_runs_system_tests (test_g7_scope.ScopeRed.test_G5_scope_fails_when_the_unit_command_runs_system_tests) ... ok
+test_T04_system_command_on_the_unit_folder_fails (test_g7_scope.ScopeRed.test_T04_system_command_on_the_unit_folder_fails) ... ok
+test_T04_system_command_running_the_unit_command_fails (test_g7_scope.ScopeRed.test_T04_system_command_running_the_unit_command_fails) ... ok
+test_G6_scope_fails_when_the_integration_command_runs_system_tests (test_g7_status.PipelineRed.test_G6_scope_fails_when_the_integration_command_runs_system_tests) ... ok
+test_T13_g1_to_g7_passed_is_completed (test_g7_status.PipelineRed.test_T13_g1_to_g7_passed_is_completed) ... ok
+test_T14_stale_g7_blocks_completion (test_g7_status.StatusRed.test_T14_stale_g7_blocks_completion) ... ok
+test_T15_g6_na_and_g7_pass_complete_the_work_item (test_g7_status.StatusRed.test_T15_g6_na_and_g7_pass_complete_the_work_item) ... ok
+test_T16_failed_or_blocked_g7_blocks_completion (test_g7_status.StatusRed.test_T16_failed_or_blocked_g7_blocks_completion) ... ok
+test_verify_runs_g1_to_g7 (test_g7_status.StatusRed.test_verify_runs_g1_to_g7) ... ok
+test_T05_non_functional_ac_without_system_test_is_a_warning (test_g7_trace.NfrWithoutSystemTestRed.test_T05_non_functional_ac_without_system_test_is_a_warning) ... ok
+test_T05_system_test_not_mapped_by_name_fails_ac_coverage (test_g7_trace.TraceRed.test_T05_system_test_not_mapped_by_name_fails_ac_coverage) ... ok
+test_T18_requirement_change_restales_g1_to_g7_and_reverifies (test_g7_trace.TraceRed.test_T18_requirement_change_restales_g1_to_g7_and_reverifies) ... ok
+test_trace_and_report_show_req_ac_system_test_results (test_g7_trace.TraceRed.test_trace_and_report_show_req_ac_system_test_results) ... ok
+
+----------------------------------------------------------------------
+Ran 56 tests in 646.720s
+
+OK (skipped=9)
+RESULT ran=56 failures=0 errors=0 skipped=9

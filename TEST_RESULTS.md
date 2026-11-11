@@ -893,3 +893,77 @@ RED 로그: `red-residual-on-20d2139.log`, `red-guard-cmd-on-20d2139.log`, `red-
 
 ### 17.9 G7 착수 여부
 v0.2.0 확정으로 G7(System Verification, PLAN M6, 제안 0.3.0)의 선행 조건(G6 구현·릴리스)은 갖춰졌다. 착수는 사용자 결정(PLAN M6 "사용자 결정 전 착수 금지")이며, 이번 작업에서는 G7을 구현하지 않았다.
+
+## 18. v0.3.0 후보: G7 System Verification (2026-11-11, 브랜치 `g7-dev`, 실제 Claude 세션 없음)
+
+사용자 지시 "VModel DevKit v0.3.0 — G7 System Verification 개발". 정본 설계 `docs/g7/G7-DESIGN.md`(REQ-G7-01~24), 결정 D49, 로그 `test-results/v0.3.0/`. 유료 헤드리스 실행, `main` 병합, 태그, 푸시는 하지 않았다.
+
+### 18.1 출발 상태와 절차
+- 출발: `main` = 태그 `v0.2.0` = `c4b508a`, G1~G6, `dist/vmodel-0.2.0`이 기록과 46개 파일 일치, 원격 푸시 없음. `g7-dev`를 `main`에서 만들었다.
+- 커밋: 설계 `cfce1e9` → 설계 독립 검토 반영 + 테스트(구현 전) `b3c79b2` → 구현 `68b4d67` → 구현 검토 RED `2c26356` → 수정 `7939f97` → 재검토 RED `172a599` → 수정 `12e3caf`(마지막 판정 코드) → 버전 `de270aa` → 릴리스 기록 `8eb93ff` → 문서·로그 `1deef79` → Windows에서 찾은 시험 수정 `fa43a03`(시험 파일만) → 이 기록.
+
+### 18.2 RED → GREEN (`scripts/red_green.py --marker RED-TARGET`)
+| 대상 | 결과 | 로그 |
+|---|---|---|
+| G7 모듈 7개, RED 대상 불변 `dist/vmodel-0.2.0` | 46/46 기대 충족: Red 42가 모두 표지 있는 목표 assertion에서 실패(0.2.0은 G7 요청에 "extension gate … not implemented" BLOCKED를 기록 없이 돌려줌), Char 2·Invariant 2 통과. Accept 3은 RED 대상 아님 | `red-g7-on-0.2.0.log` (초안 `red-draft-on-0.2.0.log`: 내 시험 실수 2건—T15 표지 누락, T19 시드가 unit 테스트에도 걸림—을 고친 뒤 최종) |
+| 구현 검토 지적 `test_g7_review`, RED 대상 검토 빌드 `68b4d67` | 5/5(Red 4, Char 1) | `red-review-impl-on-68b4d67.log` |
+| 재검토 지적 `test_g7_review2`, RED 대상 `7939f97` | 2/2 | `red-review2-on-7939f97.log` |
+| GREEN(새 코어) | G7 모듈 + 구현 검토 모듈 54/54(`7939f97` 작업 트리), 재검토 수정 뒤 `test_g7_config`·`test_g7_review`·`test_g7_review2` 19/19, 최종 전체 회귀에서 모두 통과 | §18.4 |
+
+### 18.3 사용자 테스트 T01~T20 대응 (모두 자동화, 하네스. 표는 설계 §5.2)
+| T | 시험 | 결과 |
+|---|---|---|
+| T01·T09·T10 | `test_g7_gate::GateRed.test_T01_T09_T10_…` | G7 PASSED, 증거 kind `system_test`, CLI 4개·HTTP API 2개 시스템 테스트(별도 프로세스) passed, record·증거에 명령·종료 코드·해시·REQ/AC 커버리지, verify-evidence·audit OK |
+| T02 | `test_T02_real_defect_fails_g7` | unit 테스트가 닿지 않는 CLI 진입점 버그 → G4~G6 PASSED 뒤 G7 FAILED(TEST-103·106, AC-001-3) |
+| T03 | `test_g7_config::ConfigRed` 4건, `NoSystemTestsYetRed` | 설정 없음·argv 문자열·`{junit}` 없음·timeout 없음 → BLOCKED `misconfigured`, 증거 없음, unit 명령 미실행, 중립 차단(결함·3회 규칙 무관), 시스템 테스트를 아직 안 쓴 경우 next_action이 작성 → 설정 순서 안내 |
+| T04 | `test_g7_scope::ScopeRed`·`ScopeChar` | system_test = unit 명령, `tests/unit` 대상 → G7 FAILED(SCOPE, 종료 코드 0·결과 통과여도). unit 테스트를 system ID로 옮김 → G4 FAILED(0.2.0과 같은 규칙) |
+| T05 | `test_g7_trace::TraceRed.test_T05_…`, `NfrWithoutSystemTestRed` | 이름 매핑 누락 → G7 FAILED(TEST_MAPPING not executed, AC_COVERAGE `AC-002-2 (REQ-002)`), 비기능 AC에 명세 없음 → 경고만(PASSED, COMPLETED) |
+| T06 | `test_T06_fake_pass_files_…`, `test_T06_exit_zero_without_junit_…` | 가짜 증거·junit·PASS 파일 → G7 미평가 유지, verify-evidence 거부, 평가는 자기 실행만. 종료 0 + junit 없음 → FAILED |
+| T07 | `test_T07_no_test_collected_fails`, `…empty_junit_fails` | 빈 폴더(종료 5)·종료 0 + 빈 junit → FAILED(RESULTS "0 tests executed") |
+| T08 | `test_T08_…` 2건 | 범주별 기록(REQ-001 normal/boundary/abnormal), 오류 시나리오(HTTP 400 대신 200)·경계 시나리오(0) 실패 → FAILED, 해당 AC 명시 |
+| T11 | `test_g7_rework::ReworkRed.test_T11_…` | FAILED → DEFECT 없으면 재평가 BLOCKED(기록 없음) → DEFECT(gate G7, P4) + 수정 → G4~G6 뒤 FIX_APPLIED(G5·G6 PASS로 닫히지 않음) → G7 PASSED → CLOSED `verified_by` G7, WI COMPLETED, lint 0 |
+| T12 | `test_T12_…` 4건 | 소스 변경 → REVERIFY_REQUIRED(STALE), G7 BLOCKED(misconfigured) → REVERIFY_REQUIRED(resolve_block), 재검증 실패 → VERIFICATION_FAILED, not executed → UNKNOWN 경고, 3회 동일 실패 → BLOCKED, G7·P7 결함 스키마 |
+| T13 | `test_g7_status::PipelineRed.test_T13_…` | pipeline(G6 required) + 시스템 오버레이 → G1~G7 PASSED, COMPLETED, `verify` 7개 PASSED 종료 0 |
+| T14 | `StatusRed.test_T14_…`, `test_g7_compat::CoreChangeAccept` | 소스·시스템 테스트 파일 변경, G2 리뷰 교체(G6 STALE → G7 STALE), Core 변경 → STALE, COMPLETED 아님 |
+| T15 | `StatusRed.test_T15_…` | G6 N/A + G7 PASSED → COMPLETED, 표시에 G6 N/A·AC 6/6 |
+| T16 | `StatusRed.test_T16_…` | FAILED → IN_PROGRESS(rework 안내), BLOCKED → WI BLOCKED(사용자 설정 안내) |
+| T17 | `test_g7_compat::CompatInvariant` 2건, `CompatAccept.test_T17_…` | `system_test` 없는 같은 이력(gradecalc mixed + 재작업, pipeline + integration 분리)에서 G1~G6 투영(상태·체크·실패 서명·executed_tests)과 manifest가 0.2.0과 같음, 0.2.0 원장·증거가 새 코어에서 verify-evidence·audit 통과 |
+| T18 | `TraceRed.test_T18_…` | AC 문구 변경 → G1~G7 STALE, impact가 REQ-001·TEST-102·G7, CR 후 G1~G7 재평가 → 새 G7 PASSED |
+| T19 | 전체 하네스(한글·공백 경로), `test_T19_korean_output_…`, Windows 회귀 §18.4 | 실패한 G7 실행의 한국어 출력이 JUnit 메시지·출력 꼬리로 읽힘 |
+| T20 | `CompatAccept.test_T20_…` | 0.2.0으로 G1~G6 → 재고정(pty) → 이전 기록 바이트 유지, G1~G6 STALE(Core), G7 미평가 → `configure-tests --system` → G1~G6 재평가(G4만 재리뷰) → G7 PASSED → COMPLETED |
+
+### 18.4 회귀
+| 항목 | 결과 |
+|---|---|
+| 첫 전체 회귀(`68b4d67` 작업 트리) | 552 실행, 실패 2: 새 MVP 문구·G7 표시의 "verified by"가 D37 시험("verified by"는 CLOSED 결함 전용)에 걸림 → 문구 수정(`7939f97`). 그 밖의 기존 테스트는 설계 §5.4의 의도 변경 5개 모듈만 |
+| 전체 회귀 WSL2 Ubuntu 24.04, Python 3.12.3, 깨끗한 detached worktree `1deef79` | **559 통과**(기존 503 + G7 49 + 검토 7), skip 1(xdist 환경 변수 없음), 1962초 (`wsl-harness-1deef79.log`) |
+| 전체 회귀 Windows 11, Python 3.13.14 venv, cp949, 한글·공백 경로 `1deef79` | 559 실행, **실패 0**, ERROR 1, skip 64(pty 필요 52, POSIX fork·fifo·forkserver 6, 심볼릭 링크 권한 2, ruff 없음 1, xdist 1 등), 4501초 (`windows-harness-1deef79.log`). ERROR 1은 내 시험 문제: 남은 프로세스 시험(`test_a_process_left_running…`)의 자식이 샌드박스 프로젝트를 cwd로 둔 채 남아(Windows는 남은 자식을 종료하지 않음, D49 한계) 다음 시험의 setUp이 샌드박스를 지우지 못함. 그 시험 자체와 G7 판정은 통과 |
+| Windows 재실행 `fa43a03`(남는 자식의 cwd를 프로젝트 밖으로 바꾼 시험 수정만, 플러그인 트리 동일) | G7 모듈 9개 **56 실행, 실패 0, ERROR 0**, skip 9(pty) (`windows-g7-fa43a03.log`). WSL에서도 `test_g7_gate` 11/11 |
+| 릴리스 사본 `dist/vmodel-0.3.0` 대상(G7 9개 모듈 + `test_g6_compat`·`test_version_compat`·`test_upgrade_settings`·`test_integrity`) | 94 실행, 93 통과. 실패 1 `test_integrity.Upgrade.test_upgrade_requires_user_repin…`은 플러그인 사본의 파일을 고치는 시험이라 릴리스 사본에서는 `RELEASE_MANIFEST` 대조가 (맞게) 막는다 — `dist/vmodel-0.2.0` 대상에서도 같게 실패함을 확인, 소스 대상 전체 회귀에서는 통과 (`release-copy-0.3.0.log`). T20(0.2.0 릴리스 → 0.3.0 릴리스 업그레이드) 포함 |
+| 기존 테스트 기대값 변경(설계 §5.4, 모두 REQ-G7-17·18, 0.2.0 기대값 주석) | `test_gates`(G7 IN_PROGRESS, mvp_note), `test_g6_status`(gate_summary·next_action·verify가 G7까지 돌고 BLOCKED misconfigured), `test_g6_applicability`(IN_PROGRESS), `test_g6_compat`, `test_defect_closure`(G7 IN_PROGRESS). 목록 밖 변경 없음 |
+
+### 18.5 System Test 실제 실행 증거 (릴리스 사본, `g7-demo-release-0.3.0.txt`, 모델 호출 없음)
+- A: gradecalc G1~G6(G6 N/A) → `vmodel gate WI-001 G7` PASSED(체크 9개 pass, RESULTS "6 passed", AC_COVERAGE 6/6), 서명된 증거(명령 `python3 -m pytest … tests/system --junitxml=…`, 종료 코드 0, stdout/stderr/junit 해시, config·system_test 해시, manifest, Git, Validator 0.3.0 core `8abab9ec`), 원장 `requirements_coverage`(REQ → AC → TEST → passed), `basis_records`(G5·G6), verify-evidence OK, trace의 AC 행, status COMPLETED, audit OK.
+- B: CLI 진입점 버그 → G4~G6 PASSED → G7 FAILED → DEFECT 없이 재평가 거부 → DEFECT + 수정 → FIX_APPLIED → G7 PASSED → CLOSED(verified by G7 기록), COMPLETED.
+- C: `system_test` 없음 → G7 BLOCKED `misconfigured`, G7 증거 폴더 없음(아무것도 실행 안 함), next_action이 사용자 `configure-tests --system` 안내.
+
+### 18.6 독립 검토 (별도 컨텍스트, 읽기 전용 detached worktree, 지적은 직접 확인 후 검토 빌드 대상 RED → 수정)
+| 회차 | 대상 | 결과 | 처리 |
+|---|---|---|---|
+| 설계 | `cfce1e9` | CRITICAL·HIGH 0, MEDIUM 2(M1 남은 자식 프로세스가 파이프를 쥐면 거짓 시간 초과·무한 대기 — 내가 기존 `run_command`로 재현, M2 시스템 테스트 미작성 시 설정 단계에서 막힘), LOW 6 | 설계 §8: `run_command_files`, next_action 순서, 실패 서명 유지, 지침, 결정 12~14 |
+| 구현 | `68b4d67` | CRITICAL·HIGH 0, 거짓 PASS·G1~G6 변경·결함 종료 오류 없음. MEDIUM 1(trace/report가 서명 기록 대신 현재 매핑으로 AC "verified"), LOW 2(미구현 프로필에 "report COMPLETED", 폴더 없는·`.` 명령과의 겹침 미검출) | `test_g7_review` RED → `7939f97` |
+| 재검토(좁게) | `7939f97` | 세 수정 정확, 원 지적 다시 열리지 않음. 새 LOW 2(pytest 아닌 명령이면 거부, `--pyargs` 오인) — 둘 다 거부만, 거짓 PASS 아님 | `test_g7_review2` RED → `12e3caf`(판단 불가는 안내로, SCOPE가 실제 실행으로 판정) |
+
+### 18.7 Evidence Ledger·Audit·호환
+- 원장 형식(서명·체인·head·앵커) 변경 없음. G7 기록은 기존 `type: gate`에 키를 더했다. 기존 기록·증거는 다시 쓰지 않는다(T20에서 원장 바이트 접두 동일 확인).
+- 0.2.0 서명 원장·증거: 새 코어의 verify-evidence·audit 통과(T17, 릴리스 사본 포함). 기록의 버전·Core 해시는 0.2.0 값 유지.
+- G1~G6 manifest: 같은 프로젝트에서 0.2.0과 같음(CompatInvariant, `vmodel hash` 비교). `system_test`가 없으면 G1~G6 판정·실패 서명이 0.2.0과 같음.
+- 업그레이드: Core 변경으로 기존 PASS는 STALE(기존 규칙 유지), G7은 평가 전.
+
+### 18.8 릴리스 후보 (`release-check-candidate.json`)
+`scripts/release.py` → `dist/vmodel-0.3.0` + `releases/vmodel-0.3.0.json`(core `sha256:8abab9ec86fef66fb6e21b8b13aa29bc27bd29adbb76a2df75608dd1ceee4bb5`). `test-results/v0.3.0/release_check.py`(hashlib로 독립 재계산): 0.1.0~0.3.0 사본 = 기록 = 각 사본 자기 점검, 소스 = 0.3.0 기록, 버전 문자열 일치(VERSION, plugin.json, dist plugin.json, 기록, marketplace), 이전 기록 불변, 태그 `v0.1.2`~`v0.2.0` 그대로, `v0.3.0` 태그 없음, `main` = `c4b508a` 그대로 → OK. `claude plugin validate --strict` 소스·릴리스 사본 통과. 참고: `dist/.claude-plugin/marketplace.json`(git 제외)은 릴리스 빌드가 0.3.0으로 바꿨다(0.2.0 때와 같은 방식).
+
+### 18.9 판정과 미검증 항목
+- 지시 §8의 릴리스 후보 조건(VERSION·플러그인 버전, 릴리스 Manifest, 소스·사본 해시, Plugin Validation, 기존 릴리스 호환)과 회귀(WSL 559 통과, Windows 559 실행 실패 0 + 시험 수정 뒤 G7 모듈 56 통과)를 충족 → **v0.3.0 RELEASE CANDIDATE 준비 완료.** 병합·태그·푸시·유료 E2E는 사용자 결정.
+- 미검증: 실제 Claude 세션의 G7 경로 전체(P7 작성·리뷰·G7 FAILED → DEFECT → CLOSED, 0.2.0 → 0.3.0 실제 업그레이드), macOS, Windows의 pty 사용자 전용 경로(`configure-tests`·`lock --accept-current`는 POSIX pty 시험만).
+- 남은 위험(D49 한계): 시스템 테스트의 블랙박스 여부는 리뷰 판단(화이트박스 테스트를 기계로 막지 않음), 같은 프로세스 신뢰 경계, 비기능 AC는 시스템 테스트 없으면 경고만, 설치본을 부르는 시스템 테스트, G5·G6의 파이프 출력(남은 자식 프로세스 대기 가능성, 0.2.0부터), Windows에서 끝난 뒤 남은 자식 프로세스 미종료, AC 문구만 바뀌고 매핑이 같으면 trace는 이전 G7 기록의 "verified"를 G7 STALE 표시와 함께 보임.
