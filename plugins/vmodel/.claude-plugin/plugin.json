@@ -1,6 +1,6 @@
 {
   "name": "vmodel",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "VModel DevKit: V-Model development workflow (G1-G7) with an independent, evidence-based quality gate validator",
   "author": {"name": "cyyoo"},
   "license": "UNLICENSED",
