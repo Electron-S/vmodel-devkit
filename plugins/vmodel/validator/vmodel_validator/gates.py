@@ -1897,6 +1897,8 @@ def _provider_defs(ix, rel: str) -> dict:
     strict, weak = [], []
     if m is None:
         return {"strict": strict, "weak": weak}
+    # names a function rebinds through `global` (lazy initialisation) are rebound by the provider itself (review 23)
+    rebound = {n for node in ast.walk(m.tree) if isinstance(node, ast.Global) for n in node.names}
     for name, node in m.functions.items():
         decos = {d.id if isinstance(d, ast.Name) else d.attr if isinstance(d, ast.Attribute) else ""
                  for d in getattr(node, "decorator_list", [])}
@@ -1904,10 +1906,10 @@ def _provider_defs(ix, rel: str) -> dict:
             (strict if decos <= {"staticmethod", "classmethod"} else weak).append(name)
         else:
             b = m.bindings.get(name)
-            (strict if not decos and b and b[0] == "def" and b[1] is node else weak).append(name)
+            (strict if not decos and b and b[0] == "def" and b[1] is node and name not in rebound else weak).append(name)
     for name in m.classes:
         b = m.bindings.get(name)
-        (strict if b and b[0] == "class" else weak).append(name)
+        (strict if b and b[0] == "class" and name not in rebound else weak).append(name)
     return {"strict": sorted(strict), "weak": sorted(weak)}
 
 

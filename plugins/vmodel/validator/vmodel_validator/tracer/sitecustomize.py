@@ -100,6 +100,7 @@ def _vmodel_trace_install():
         state["spawns"] = 0
         state["kdone"] = set()
         state["xdone"] = set()
+        state["xscans"] = {}
         state["seen"] = set()
         state["full"] = False
         state["bytes"] = 0
@@ -318,7 +319,10 @@ def _vmodel_trace_install():
     def replaced(obj, strict, pfile, modname):
         """D48 (policy A at run time): is this provider-module binding something else than the provider defined?"""
         if isinstance(obj, type):
-            return obj.__module__ != modname
+            if strict:
+                return obj.__module__ != modname
+            mf = getattr(sys.modules.get(obj.__module__), "__file__", None) or ""  # weak: only a test-tree class
+            return bool(mf) and (norm(mf) in test_files or label_of(mf) in test_labels)
         if type(obj).__module__ == "unittest.mock":
             return True
         f = obj
@@ -345,18 +349,17 @@ def _vmodel_trace_install():
     def check_patched(test, phase, lab, frame):
         """D48: when a provider function starts, the provider-defined names of its module that were replaced (a
         patch made anywhere: any fixture, plugin, MonkeyPatch.context, a child's own code). One line per (test, phase,
-        provider, names); checks per thread up to the scan limit."""
+        provider, names); up to the scan limit of checks per (test, phase, provider) over all threads."""
         defs = pdefs.get(lab)
         if not defs or frame is None:
             return
         k = (test, phase, lab)
         if k in state["xdone"]:
             return
-        scans = scan_counts()
-        n = scans.get(("x", k), 0)
+        n = state["xscans"].get(k, 0)  # one budget for all threads (review 23: short-lived threads multiplied it)
         if n >= scan_limit:
             return
-        scans[("x", k)] = n + 1
+        state["xscans"][k] = n + 1
         g = frame.f_globals
         pfile, modname, bad = prov_path.get(lab), g.get("__name__"), []
         for strict, names in ((True, defs[0]), (False, defs[1])):
