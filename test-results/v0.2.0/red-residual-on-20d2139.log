@@ -1,0 +1,36 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/7cecc96f-20f2-42ed-ab37-b71618f25fbb/scratchpad/red-20d2139/plugins/vmodel",
+    "release_manifest": null
+  },
+  "git_head": "e4aaaf5",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "marker": "RED-TARGET",
+  "tests": 12,
+  "expectations_met": 12,
+  "violations": 0,
+  "seconds": 43.0
+}
+
+OK  expect=ok   got=ok      test_g6_residual.ResidualControlChar.test_decorated_provider_functions
+OK  expect=ok   got=ok      test_g6_residual.ResidualControlChar.test_requested_server_fixture_and_the_tests_own_request
+OK  expect=ok   got=ok      test_g6_residual.ResidualControlChar.test_requested_server_process_fixture_and_the_tests_own_request
+OK  expect=ok   got=ok      test_g6_residual.ResidualControlChar.test_unrelated_autouse_thread_and_the_tests_direct_call
+OK  expect=FAIL got=FAIL    test_g6_residual.ResidualPatchRed.test_A1_autouse_patch_fixture_imported_from_another_module
+      AssertionError: 'test_level' == 'test_level' : RED-TARGET {'consumer_modules': None, 'consumers': ['EXTERNAL'], 'covered': True, 'covered_by': ['TEST-012'], 'id': 'IF-002', 'provider': 'ARCH-002', 'provider_modules': ['src/pipeline/report.py'], 'provider_symbols': ['main'], 'tests': {'TEST-012': {'evidence_level': 'test_level', 'evidence_reason': None, 'function': 'tests/integration/test_pipeline.
+OK  expect=FAIL got=FAIL    test_g6_residual.ResidualPatchRed.test_A2_autouse_patch_fixture_in_a_base_class
+      AssertionError: 'test_level' == 'test_level' : RED-TARGET {'consumer_modules': None, 'consumers': ['EXTERNAL'], 'covered': True, 'covered_by': ['TEST-012'], 'id': 'IF-002', 'provider': 'ARCH-002', 'provider_modules': ['src/pipeline/report.py'], 'provider_symbols': ['main'], 'tests': {'TEST-012': {'evidence_level': 'test_level', 'evidence_reason': None, 'function': 'tests/integration/test_pipeline.
+OK  expect=FAIL got=FAIL    test_g6_residual.ResidualPatchRed.test_A3_autouse_patch_fixture_from_pytest_plugins
+      AssertionError: 'test_level' == 'test_level' : RED-TARGET {'consumer_modules': None, 'consumers': ['EXTERNAL'], 'covered': True, 'covered_by': ['TEST-012'], 'id': 'IF-002', 'provider': 'ARCH-002', 'provider_modules': ['src/pipeline/report.py'], 'provider_symbols': ['main'], 'tests': {'TEST-012': {'evidence_level': 'test_level', 'evidence_reason': None, 'function': 'tests/integration/test_pipeline.
+OK  expect=FAIL got=FAIL    test_g6_residual.ResidualPatchRed.test_A4_autouse_patch_fixture_in_the_root_conftest
+      AssertionError: 'test_level' == 'test_level' : RED-TARGET {'consumer_modules': None, 'consumers': ['EXTERNAL'], 'covered': True, 'covered_by': ['TEST-012'], 'id': 'IF-002', 'provider': 'ARCH-002', 'provider_modules': ['src/pipeline/report.py'], 'provider_symbols': ['main'], 'tests': {'TEST-012': {'evidence_level': 'test_level', 'evidence_reason': None, 'function': 'tests/integration/test_pipeline.
+OK  expect=FAIL got=FAIL    test_g6_residual.ResidualPatchRed.test_A5_module_scoped_autouse_monkeypatch_context
+      AssertionError: 'test_level' == 'test_level' : RED-TARGET {'consumer_modules': None, 'consumers': ['EXTERNAL'], 'covered': True, 'covered_by': ['TEST-012'], 'id': 'IF-002', 'provider': 'ARCH-002', 'provider_modules': ['src/pipeline/report.py'], 'provider_symbols': ['main'], 'tests': {'TEST-012': {'evidence_level': 'test_level', 'evidence_reason': None, 'function': 'tests/integration/test_pipeline.
+OK  expect=FAIL got=FAIL    test_g6_residual.ResidualPatchRed.test_H4_patch_written_inside_the_childs_command
+      AssertionError: 'test_level' == 'test_level' : RED-TARGET {'consumer_modules': None, 'consumers': ['EXTERNAL'], 'covered': True, 'covered_by': ['TEST-012'], 'id': 'IF-002', 'provider': 'ARCH-002', 'provider_modules': ['src/pipeline/report.py'], 'provider_symbols': ['main', 'summarize'], 'tests': {'TEST-012': {'evidence_level': 'test_level', 'evidence_reason': None, 'function': 'tests/integration/t
+OK  expect=FAIL got=FAIL    test_g6_residual.ResidualSenderRed.test_H3a_autouse_thread_sends_to_a_requested_thread_server
+      AssertionError: 'test_level' == 'test_level' : RED-TARGET {'consumer_modules': None, 'consumers': ['EXTERNAL'], 'covered': True, 'covered_by': ['TEST-012'], 'id': 'IF-002', 'provider': 'ARCH-002', 'provider_modules': ['src/pipeline/report.py'], 'provider_symbols': ['main', 'summarize'], 'tests': {'TEST-012': {'evidence_level': 'test_level', 'evidence_reason': None, 'function': 'tests/integration/t
+OK  expect=FAIL got=FAIL    test_g6_residual.ResidualSenderRed.test_H3b_autouse_thread_sends_to_a_requested_server_process
+      AssertionError: 'test_level' == 'test_level' : RED-TARGET {'consumer_modules': None, 'consumers': ['EXTERNAL'], 'covered': True, 'covered_by': ['TEST-012'], 'id': 'IF-002', 'provider': 'ARCH-002', 'provider_modules': ['src/pipeline/report.py'], 'provider_symbols': ['main', 'summarize'], 'tests': {'TEST-012': {'evidence_level': 'test_level', 'evidence_reason': None, 'function': 'tests/integration/t
