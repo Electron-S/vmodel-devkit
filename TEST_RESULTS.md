@@ -834,8 +834,9 @@ E2E-B (`samples/textstats`, 단일 함수 기능, 37턴, 3.4분)
 | 분류 | 경로 | 처리 |
 |---|---|---|
 | B 거짓 PASS(재현됨, 현재 후보 `20d2139`) | A1 import한 autouse patch fixture, A2 기반 클래스 autouse patch, A3 `pytest_plugins`, A4 루트 conftest autouse patch, A5 `MonkeyPatch.context()`, H4 자식 명령 문자열 patch, H3 autouse 스레드가 요청한 서버로 요청(스레드·프로세스) | `tests/test_g6_residual.py` RED 8/8 → D48 R1(실행 시점 patch 관찰)·R2(출처 불확실하면 메인 스레드 증거만) → 모두 BLOCKED |
+| B 거짓 PASS(분류 중 내가 재현, `86dbf98`) | provider 모듈 수준 인스턴스(provider 정의 클래스)의 메서드를 인스턴스에서 바꾼 patch(autouse fixture·시험 함수 모두) | `tests/test_g6_residual3.py` RED 2/2 → R1 확장(`c399b1a`) → BLOCKED |
 | A 증거 부족 BLOCKED(수용) | 조건부 autouse patch(A6), 공유 스레드 풀 예산 소진, autouse fixture가 스레드·프로세스를 띄운 테스트의 스레드·프로세스 경유 연결(R2, 검토 23 R2b·c·d·f), provider 이름을 provider 밖 함수로 정상 재대입(strict 이름), asyncio 작업·제너레이터 전달(N4/N5), 데이터 전달형 테스트, 세션·모듈 범위 서버, pytest가 아닌 러너, 출처 토큰이 닿지 않는 프로세스(Windows `os.spawn*` 등) | 알려진 기능 제약. 사유 메시지에 원인 표시 |
-| 결정에 따른 경고(정책상 G4 리뷰 몫) | provider 모듈의 상수·모듈 수준 객체 속성(인스턴스 속성) patch(D44 2항, 8회차 P1), 장식·재대입된(weak) 이름을 라이브러리 함수로 바꾼 patch(R1이 보지 않음; 테스트 트리 밖 지원 코드는 G4가 막음) | G4 patch 경고 + 리뷰. 재현된 거짓 PASS 아님 |
+| 결정에 따른 경고(정책상 G4 리뷰 몫) | provider 모듈의 설정 상수·가져온 이름 patch(D44 2항, 8회차 P1: 시계·한도 같은 의존 설정), 장식·재대입된(weak) 이름을 라이브러리 함수로 바꾼 patch(R1이 보지 않음; 테스트 트리 밖 지원 코드는 G4가 막음), 모듈 수준이 아닌 객체(컨테이너 안·지역 객체)의 인스턴스 patch | G4 patch 경고 + 리뷰. 재현된 거짓 PASS 아님 |
 | 신뢰 경계(주장하지 않음) | 테스트 코드가 계측 줄·토큰을 의도적으로 위조, 의도적 구성(테스트가 시작한 스레드를 autouse 코드가 재사용, signal 처리기) | SPEC §5.7·D25 |
 최소 보호의 회귀 확인: 독립 검토 23회차(`733d708`)가 R1 거짓 BLOCKED 2, guard 읽기 명령 거짓 거부, tracer 속도 저하를 찾음 → `tests/test_g6_residual2.py` RED 3/3 → `86dbf98` 수정(스레드 100개×호출 1000회 19.1초 → 1.1초, D48 이전 0.9초). 24회차(`86dbf98`) 확인: 해결, 완화가 A1~A5·H3·H4·`del,`을 다시 열지 않음, 충돌 없음.
 

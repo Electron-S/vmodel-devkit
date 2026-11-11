@@ -1,0 +1,21 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/7cecc96f-20f2-42ed-ab37-b71618f25fbb/scratchpad/red-c399b1a/plugins/vmodel",
+    "release_manifest": null
+  },
+  "git_head": "c399b1a",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "marker": "RED-TARGET",
+  "tests": 3,
+  "expectations_met": 3,
+  "violations": 0,
+  "seconds": 0.1
+}
+
+OK  expect=FAIL got=FAIL    test_g6_residual4.InstanceOwnCodeRed.test_a_raising_dict_never_stops_tracing
+      AssertionError: Items in the second set but not the first:
+OK  expect=FAIL got=FAIL    test_g6_residual4.InstanceOwnCodeRed.test_the_providers_own_instance_rebinding_is_no_patch
+      AssertionError: Lists differ: ['_cache.compute', '_fmt.table', '_strategy.run'] != []
+OK  expect=ok   got=ok      test_g6_residual4.InstancePatchChar.test_a_test_lambda_on_the_instance_is_a_patch
