@@ -320,6 +320,7 @@ def _vmodel_trace_install():
         return int(threading.get_ident() == threading.main_thread().ident and not state.get("spawned"))
 
     code_files = {}
+    inst_names = {}  # provider file -> (size of its module dict, names of module-level provider-class instances)
     missing = object()
 
     def replaced(obj, strict, pfile, modname):
@@ -370,21 +371,40 @@ def _vmodel_trace_install():
         pfile, modname, bad = prov_path.get(lab), g.get("__name__"), []
         for strict, names in ((True, defs[0]), (False, defs[1])):
             for name in names:
-                if "." in name:
-                    cname, m = name.split(".", 1)
-                    c = g.get(cname)
-                    obj = c.__dict__.get(m, missing) if isinstance(c, type) else missing
-                else:
-                    obj = g.get(name, missing)
-                if obj is not missing and replaced(obj, strict, pfile, modname):
-                    bad.append(name)
+                try:
+                    if "." in name:
+                        cname, m = name.split(".", 1)
+                        c = g.get(cname)
+                        obj = c.__dict__.get(m, missing) if isinstance(c, type) else missing
+                    else:
+                        obj = g.get(name, missing)
+                    if obj is not missing and replaced(obj, strict, pfile, modname):
+                        bad.append(name)
+                except Exception:
+                    continue
         methods = cls_methods.get(lab)
-        if methods:  # a module-level instance of a provider class whose method was replaced on the instance
-            for gname, val in list(g.items()):
-                cls = type(val)
-                d = getattr(val, "__dict__", None) if cls.__module__ == modname else None
-                if isinstance(d, dict):
-                    bad.extend(f"{gname}.{m}" for m in methods.get(cls.__qualname__, ()) if m in d)
+        if methods:  # module-level instances of provider classes: a method replaced on the instance (weak rule:
+            size = len(g)  # only a mock, test-tree or string code; the provider's own per-instance rebinding is not)
+            cached = inst_names.get(lab)
+            if cached is None or cached[0] != size:
+                found = []
+                for gname, val in list(g.items()):
+                    try:
+                        cls = type(val)
+                        if cls.__module__ == modname and cls.__qualname__ in methods:
+                            found.append(gname)
+                    except Exception:
+                        continue
+                inst_names[lab] = cached = (size, found)
+            for gname in cached[1]:
+                try:
+                    val = g.get(gname)
+                    d = object.__getattribute__(val, "__dict__")
+                    for m in methods.get(type(val).__qualname__, ()):
+                        if m in d and replaced(d[m], False, pfile, modname):
+                            bad.append(f"{gname}.{m}")
+                except Exception:
+                    continue
         if bad:
             state["xdone"].add(k)
             write(("x", test, phase, lab, tuple(sorted(bad))), {"t": test, "p": phase, "x": lab, "n": sorted(bad)})
@@ -412,7 +432,10 @@ def _vmodel_trace_install():
         write((test, phase, lab, func), {"t": test, "p": phase, "m": lab, "f": func})
         if lab in providers:
             note_provider(test, phase, lab, func, frame)
-            check_patched(test, phase, lab, frame)
+            try:  # never let the patch check stop tracing this function (review 25)
+                check_patched(test, phase, lab, frame)
+            except Exception:
+                pass
         if lab in consumers and frame is not None:
             note_consumer(test, phase, lab, frame)
         return True
