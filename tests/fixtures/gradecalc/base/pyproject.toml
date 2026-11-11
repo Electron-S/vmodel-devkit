@@ -1,0 +1,9 @@
+[project]
+name = "gradecalc"
+version = "0.0.1"
+description = "VModel DevKit G7 fixture: one component with a CLI and an HTTP API (Python + pytest)"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

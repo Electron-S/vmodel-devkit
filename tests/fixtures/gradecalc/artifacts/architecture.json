@@ -1,0 +1,63 @@
+{
+  "work_item": "WI-001",
+  "components": [
+    {
+      "id": "ARCH-001",
+      "name": "gradecalc",
+      "responsibility": "점수 등급 계산과 CLI·HTTP 제공",
+      "requirements": [
+        "REQ-001",
+        "REQ-002"
+      ],
+      "location": "src/gradecalc/"
+    }
+  ],
+  "interfaces": [],
+  "data_flows": [
+    {
+      "from": "CLI 사용자",
+      "to": "ARCH-001",
+      "data": "점수 인자"
+    },
+    {
+      "from": "ARCH-001",
+      "to": "CLI 사용자",
+      "data": "등급 또는 오류 메시지"
+    },
+    {
+      "from": "HTTP 클라이언트",
+      "to": "ARCH-001",
+      "data": "GET /grade 요청"
+    },
+    {
+      "from": "ARCH-001",
+      "to": "HTTP 클라이언트",
+      "data": "JSON 응답"
+    }
+  ],
+  "nfr_mapping": [
+    {
+      "requirement": "REQ-003",
+      "approach": "CLI 오류 문구를 한국어 상수로 둔다",
+      "components": [
+        "ARCH-001"
+      ]
+    }
+  ],
+  "tradeoffs": [
+    {
+      "topic": "HTTP 서버",
+      "options": [
+        "http.server",
+        "외부 프레임워크"
+      ],
+      "decision": "http.server",
+      "rationale": "표준 라이브러리만 쓴다"
+    }
+  ],
+  "integration_test_strategy": {
+    "approach": "단일 컴포넌트라 통합 대상 인터페이스가 없다",
+    "interfaces_covered": [],
+    "na_reason": "컴포넌트 1개, 다른 ARCH와 주고받는 데이터 없음"
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "work_item": "WI-001",
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "type": "functional",
+      "title": "CLI 등급 계산",
+      "priority": "must",
+      "status": "active",
+      "description": "명령줄에서 0~100 정수 점수를 받아 'A'(90 이상)·'B'(80 이상)·'C'(70 이상)·'F' 등급을 출력한다. 잘못된 입력은 종료 코드 2로 거부한다.",
+      "acceptance_criteria": [
+        {
+          "id": "AC-001-1",
+          "criterion": "점수 95를 주면 표준 출력에 '95 A'를 쓰고 종료 코드 0"
+        },
+        {
+          "id": "AC-001-2",
+          "criterion": "경계값 90은 A, 89는 B, 0은 F, 100은 A"
+        },
+        {
+          "id": "AC-001-3",
+          "criterion": "숫자가 아니거나 범위 밖인 입력(abc, 101, -1)은 종료 코드 2와 표준 오류의 오류 메시지, 표준 출력 없음"
+        }
+      ]
+    },
+    {
+      "id": "REQ-002",
+      "type": "functional",
+      "title": "HTTP 등급 API",
+      "priority": "must",
+      "status": "active",
+      "description": "GET /grade?score=N 요청에 JSON {score, grade}로 답하고, 잘못된 점수는 400과 JSON error로 거부한다.",
+      "acceptance_criteria": [
+        {
+          "id": "AC-002-1",
+          "criterion": "GET /grade?score=85 -> 200, {\"score\": 85, \"grade\": \"B\"}"
+        },
+        {
+          "id": "AC-002-2",
+          "criterion": "GET /grade?score=abc -> 400, error 필드가 있는 JSON"
+        }
+      ]
+    },
+    {
+      "id": "REQ-003",
+      "type": "non-functional",
+      "title": "한국어 오류 메시지",
+      "priority": "should",
+      "status": "active",
+      "description": "CLI 오류 메시지는 한국어로 쓴다.",
+      "acceptance_criteria": [
+        {
+          "id": "AC-003-1",
+          "criterion": "범위 밖 점수에 '점수는 0에서 100 사이의 정수여야 합니다'를 표준 오류에 쓴다"
+        }
+      ]
+    }
+  ],
+  "conflict_analysis": {
+    "performed": true,
+    "method": "요구사항 3개 쌍별 검토",
+    "conflicts": []
+  },
+  "open_issues": []
+}

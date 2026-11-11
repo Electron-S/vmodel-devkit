@@ -15,13 +15,13 @@
 - **REQ-G7-01** config에 선택 키 `system_test`(`argv` 문자열 1개 이상·`{junit}` 포함, `timeout_s` 양의 정수, `plugin_autoload` 선택)를 둔다. 키가 없는 0.2.0 config는 그대로 유효하다. G7은 평가마다 하위 스키마를 검증한다.
   - AC: 0.2.0 config가 스키마를 통과한다. 하위 스키마 위반·`{junit}` 없음 → G7 BLOCKED `misconfigured`, 아무것도 실행하지 않는다.
 - **REQ-G7-02** `system_test`가 없으면 G7은 BLOCKED(`misconfigured`)이고 `unit_test`·`integration_test`로 대체하지 않는다. next_action은 사용자 조치(`vmodel configure-tests --system <path>`, TTY)를 안내한다. (T03)
-- **REQ-G7-03** Validator가 `system_test` argv를 셸 없이 직접 실행한다. 환경은 G5와 같은 `scrubbed_env`(에이전트의 `PYTHON*`·`PYTEST_*`·`VMODEL_*` 제거, 바이트코드 끔, 플러그인 자동 로드 끔)이고 계측을 넣지 않는다. 새 실행 폴더 `.vmodel/evidence/<WI>/G7/<시각>-system-<rand>/`에 stdout/stderr 원본 바이트, junit.xml, 서명된 record.json(명령, 실행 파일 경로·버전·sha256, 런타임, 시작·종료 시각, 종료 코드, stdout/stderr 해시, Git HEAD·dirty, manifest 해시, Core 해시, 환경 정리 내역, 설치 패키지 목록, 검증 대상 파일 해시, `command_source: system_test`, `config_sha256`, `system_test_sha256`, JUnit 요약)을 남긴다. G7은 G5·G6의 증거를 쓰지 않는다.
+- **REQ-G7-03** Validator가 `system_test` argv를 셸 없이 직접 실행한다. 환경은 G5와 같은 `scrubbed_env`(에이전트의 `PYTHON*`·`PYTEST_*`·`VMODEL_*` 제거, 바이트코드 끔, 플러그인 자동 로드 끔)이고 계측을 넣지 않는다. 출력은 파이프가 아니라 Validator 임시 파일로 받는다(`runner.run_command_files`: 시스템 테스트가 남긴 서버 프로세스가 상속한 stdout/stderr를 쥐고 있어도 Validator가 멈추거나 거짓 시간 초과가 나지 않음. POSIX는 새 세션으로 실행하고 끝난 뒤·시간 초과 때 프로세스 그룹 전체를 종료, 설계 검토 M1). 새 실행 폴더 `.vmodel/evidence/<WI>/G7/<시각>-system-<rand>/`에 stdout/stderr 원본 바이트, junit.xml, 서명된 record.json(명령, 실행 파일 경로·버전·sha256, 런타임, 시작·종료 시각, 종료 코드, stdout/stderr 해시, Git HEAD·dirty, manifest 해시, Core 해시, 환경 정리 내역, 설치 패키지 목록, 검증 대상 파일 해시, `command_source: system_test`, `config_sha256`, `system_test_sha256`, JUnit 요약)을 남긴다. G7은 G5·G6의 증거를 쓰지 않는다.
 - **REQ-G7-04** 실행 판정(G5/G6과 같은 의미): 시작 실패 → BLOCKED `tool_unavailable`(중립). 시간 초과·비 0 종료·junit 없음·파싱 불가 → FAILED(G7.EXECUTION). 케이스 0개 → FAILED(G7.RESULTS). 실패·오류 케이스 → FAILED. **종료 코드 0만으로는 PASS가 아니다**: RESULTS·TEST_MAPPING·AC_COVERAGE가 모두 통과해야 한다. (T06, T07)
 
 ### 1.2 범위 분리
 - **REQ-G7-05** G7.SCOPE: system 실행이 unit 수준(G5 몫) 또는 integration 수준(G6 몫) TEST ID를 실행하면 FAILED다. 수준은 프로젝트 모든 WI의 `tests.json`을 합쳐 정한다. 어느 WI에도 없는 ID·ID 없는 케이스는 `unmapped_cases`(기록)로만 남긴다. (T04)
 - **REQ-G7-06** `system_test`가 설정된 프로젝트에서는 system 수준 TEST는 G7 명령에서만 실행돼야 한다: G5.SCOPE와 G6.SCOPE는 system ID 실행을 FAILED로 본다(지금은 경고). G5.SCOPE는 `integration_test`나 `system_test` 중 하나라도 설정되면 기록된다. G5.NO_WEAKENING의 "이전에 실행된 ID 유지"는 지금 system 수준인 ID를 뺀다(REQ-G6-07과 같은 규칙).
-- **REQ-G7-07** `system_test`가 없는 프로젝트에서 G1~G6 판정·기록 키는 0.2.0과 같다. 다른 점은 G5/G6.SCOPE가 system ID를 경고할 때의 문구(0.2.0 "(G7, not implemented)" → G7이 별도 `system_test` 명령으로 실행함)뿐이다. status·report는 unit 명령이 system 테스트를 실행했다는 사실을 경고로 보인다(표시 전용).
+- **REQ-G7-07** `system_test`가 없는 프로젝트에서 G1~G6 판정·기록 키는 0.2.0과 같다. 다른 점은 G5/G6.SCOPE가 system ID를 보일 때의 표시 문구(0.2.0 "(G7, not implemented)" → G7이 별도 `system_test` 명령으로 실행함)뿐이고, 실패 서명은 0.2.0 문구로 계산해 같게 유지한다(설계 검토 L5). status·report는 unit 명령이 system 테스트를 실행했다는 사실을 경고로 보인다(표시 전용).
 
 ### 1.3 요구사항 추적성
 - **REQ-G7-08** G7.TEST_MAPPING: 이 WI의 모든 system 수준 TEST 명세에 이름에 그 ID 하나만 가진 `passed` 케이스가 있어야 한다. 실패·오류·skip → FAILED, 실행 안 됨 → `TEST-xxx: not executed`(결함 추적의 UNKNOWN 분류와 같은 문구), 이름에 ID 둘 이상 → FAILED. system 명세가 0개면 FAILED("G7 needs at least one system test spec").
@@ -40,14 +40,14 @@
 
 ### 1.6 Work Item 완료
 - **REQ-G7-17** STANDARD WI는 G1~G7이 모두 현재 해시로 PASSED일 때만 COMPLETED다(G6 N/A는 PASSED로 기록되므로 허용). G7 미평가·STALE·FAILED·BLOCKED·REVIEW_REQUIRED면 COMPLETED가 아니다. G1~G6이 PASSED이고 G7 기록이 없으면 WI는 IN_PROGRESS, G7은 "not evaluated yet"(G6 결정 4와 같은 방식). STANDARD에서는 PARTIALLY_VERIFIED가 더 이상 나오지 않는다(상태 값은 미구현 프로파일용으로 남김). (T13~T16)
-- **REQ-G7-18** 표시: status·`vmodel gate`·report·trace·next_action·SessionStart 문구가 G7 결과(검증된 AC 수/전체, 통과한 system 테스트 수, 시스템 테스트로 검증되지 않은 비기능 AC)를 보인다. `vmodel verify`는 G1~G7을 돈다. MVP 문구는 "G1~G7 구현, COMPLETED는 자동 검증이지 사용자 수용·배포 승인이 아님, LITE/STRICT 미구현"으로 바꾼다.
+- **REQ-G7-18** 표시: G7 평가 전·`misconfigured` BLOCKED일 때 next_action은 (1) system 명세가 없으면 P3 명세 작성, (2) 테스트 함수가 없는 system 명세가 있으면 "`tests/system/`에 그 TEST의 시스템 테스트 작성 → G4 리뷰·G5·G6 → (system_test가 없으면) 사용자 configure-tests", (3) 설정 문제면 사용자 조치, (4) 아니면 `vmodel gate WI G7` 순으로 안내한다(G4 판정은 바꾸지 않고 status의 같은 AST 탐색으로 계산, 설계 검토 M2). status·`vmodel gate`·report·trace·next_action·SessionStart 문구가 G7 결과(검증된 AC 수/전체, 통과한 system 테스트 수, 시스템 테스트로 검증되지 않은 비기능 AC)를 보인다. `vmodel verify`는 G1~G7을 돈다. MVP 문구는 "G1~G7 구현, COMPLETED는 자동 검증이지 사용자 수용·배포 승인이 아님, LITE/STRICT 미구현"으로 바꾼다.
 - **REQ-G7-19** trace: REQ 행의 system TEST 결과는 마지막 G7 실행에서 가져오고(unit은 G5, integration은 G6), REQ → AC → system TEST → 결과 → 기록 ID 행을 더한다.
 
 ### 1.7 설정 도구·호환·변경
 - **REQ-G7-20** `init`: `--system-tests PATH`를 주거나 `tests/system/`에 테스트 함수가 있을 때만 `system_test`를 등록하고 unit argv에 `--ignore=<경로>`를 더한다(G6 D3과 같은 경로 검사: 프로젝트 안, tests 경로 아래, unit 전체 범위 아님, 테스트 함수 있음). integration 경로와 겹치면(같거나 한쪽이 다른 쪽 안) 거부한다.
 - **REQ-G7-21** `configure-tests`(사용자 전용, TTY): `--integration PATH`와 `--system PATH` 중 하나 이상. 같은 경로 검사와 겹침 검사, unit argv에 `--ignore`, 기존 `integration_test` argv가 system 경로(또는 그 상위)를 실행 대상으로 이름에 두면 거부. 서명 원장 `config` 기록을 먼저 쓰고 config를 쓴다.
 - **REQ-G7-22** 호환: G1~G6 manifest 계산은 0.2.0과 같다. `system_test` 없는 프로젝트의 G1~G6 원장 투영(상태, 체크 ID·상태값, 실패 서명, executed_tests)은 같은 이력에서 0.2.0과 같다. 원장 형식(서명·체인·head·앵커)은 그대로이고 기존 기록·증거는 다시 쓰지 않는다. 0.2.0이 서명한 원장·증거는 새 코어의 `audit`·`verify-evidence`를 통과하고, 기록의 버전·Core 해시는 0.2.0 값으로 남는다. (T17)
-- **REQ-G7-23** 업그레이드는 기존처럼 새 릴리스의 `lock --accept-current`(TTY) 한 번이다. Core 해시가 바뀌므로 기존 PASS는 STALE(기존 규칙 유지, G7 때문이 아님). 그 뒤 G7은 평가 전이고 WI는 IN_PROGRESS다. 완료하려면 시스템 테스트 작성(없으면 G7 FAILED가 알려 준다) → 사용자 `configure-tests --system` → G4 재리뷰(config 변경) → G5 → G6 → G7. (T20)
+- **REQ-G7-23** 업그레이드는 기존처럼 새 릴리스의 `lock --accept-current`(TTY) 한 번이다. Core 해시가 바뀌므로 기존 PASS는 STALE(기존 규칙 유지, G7 때문이 아님). 그 뒤 G7은 평가 전이고 WI는 IN_PROGRESS다. 완료하려면 G1부터 순서대로 재평가한다: 시스템 테스트가 없으면 먼저 작성(status next_action이 알려 줌, REQ-G7-18) → 사용자 `configure-tests --system`(경로에 테스트 함수가 있어야 받아들임) → G1~G3 재평가(리뷰 재작성 불필요) → G4 재리뷰(config 변경) → G5 → G6 → G7. (T20, 설계 검토 M2 정정)
 - **REQ-G7-24** 최신성: G7 PASS는 manifest 파일 변경, Core 변경, G6이 PASSED가 아님 중 하나면 STALE이다. 요구사항 변경(requirements.json)은 G1부터 G7까지 STALE로 만들고, `vmodel impact`가 바뀐 REQ·AC와 영향받는 system TEST, STALE Gate(G7 포함)를 보인다. (T18)
 
 ## 2. 영향 분석
@@ -120,6 +120,9 @@
 9. 사용자 수용·배포 승인은 G7과 분리한다. G7 reviewer는 "none (mechanical)".
 10. 실행 문제의 FAILED/BLOCKED 구분은 G5·G6과 같다(시작 실패·설정 부재만 BLOCKED).
 11. 버전 0.3.0(Gate 의미 추가).
+12. G7은 출력 파일 방식 실행(`run_command_files`)을 쓴다. G5·G6의 `run_command`(파이프)는 바꾸지 않는다(같은 잠재 문제는 G5·G6에도 있으나 0.2.0 판정 경로 보존, §7).
+13. 결정 3(system 명세 0개 → FAILED)은 결정 4의 예외다: 기능 요구사항이 없어 G3가 system 명세를 요구하지 않은 WI(비기능·제약만)도 COMPLETED가 되려면 시스템 테스트가 하나는 실행돼야 한다. 근거: "필수 System Test가 없으면 G7을 PASS시키지 않는다". 원인 단계는 P3(명세 추가), status 미리보기가 안내한다.
+14. REQ-G7-06(`system_test` 설정 시 G5.NO_WEAKENING이 system 수준 ID를 뺌)은 D41 결정 1의 "unit을 system으로 바꾸면 G5.NO_WEAKENING 실패"를 그 프로젝트에서 바꾼다. 그래도 안전한 이유: 그 TEST는 G7에서 실행·통과해야 하고(unit 폴더에 남으면 G5.SCOPE 실패), G3.UNIT_TESTS가 설계 단위마다 unit 명세를 계속 요구한다. 제외는 `integration_test`가 있을 때 integration 수준, `system_test`가 있을 때 system 수준만이다.
 
 ## 5. 테스트 명세
 
@@ -134,9 +137,9 @@
 | T | 내용 | 모듈::클래스 (종류) | 기대 결과 |
 |---|---|---|---|
 | T01 | 정상 System Test PASS | `test_g7_gate::GateRed` | G7 PASSED, 증거 kind `system_test`, record·증거에 명령·종료 코드 0·해시·TEST ID·REQ/AC 커버리지 |
-| T02 | 실제 기능 오류 → FAILED | `test_g7_gate::GateRed` | CLI 경계 버그(90 → B) → G7 FAILED, RESULTS·TEST_MAPPING·AC_COVERAGE에 TEST-102·AC-001-2 |
+| T02 | 실제 기능 오류 → FAILED | `test_g7_gate::GateRed` | unit 테스트가 닿지 않는 CLI 진입점 버그(잘못된 입력에도 종료 코드 0) — G4·G5·G6 PASSED를 먼저 확인 → G7 FAILED, TEST_MAPPING `TEST-103`·`TEST-106` failed, AC_COVERAGE `AC-001-3 (REQ-001)`. 경계값 버그(0 → 오류)도 별도 시험 |
 | T03 | system_test 누락 | `test_g7_config::ConfigRed` | BLOCKED `misconfigured`, 증거 없음, unit·integration 명령 미실행, next_action 사용자 조치. 하위 스키마 오류·`{junit}` 없음도 같음 |
-| T04 | Unit Test 재사용 우회 | `test_g7_scope::ScopeRed` | system_test argv = unit argv → G7 FAILED(SCOPE unit ID, TEST_MAPPING); system_test가 `tests/unit` → FAILED; unit 테스트 함수를 system ID로 개명해 system 폴더로 옮김 → G5 FAILED(unit ID not executed). unit 테스트 본문을 **복사**해 system 이름을 붙인 화이트박스 테스트는 기계로 막지 않는다(G4 리뷰, §7) |
+| T04 | Unit Test 재사용 우회 | `test_g7_scope::ScopeRed` | system_test argv = unit argv → G7 FAILED(SCOPE unit ID, TEST_MAPPING); system_test가 `tests/unit` → FAILED; unit 테스트 함수를 system ID로 개명해 system 폴더로 옮김 → G4 FAILED(TEST_CODE: unit 명세의 테스트 함수 없음, 0.2.0과 같은 규칙, Char). unit 테스트 본문을 **복사**해 system 이름을 붙인 화이트박스 테스트는 기계로 막지 않는다(G4 리뷰, §7) |
 | T05 | REQ ↔ System Test 매핑 누락 | `test_g7_trace::TraceRed` | AC-002-2 명세의 테스트 함수 이름에 ID 없음 → G7 FAILED(TEST_MAPPING not executed, AC_COVERAGE `AC-002-2 (REQ-002)`); 비기능 AC에 명세 없음 → 경고만(PASSED) |
 | T06 | 실행 결과 없는 PASS | `test_g7_gate::GateRed` | 가짜 G7 증거·junit·PASS 보고서 파일 주입 → G7 미평가 유지, 평가 시 자기 실행만 사용; 종료 0이지만 junit 없음 → FAILED(EXECUTION) |
 | T07 | 테스트 0개 | `test_g7_gate::GateRed` | 빈 폴더 대상(종료 5) → FAILED(RESULTS 0 tests); 종료 0 + 빈 junit → FAILED(RESULTS) |
@@ -175,7 +178,26 @@ G7 구현으로 다음 기대값만 바뀐다. 바꾸는 곳마다 0.2.0 기대�
 하지 않는 것: main 병합, v0.3.0 태그, 원격 푸시, 유료 Claude 헤드리스 E2E, LITE/STRICT, 운영 배포.
 
 ## 7. 남은 위험 (설계 시점)
+- G5·G6은 여전히 파이프로 출력을 받는다: 테스트가 남긴 자식 프로세스가 상속한 출력을 쥐면 G5·G6 실행이 거짓 시간 초과나 긴 대기가 될 수 있다(0.2.0부터 있던 성질, 이번 범위 밖).
+- Windows에서는 시간 초과 때 명령 프로세스만 종료하고, 끝난 뒤 남은 자식 프로세스는 정리하지 않는다(대기는 하지 않음).
+- 시스템 테스트가 설치된 패키지(편집 불가 설치)를 부르면 소스가 아니라 설치본을 검증할 수 있다. 설치 패키지 목록은 증거에 기록만 하고 STALE 판정에 쓰지 않는다(SPEC §5.5, 지침으로 안내).
 - 시스템 테스트가 외부 인터페이스 대신 내부 함수를 직접 부르는 화이트박스 테스트여도 G7은 기계적으로 막지 못한다(리뷰 판단). 기계로 막는 것은 unit·integration 테스트 재사용(SCOPE), 이름만 있는 매핑(실행·통과 요구), 실행 없는 보고(자기 실행만 사용)다.
 - 테스트 코드는 러너와 같은 프로세스에서 돈다(SPEC §5.7 신뢰 경계, G4.TEST_INTEGRITY 휴리스틱).
 - 비기능 AC는 system 테스트가 없으면 경고만 한다.
 - 실제 Claude 세션의 G7 경로는 이번에 관찰하지 않는다(유료 E2E 별도 승인).
+
+## 8. 독립 검토 (설계, 2026-11-11, 별도 컨텍스트·읽기 전용 detached worktree `cfce1e9`)
+CRITICAL·HIGH 없음, MEDIUM 2, LOW 6. 모든 지적을 코드에서 직접 확인했고 전부 맞아 반영했다.
+
+| 지적 | 확인 | 처리 |
+|---|---|---|
+| M1 `run_command`가 파이프 EOF를 기다려, 시스템 테스트가 남긴 자식 프로세스가 상속 출력을 쥐면 거짓 시간 초과·무한 대기(두 번째 `communicate()` 시간 제한 없음) | 기존 `run_command`로 재현: 종료 코드 0 명령이 12초 자식 때문에 `timed_out=True`, 12초 대기 | G7 전용 `run_command_files`(임시 파일, POSIX 새 세션·프로세스 그룹 종료, 대기 시간 제한). 새 코드로 같은 명령이 즉시 종료 코드 0. 시험: 남은 프로세스가 있어도 G7 PASSED·시간 안(`test_g7_gate`) |
+| M2 시스템 테스트를 아직 안 썼으면 G7 BLOCKED(misconfigured)가 사용자 configure를 안내하지만 configure-tests는 테스트 없는 경로를 거부 → 막힘. REQ-G7-23 "G7 FAILED가 알려 준다"는 틀림, 업그레이드 순서에 G1~G3 재평가 누락 | `setup_project` 경로 검사, `preconditions` 확인 | REQ-G7-18 next_action 순서(명세 → 테스트 작성 → 사용자 설정 → 실행), `g7_preview.missing_functions`, REQ-G7-23 정정, 시험 `NoSystemTestsYetRed` |
+| L3 T04 셋째 경우는 G4.TEST_CODE가 먼저 막음 | 확인 | T04 표·시험을 G4 FAILED(Char)로 |
+| L4 T02 버그가 grading에 있으면 G5가 먼저 잡음 | 확인 | 버그를 CLI 진입점에 두고 G4~G6 PASSED를 먼저 확인 |
+| L5 SCOPE 실패 항목 문구 변경이 실패 서명을 바꿈(REQ-G7-22 주장과 모순) | `failure_signature`가 items 사용 확인 | 표시는 새 문구, `sig`는 0.2.0 문구 |
+| L6 scrubbed 환경(PYTHONPATH 제거)·Windows 자식 인코딩·설치본 검증 | 확인 | 지침(implementer·start·ARTIFACTS), 픽스처가 PYTHONPATH·PYTHONIOENCODING 설정, §7 |
+| L7 결정 3과 4 모순(기능 요구사항 없는 WI) | G1이 기능 요구사항을 강제하지 않음 확인 | 결정 13으로 예외와 근거 명시, 미리보기 안내 |
+| L8 REQ-G7-06이 D41 결정 1 일부를 바꿈 | 확인 | 결정 14로 명시 |
+
+검토자가 맞다고 확인한 것: G7 manifest = G5 코드 manifest, 상위 STALE 전파, `wi_status` 변경 불필요, `citation_view` G7 UNKNOWN 분류, 결함 종료 Gate·CLOSED 규칙, 0.2.0 원장에 G7 기록 없음, config 스키마 추가 호환, 결정 1 근거, G5.REQ_COVERAGE 유지, G5 test_files에 tests/system 포함, §5.4 목록.

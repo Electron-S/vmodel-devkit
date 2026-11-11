@@ -1,0 +1,188 @@
+{
+  "work_item": "WI-001",
+  "tests": [
+    {
+      "id": "TEST-001",
+      "level": "unit",
+      "title": "등급 계산",
+      "category": "normal",
+      "verifies": [
+        "DESIGN-001"
+      ],
+      "procedure": "등급 계산 절차",
+      "expected": "등급 계산 기대 결과"
+    },
+    {
+      "id": "TEST-002",
+      "level": "unit",
+      "title": "잘못된 점수 거부",
+      "category": "abnormal",
+      "verifies": [
+        "DESIGN-001"
+      ],
+      "procedure": "잘못된 점수 거부 절차",
+      "expected": "잘못된 점수 거부 기대 결과"
+    },
+    {
+      "id": "TEST-003",
+      "level": "unit",
+      "title": "등급 경계값",
+      "category": "boundary",
+      "verifies": [
+        "DESIGN-001"
+      ],
+      "procedure": "등급 경계값 절차",
+      "expected": "등급 경계값 기대 결과"
+    },
+    {
+      "id": "TEST-004",
+      "level": "unit",
+      "title": "CLI 출력",
+      "category": "normal",
+      "verifies": [
+        "DESIGN-002"
+      ],
+      "procedure": "CLI 출력 절차",
+      "expected": "CLI 출력 기대 결과"
+    },
+    {
+      "id": "TEST-005",
+      "level": "unit",
+      "title": "CLI 입력 거부",
+      "category": "abnormal",
+      "verifies": [
+        "DESIGN-002"
+      ],
+      "procedure": "CLI 입력 거부 절차",
+      "expected": "CLI 입력 거부 기대 결과"
+    },
+    {
+      "id": "TEST-006",
+      "level": "unit",
+      "title": "CLI 경계값",
+      "category": "boundary",
+      "verifies": [
+        "DESIGN-002"
+      ],
+      "procedure": "CLI 경계값 절차",
+      "expected": "CLI 경계값 기대 결과"
+    },
+    {
+      "id": "TEST-007",
+      "level": "unit",
+      "title": "API 처리",
+      "category": "normal",
+      "verifies": [
+        "DESIGN-003"
+      ],
+      "procedure": "API 처리 절차",
+      "expected": "API 처리 기대 결과"
+    },
+    {
+      "id": "TEST-008",
+      "level": "unit",
+      "title": "API 잘못된 요청",
+      "category": "abnormal",
+      "verifies": [
+        "DESIGN-003"
+      ],
+      "procedure": "API 잘못된 요청 절차",
+      "expected": "API 잘못된 요청 기대 결과"
+    },
+    {
+      "id": "TEST-009",
+      "level": "unit",
+      "title": "API 경계값",
+      "category": "boundary",
+      "verifies": [
+        "DESIGN-003"
+      ],
+      "procedure": "API 경계값 절차",
+      "expected": "API 경계값 기대 결과"
+    },
+    {
+      "id": "TEST-101",
+      "level": "system",
+      "title": "CLI 등급 출력(외부 프로세스)",
+      "category": "normal",
+      "verifies": [
+        "REQ-001"
+      ],
+      "acceptance_criteria": [
+        "AC-001-1"
+      ],
+      "procedure": "python -m gradecalc.cli 95를 별도 프로세스로 실행",
+      "expected": "종료 코드 0, 표준 출력 '95 A'"
+    },
+    {
+      "id": "TEST-102",
+      "level": "system",
+      "title": "CLI 경계값(외부 프로세스)",
+      "category": "boundary",
+      "verifies": [
+        "REQ-001"
+      ],
+      "acceptance_criteria": [
+        "AC-001-2"
+      ],
+      "procedure": "90, 89, 0, 100으로 CLI 실행",
+      "expected": "A, B, F, A"
+    },
+    {
+      "id": "TEST-103",
+      "level": "system",
+      "title": "CLI 잘못된 입력(외부 프로세스)",
+      "category": "abnormal",
+      "verifies": [
+        "REQ-001"
+      ],
+      "acceptance_criteria": [
+        "AC-001-3"
+      ],
+      "procedure": "abc, 101, -1로 CLI 실행",
+      "expected": "종료 코드 2, 표준 출력 없음, 표준 오류에 오류"
+    },
+    {
+      "id": "TEST-104",
+      "level": "system",
+      "title": "HTTP 등급 조회(서버 프로세스)",
+      "category": "normal",
+      "verifies": [
+        "REQ-002"
+      ],
+      "acceptance_criteria": [
+        "AC-002-1"
+      ],
+      "procedure": "서버를 별도 프로세스로 띄우고 GET /grade?score=85",
+      "expected": "200, {score: 85, grade: B}"
+    },
+    {
+      "id": "TEST-105",
+      "level": "system",
+      "title": "HTTP 잘못된 점수(서버 프로세스)",
+      "category": "abnormal",
+      "verifies": [
+        "REQ-002"
+      ],
+      "acceptance_criteria": [
+        "AC-002-2"
+      ],
+      "procedure": "GET /grade?score=abc",
+      "expected": "400, error 필드"
+    },
+    {
+      "id": "TEST-106",
+      "level": "system",
+      "title": "한국어 오류 메시지(외부 프로세스)",
+      "category": "abnormal",
+      "verifies": [
+        "REQ-003"
+      ],
+      "acceptance_criteria": [
+        "AC-003-1"
+      ],
+      "procedure": "CLI에 101",
+      "expected": "표준 오류에 '점수는 0에서 100 사이의 정수여야 합니다'"
+    }
+  ]
+}

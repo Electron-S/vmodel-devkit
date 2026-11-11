@@ -1,0 +1,104 @@
+{
+  "work_item": "WI-001",
+  "units": [
+    {
+      "id": "DESIGN-001",
+      "component": "ARCH-001",
+      "module": "src/gradecalc/grading.py",
+      "name": "grade",
+      "kind": "function",
+      "signature": "def grade(score: int) -> str",
+      "description": "점수 구간으로 등급 문자를 고른다",
+      "requirements": [
+        "REQ-001",
+        "REQ-002"
+      ],
+      "contract": {
+        "preconditions": [
+          "입력 형식은 시그니처와 같다"
+        ],
+        "postconditions": [
+          "설명된 값을 반환"
+        ]
+      },
+      "errors": [
+        {
+          "exception": "ValueError",
+          "condition": "0~100 밖"
+        },
+        {
+          "exception": "TypeError",
+          "condition": "int 아님"
+        }
+      ],
+      "boundary_conditions": [
+        "90 -> A, 89 -> B",
+        "0 -> F, 100 -> A"
+      ]
+    },
+    {
+      "id": "DESIGN-002",
+      "component": "ARCH-001",
+      "module": "src/gradecalc/cli.py",
+      "name": "main",
+      "kind": "function",
+      "signature": "def main(argv: list[str] | None = None) -> int",
+      "description": "인자 하나를 정수로 읽어 등급을 출력, 잘못된 입력은 한국어 오류와 2",
+      "requirements": [
+        "REQ-001"
+      ],
+      "contract": {
+        "preconditions": [
+          "입력 형식은 시그니처와 같다"
+        ],
+        "postconditions": [
+          "설명된 값을 반환"
+        ]
+      },
+      "errors": [
+        {
+          "exception": "종료 코드 2",
+          "condition": "인자 수가 1이 아니거나 정수가 아니거나 범위 밖"
+        }
+      ],
+      "boundary_conditions": [
+        "100 -> '100 A'",
+        "0 -> '0 F'"
+      ]
+    },
+    {
+      "id": "DESIGN-003",
+      "component": "ARCH-001",
+      "module": "src/gradecalc/server.py",
+      "name": "handle",
+      "kind": "function",
+      "signature": "def handle(path: str) -> tuple[int, dict]",
+      "description": "요청 경로를 (상태 코드, JSON 본문)으로 바꾼다",
+      "requirements": [
+        "REQ-002"
+      ],
+      "contract": {
+        "preconditions": [
+          "입력 형식은 시그니처와 같다"
+        ],
+        "postconditions": [
+          "설명된 값을 반환"
+        ]
+      },
+      "errors": [
+        {
+          "exception": "400 응답",
+          "condition": "score 없음·정수 아님·범위 밖"
+        },
+        {
+          "exception": "404 응답",
+          "condition": "다른 경로"
+        }
+      ],
+      "boundary_conditions": [
+        "score=0 -> F",
+        "score=100 -> A"
+      ]
+    }
+  ]
+}
