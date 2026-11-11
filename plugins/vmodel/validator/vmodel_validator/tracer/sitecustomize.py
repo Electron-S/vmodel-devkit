@@ -74,6 +74,12 @@ def _vmodel_trace_install():
              for k, v in (spec.get("provider_defs") or {}).items() if isinstance(v, dict)}
     test_files = frozenset(norm(x) for x in spec.get("test_files") or () if isinstance(x, str))
     prov_path = {lab: path for path, lab in watch.items() if lab in providers}
+    cls_methods = {}  # provider file -> {class name: method names} (instance shadowing, D48)
+    for _lab, (_s, _w) in pdefs.items():
+        for _name in _s | _w:
+            if "." in _name:
+                _c, _m = _name.split(".", 1)
+                cls_methods.setdefault(_lab, {}).setdefault(_c, set()).add(_m)
     mon = getattr(sys, "monitoring", None)
     tool = None
     if mon is not None and not spec.get("force_setprofile"):
@@ -372,6 +378,13 @@ def _vmodel_trace_install():
                     obj = g.get(name, missing)
                 if obj is not missing and replaced(obj, strict, pfile, modname):
                     bad.append(name)
+        methods = cls_methods.get(lab)
+        if methods:  # a module-level instance of a provider class whose method was replaced on the instance
+            for gname, val in list(g.items()):
+                cls = type(val)
+                d = getattr(val, "__dict__", None) if cls.__module__ == modname else None
+                if isinstance(d, dict):
+                    bad.extend(f"{gname}.{m}" for m in methods.get(cls.__qualname__, ()) if m in d)
         if bad:
             state["xdone"].add(k)
             write(("x", test, phase, lab, tuple(sorted(bad))), {"t": test, "p": phase, "x": lab, "n": sorted(bad)})
