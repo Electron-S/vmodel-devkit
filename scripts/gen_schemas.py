@@ -289,11 +289,12 @@ schemas = {
                 "required": ["id", "gate", "found_in_records", "description", "root_cause_phase", "root_cause", "fix_scope", "status"],
                 "properties": {
                     "id": {"type": "string", "pattern": r"^DEFECT-\d{3,}$"},
-                    "gate": {"enum": ["G1", "G2", "G3", "G4", "G5", "G6"]},
+                    "gate": {"enum": ["G1", "G2", "G3", "G4", "G5", "G6", "G7"]},  # G7 since 0.3.0
                     "found_in_records": {"type": "array", "minItems": 1, "items": {"type": "string", "pattern": r"^R\d{5,}$"}},
                     "description": S,
                     "failed_checks": {"type": "array", "items": S},
-                    "root_cause_phase": {"enum": ["P1", "P2", "P3", "P4", "P5", "P6"]},
+                    # P7 (0.3.0): the system test execution environment (test data, external services)
+                    "root_cause_phase": {"enum": ["P1", "P2", "P3", "P4", "P5", "P6", "P7"]},
                     "root_cause": S,
                     "fix_scope": {"type": "array", "minItems": 1, "items": S},
                     "related": ids(ANY_ID),
@@ -358,6 +359,16 @@ schemas = {
             # 0.2.0 (G6, optional): the integration test command. G6 re-checks this shape on every evaluation
             # (config is schema-checked only at init) and needs {junit} in argv and a positive timeout.
             "integration_test": {
+                "type": "object",
+                "required": ["argv", "timeout_s"],
+                "properties": {
+                    "argv": {"type": "array", "minItems": 1, "items": S},
+                    "timeout_s": {"type": "integer"},
+                    "plugin_autoload": {"type": "boolean"},
+                },
+            },
+            # 0.3.0 (G7, optional): the system test command, checked by G7 on every evaluation like integration_test.
+            "system_test": {
                 "type": "object",
                 "required": ["argv", "timeout_s"],
                 "properties": {

@@ -45,13 +45,19 @@ every external data flow endpoint (user, files, DB, network) in `endpoints_revie
 must be verified needs an interface (consumer `EXTERNAL` or its own component): then raise a finding instead.
 G3 Design + test planning: units are implementable as specified; contracts (pre/postconditions, errors, boundaries) are
 precise and complete; unit tests can actually detect contract violations (normal, abnormal, boundary, with concrete
-expected results); integration specs cover interfaces; system specs cover every acceptance criterion; nothing is
-designed that no requirement asks for. With no integration spec, record `integration_applicability` as for G2.
+expected results); integration specs cover interfaces; system specs cover every acceptance criterion and are black
+box: `procedure` drives the external interface (CLI, HTTP API, public library API) and `expected` is an observable
+result, with normal, boundary and error scenarios per requirement; nothing is designed that no requirement asks for. With no integration spec, record `integration_applicability` as for G2.
 G4 Code + test code: code matches the design contracts (signatures, errors raised, boundaries); no unrequested
 behaviour; each unit TEST spec is implemented faithfully by tests named with its `TEST_nnn` token; assertions are
 meaningful (no tautologies, no swallowed exceptions, nothing skipped); conftest/fixtures do not alter collection or
 results; any `test_changes` in defects or change requests is justified (read defects.json and change-requests.json);
-obvious defects, unsafe code or dead code.
+obvious defects, unsafe code or dead code. System tests (`tests/system/`, run by G7): each system TEST spec is
+implemented by a test named with its token that drives the program from outside (subprocess CLI, server process +
+HTTP, or only the public library API) — not internal functions, not a renamed unit test, nothing of the system under
+test mocked — and asserts the acceptance criterion's observable result; expected values were not weakened to match the
+code; `system_test` in `.vmodel/config.json` runs the system folder and not the unit or integration tests. G7 judges
+only that the tests ran and passed; whether they are black box and meaningful is your judgement here.
 G4 interfaces (when architecture.json has interfaces): for every IF write an `interfaces` entry: `result` ok/issue,
 `provider_symbols` (the provider's def/class names that implement it), `note`. Check that the integration tests really
 connect consumer and provider (no placeholder, no import-only test, the provider under test not mocked), cover the

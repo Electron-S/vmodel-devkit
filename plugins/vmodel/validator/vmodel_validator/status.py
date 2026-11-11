@@ -6,7 +6,8 @@ from typing import Any
 
 from .gates import (EVIDENCE_LABELS, GATE_ORDER, REVIEWER, Ctx, _items, _str_list, build_ctx, defect_trace,
                     g6_applicability, gate_def, gate_state, gates_def, implemented_gates, integration_config_problems, integrity_for,
-                    last_eval, last_with_status, project_test_levels)
+                    last_eval, last_with_status, project_test_levels, system_config_problems, system_specs,
+                    system_tests_without_function)
 from .hashing import short
 from .integrity import IntegrityReport
 from .ledger import Ledger, LedgerError
@@ -14,9 +15,11 @@ from .project import Project
 from .runner import check_evidence
 from .trace import item_hashes
 
-MVP_NOTE = ("Implemented gates: G1-G6 (G6 integration verification is N/A only for a confirmed single-component work "
-            "item without interfaces). G7 (system) is an extension gate, so a work item can reach PARTIALLY_VERIFIED at "
-            "most. This is NOT a full V-Model completion.")
+MVP_NOTE = ("Implemented gates: G1-G7 (G6 integration verification is N/A only for a confirmed single-component work "
+            "item without interfaces; G7 runs the system_test command and needs every acceptance criterion of the active "
+            "functional requirements verified by a system test that passed in that run). A STANDARD work item is "
+            "COMPLETED only when G1-G7 are PASSED for the current inputs. COMPLETED is automated verification, not user "
+            "acceptance or a deployment approval. LITE and STRICT profiles are not implemented.")
 
 
 def _contexts(project: Project, wi: str | None) -> tuple[list[Ctx], dict]:
@@ -98,7 +101,32 @@ def _g6_next(wi: str, g: dict, preview: dict | None) -> str | None:
     return None
 
 
-def next_action(wi: str, gates: list[dict], preview: dict | None = None) -> str:
+def _g7_next(wi: str, g: dict, preview: dict | None) -> str | None:
+    """G7-specific next steps (0.3.0): system tests to write first (review M2), the system_test command (user), run."""
+    pv = preview or {}
+    if not (g.get("not_evaluated") or (g["status"] == "BLOCKED" and g.get("blocked_reason") == "misconfigured")):
+        return None
+    if not pv.get("specs"):
+        return ("G7 needs at least one system test spec: add level 'system' specs for the acceptance criteria to "
+                "tests.json (P3, G3 review), write them in tests/system/ (P4), then re-run G3-G6 and "
+                f"'vmodel gate {wi} G7'")
+    missing = pv.get("missing_functions") or []
+    if missing:
+        user = ("; then ask the user to run 'vmodel configure-tests --system tests/system' in a terminal (system_test "
+                "is not configured)" if pv.get("config_problems") else "")
+        return (f"G7 needs system tests: write a test function for {', '.join(missing[:10])} in tests/system/ that "
+                "drives the program through its external interface (CLI, HTTP API or public library API; the TEST id "
+                f"token in the function name), get the G4 review, re-run G5 and G6{user}, then 'vmodel gate {wi} G7'")
+    if pv.get("config_problems"):
+        return ("G7 needs the system_test command: ask the user to run 'vmodel configure-tests --system tests/system' "
+                "in a terminal (the agent cannot edit .vmodel/config.json; the unit_test and integration_test commands "
+                f"are never used instead). Then re-run G4-G6 (config changed) and 'vmodel gate {wi} G7'")
+    if g.get("not_evaluated"):
+        return f"run 'vmodel gate {wi} G7' (not evaluated yet: no system verification has run)"
+    return None
+
+
+def next_action(wi: str, gates: list[dict], preview: dict | None = None, g7_preview: dict | None = None) -> str:
     for g in gates:
         s = g["status"]
         gid = g["gate"]
@@ -110,6 +138,10 @@ def next_action(wi: str, gates: list[dict], preview: dict | None = None) -> str:
             g6 = _g6_next(wi, g, preview)
             if g6:
                 return g6
+        if gid == "G7":
+            g7 = _g7_next(wi, g, g7_preview)
+            if g7:
+                return g7
         if s == "BLOCKED":
             return f"{gid} BLOCKED: stop and report to the user ({'; '.join(g.get('notes') or [g.get('blocked_reason', '')])[:300]})"
         if s == "FAILED":
@@ -120,7 +152,10 @@ def next_action(wi: str, gates: list[dict], preview: dict | None = None) -> str:
         if s == "STALE":
             return f"{gid} STALE (inputs changed): re-review if needed and re-run 'vmodel gate {wi} {gid}'"
         return f"{gid} {s}: author its artifacts, then run 'vmodel gate {wi} {gid}'"
-    return "all gates passed"
+    g6 = next((g for g in gates if g["gate"] == "G6"), {})
+    na = ", G6 N/A (no integration test executed)" if g6.get("applicability") == "not_applicable" else ""
+    return (f"all gates passed: G1-G7 verified{na}; report COMPLETED (automated verification, not user acceptance "
+            "or a deployment approval)")
 
 
 def defect_views(ctx: Ctx, ledger_error: str | None = None) -> list[dict]:
@@ -265,24 +300,31 @@ def summary_text(summary: dict) -> str:
 
 
 def scope_warnings(ctx: Ctx) -> list[str]:
-    """REQ-G6-06: without integration_test, integration tests run by the unit command are flagged (display only)."""
+    """REQ-G6-06 / REQ-G7-07: without integration_test (system_test), integration (system) tests run by the unit
+    command are flagged (display only)."""
     try:
         cfg = ctx.project.config()
     except Exception:  # status must not fail on a broken config; integrity and gates report it
         return []
-    if not isinstance(cfg, dict) or "integration_test" in cfg:
+    if not isinstance(cfg, dict):
         return []
     last = last_eval(ctx.entries, ctx.wi, "G5")
     ex = (last.record.get("executed_tests") if last else None) or {}
     if not isinstance(ex, dict) or not ex:
         return []
     levels = project_test_levels(ctx)
+    out = []
     mixed = sorted(t for t in ex if levels.get(t) == "integration")
-    if not mixed:
-        return []
-    return [f"G5 ({last.id}, unit_test command) executed integration test(s) {', '.join(mixed)}: these results are not "
-            "integration verification (G6 runs the separate integration_test command). Ask the user to configure "
-            "integration_test ('vmodel configure-tests') to separate them"]
+    if mixed and "integration_test" not in cfg:
+        out.append(f"G5 ({last.id}, unit_test command) executed integration test(s) {', '.join(mixed)}: these results "
+                   "are not integration verification (G6 runs the separate integration_test command). Ask the user to "
+                   "configure integration_test ('vmodel configure-tests') to separate them")
+    system = sorted(t for t in ex if levels.get(t) == "system")
+    if system and "system_test" not in cfg:
+        out.append(f"G5 ({last.id}, unit_test command) executed system test(s) {', '.join(system)}: these results are "
+                   "not system verification (G7 runs the separate system_test command). Ask the user to configure "
+                   "system_test ('vmodel configure-tests --system tests/system') to separate them")
+    return out
 
 
 def g6_preview(ctx: Ctx) -> dict:
@@ -294,6 +336,19 @@ def g6_preview(ctx: Ctx) -> dict:
     return {"applicability": app["applicability"], "problems": app["problems"][:5],
             "integration_test_configured": cfg is not None,
             "config_problems": integration_config_problems(cfg) if app["applicability"] == "required" else []}
+
+
+def g7_preview(ctx: Ctx) -> dict:
+    try:
+        cfg = ctx.project.config().get("system_test")
+    except Exception:
+        cfg = None
+    try:
+        missing = system_tests_without_function(ctx)
+    except Exception:  # display only
+        missing = []
+    return {"specs": system_specs(ctx), "missing_functions": missing, "system_test_configured": cfg is not None,
+            "config_problems": system_config_problems(cfg)}
 
 
 def render_problem(p: dict) -> str:
@@ -318,17 +373,19 @@ def project_status(project: Project, wi: str | None = None) -> dict:
             if d.get("closure_state") == "OUT_OF_SCOPE":
                 d["scope_removal"] = scope_removal(ctx, d, by_gate.get("G6") or {})
         preview = g6_preview(ctx) if ctx.integrity.ok else None
+        preview7 = g7_preview(ctx) if ctx.integrity.ok else None
         item = {"id": ctx.wi, "title": wi_doc.get("title"), "profile": profile,
                 "status": wi_status(gates, profile), "gates": gates,
-                "next_action": next_action(ctx.wi, gates, preview),
+                "next_action": next_action(ctx.wi, gates, preview, preview7),
                 "gate_summary": gate_summary(gates), "scope_warnings": scope_warnings(ctx),
-                "g6_applicability_preview": preview,
+                "g6_applicability_preview": preview, "g7_preview": preview7,
                 "defects": defects, "defect_checks": defect_check_counts(defects)}
         if item["status"] == "BLOCKED" and not isinstance(gates_def()["profiles"].get(profile), dict):
             item["profile_note"] = f"unknown profile {profile!r} in workitem.json"
             item["next_action"] = f"fix the profile in {ctx.wi}/workitem.json (STANDARD)"
         elif not gates_def()["profiles"].get(profile, {}).get("implemented", False):
-            item["profile_note"] = f"profile {profile} is not implemented in the MVP; gates follow STANDARD G1-G5"
+            item["profile_note"] = (f"profile {profile} is not implemented in this DevKit version; gates follow STANDARD "
+                                    "G1-G7 and the work item cannot be COMPLETED")
         out["work_items"].append(item)
     return out
 
@@ -451,7 +508,15 @@ def render_status(st: dict) -> str:
                 lines.append(f"      - N/A: recorded PASSED {g.get('record_id')}, no integration test executed "
                              f"({g.get('na_reason')}); external endpoints reviewed: {eps}")
             elif g.get("not_evaluated"):
-                lines.append("      - not evaluated yet: no integration verification has run")
+                what = "system" if g["gate"] == "G7" else "integration"
+                lines.append(f"      - not evaluated yet: no {what} verification has run")
+            elif g.get("acceptance") and g["status"] == "PASSED":
+                a = g["acceptance"]
+                lines.append(f"      - AC {a['verified']}/{a['acceptance_criteria']} verified by passed system tests "
+                             f"({a['system_tests_passed']} system test(s) passed, {a['requirements']} requirement(s))")
+                if a.get("not_system_tested"):
+                    lines.append(f"      - not verified by a system test (non-functional, warning): "
+                                 f"{', '.join(a['not_system_tested'])}")
             elif g.get("coverage") and g["status"] == "PASSED":
                 c = g["coverage"]
                 lines.append(f"      - IF {c['covered']}/{c['interfaces']} test-level verified (a passed integration test "
@@ -499,6 +564,30 @@ def trace_view(project: Project, wi: str) -> dict:
             executed.pop(tid, None)
             if tid in g6_exec:
                 executed[tid] = g6_exec[tid]
+    # system results come from the last G7 run that executed tests (0.3.0, REQ-G7-19)
+    g7_runs = [e for e in reversed([x for x in ctx.entries if x.record.get("work_item") == wi
+                                    and x.record.get("gate") == "G7" and x.record.get("type") == "gate"])
+               if e.record.get("executed_tests")]
+    last_g7 = g7_runs[0] if g7_runs else None
+    g7_exec = (last_g7.record.get("executed_tests") if last_g7 else None) or {}
+    for tid, t in g.tests.items():
+        if t.get("level") == "system":
+            executed.pop(tid, None)
+            if tid in g7_exec:
+                executed[tid] = g7_exec[tid]
+    acceptance = []
+    for rid in sorted(g.reqs):
+        r = g.reqs[rid]
+        if r.get("status") != "active":
+            continue
+        for a in r.get("acceptance_criteria") or []:
+            if not isinstance(a, dict) or not isinstance(a.get("id"), str):
+                continue
+            tests = {tid: g7_exec.get(tid, "not run") for tid, x in sorted(g.tests.items())
+                     if x.get("level") == "system" and a["id"] in _str_list(x.get("acceptance_criteria"))}
+            acceptance.append({"req": rid, "ac": a["id"], "tests": tests,
+                               "verified": bool(tests) and all(s == "passed" for s in tests.values()),
+                               "g7_record": last_g7.id if last_g7 else None})
     rows = []
     for rid in sorted(g.reqs):
         r = g.reqs[rid]
@@ -530,7 +619,8 @@ def trace_view(project: Project, wi: str) -> dict:
     return {"work_item": wi, "rows": rows, "reverse": reverse, "dangling": g.dangling(),
             "results_from": last_g5.id if last_g5 else None,
             "integration_results_from": last_g6.id if last_g6 else None, "interfaces": ifaces,
-            "g6": "N/A (no interfaces)" if na else None}
+            "g6": "N/A (no interfaces)" if na else None,
+            "system_results_from": last_g7.id if last_g7 else None, "acceptance": acceptance}
 
 
 def render_trace(tv: dict) -> str:
@@ -552,6 +642,11 @@ def render_trace(tv: dict) -> str:
                  f"{', ' + EVIDENCE_LABELS.get(v['evidence_level'], v['evidence_level']) if v.get('evidence_level') else ''})"
                  for t, v in i["tests"].items()]
         lines.append(f"   TEST: {', '.join(tests) or '-'}")
+    if tv.get("acceptance"):
+        lines.append(f"Acceptance criteria (system results from {tv.get('system_results_from') or 'no G7 run'}):")
+    for a in tv.get("acceptance") or []:
+        tests = ", ".join(f"{t}({r})" for t, r in a["tests"].items()) or "no system test spec"
+        lines.append(f"   {a['ac']} ({a['req']}): {tests} {'verified' if a['verified'] else 'NOT verified'}")
     lines.append("Reverse (TEST -> REQ):")
     for t, reqs in tv["reverse"].items():
         lines.append(f"   {t} -> {', '.join(reqs) or '(none)'}")
@@ -686,6 +781,16 @@ def report_markdown(project: Project, wi: str) -> str:
         md += ["", f"G6: {c['covered']}/{c['interfaces']} interface(s) test-level verified (a passed integration test "
                f"whose own execution shows the connection); {c['integration_tests_passed']} integration test(s) passed."]
         md += [f"- not counted (below test level): {t}" for t in c.get("not_counted") or []]
+    g7 = next((g for g in w["gates"] if g["gate"] == "G7"), {})
+    if g7.get("not_evaluated"):
+        md += ["", "G7 is not evaluated yet: no system verification has run."]
+    elif g7.get("acceptance") and g7.get("status") == "PASSED":
+        a = g7["acceptance"]
+        md += ["", f"G7: {a['verified']}/{a['acceptance_criteria']} acceptance criteria verified by system tests that "
+               f"passed in that run ({a['system_tests_passed']} system test(s) passed; black-box run of the "
+               "system_test command, not user acceptance)."]
+        if a.get("not_system_tested"):
+            md.append(f"- not verified by a system test (non-functional, warning): {', '.join(a['not_system_tested'])}")
     for wn in w.get("scope_warnings") or []:
         md += ["", f"Scope warning: {wn}"]
     md += ["", f"Next action: {w['next_action']}", "", "## Checks (latest evaluation per gate)", ""]
@@ -723,6 +828,12 @@ def report_markdown(project: Project, wi: str) -> str:
                   f"{', '.join(r['design_units']) or '-'} | {tests} |")
     if tv["dangling"]:
         md += ["", "Dangling references:", ""] + [f"- {d}" for d in tv["dangling"]]
+    md += ["", "## Acceptance (system verification)", "",
+           f"System test results from {tv.get('system_results_from') or 'no G7 run yet'}.", "",
+           "| REQ | AC | System tests (result) | Verified |", "|---|---|---|---|"]
+    for a in tv.get("acceptance") or []:
+        tests = ", ".join(f"{t} ({r})" for t, r in a["tests"].items()) or "no system test spec"
+        md.append(f"| {a['req']} | {a['ac']} | {tests} | {'yes' if a['verified'] else 'no'} |")
     defects = _items(ctx.arts.get("defects.json"), "defects")
     crs = _items(ctx.arts.get("change-requests.json"), "change_requests")
     views = w["defects"]  # the same derivation as `vmodel status`
@@ -769,5 +880,10 @@ def report_markdown(project: Project, wi: str) -> str:
            "calling the provider (written inside the processes under test: same trust limit as the test runner). "
            "Suite-level evidence is shown, never counted; whether a test exercises the interface's meaning is the G4 "
            "review's judgement.",
-           "- G7, LITE and STRICT profiles are not implemented in this DevKit version."]
+           "- G7 runs the configured system_test command itself (black box, no runtime tracer) and counts an acceptance "
+           "criterion as verified only when every system test spec naming it passed in that run. Whether a system test "
+           "really drives the external interface (CLI, API, public library API) and covers normal, boundary and error "
+           "scenarios is the G3/G4 reviews' judgement, not machine-verified. COMPLETED is automated verification, not "
+           "user acceptance or a deployment approval.",
+           "- LITE and STRICT profiles are not implemented in this DevKit version."]
     return "\n".join(md) + "\n"

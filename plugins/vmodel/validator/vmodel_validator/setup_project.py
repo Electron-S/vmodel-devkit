@@ -40,6 +40,8 @@ class SetupError(Exception):
 UNIT_ARGV = ["{python}", "-m", "pytest", "-q", "-p", "no:cacheprovider", "--junitxml={junit}"]
 DEFAULT_INTEGRATION_DIR = "tests/integration"
 INTEGRATION_TIMEOUT_S = 900
+DEFAULT_SYSTEM_DIR = "tests/system"  # 0.3.0 (G7, REQ-G7-20/21)
+SYSTEM_TIMEOUT_S = 900
 
 
 def integration_argv(rel: str) -> list[str]:
@@ -74,34 +76,53 @@ def _count_test_functions(files: list[Path]) -> int:
     return n
 
 
-def integration_path_problems(root: Path, given: str, test_globs: list[str]) -> tuple[str, list[str]]:
-    """Check a user-given integration test path: it must exist inside the project under the configured tests paths,
-    hold at least one test function, and not be the unit command's whole scope. Nothing is ever created (D3)."""
+def test_path_problems(root: Path, given: str, test_globs: list[str], label: str) -> tuple[str, list[str]]:
+    """Check a user-given integration / system test path: it must exist inside the project under the configured tests
+    paths, hold at least one test function, and not be the unit command's whole scope. Nothing is ever created (D3).
+    `label` is "integration" (G6, 0.2.0 wording unchanged) or "system" (G7, 0.3.0)."""
     raw = given.replace("\\", "/").strip()
     rel = posixpath.normpath(raw) if raw else ""  # tests/integration/.. and tests/. are tests (review F11)
     root = root.resolve()
     if not rel or rel == "." or os.path.isabs(given) or rel == ".." or rel.startswith("../"):
-        return rel, [f"integration test path {given!r} must be a relative path inside the project"]
+        return rel, [f"{label} test path {given!r} must be a relative path inside the project"]
     path = (root / rel).resolve()
     try:
         path.relative_to(root)
     except ValueError:
-        return rel, [f"integration test path {given!r} is outside the project"]
+        return rel, [f"{label} test path {given!r} is outside the project"]
     if not path.exists():
-        return rel, [f"integration test path {rel} does not exist (write the integration tests first; the DevKit "
+        return rel, [f"{label} test path {rel} does not exist (write the {label} tests first; the DevKit "
                      "never creates test paths or tests)"]
     roots = _glob_roots(test_globs)
     if any(r in ("", rel + "/") or r.startswith(rel + "/") for r in roots):
-        return rel, [f"integration test path {rel} is the same scope as the unit test command (it would run the unit "
-                     "tests too); use a separate folder such as tests/integration"]
+        return rel, [f"{label} test path {rel} is the same scope as the unit test command (it would run the unit "
+                     f"tests too); use a separate folder such as tests/{label}"]
     if not any(rel.startswith(r) or (rel + "/").startswith(r) for r in roots):
-        return rel, [f"integration test path {rel} is not under the configured tests paths {test_globs} (G4 would not "
+        return rel, [f"{label} test path {rel} is not under the configured tests paths {test_globs} (G4 would not "
                      "check those files)"]
     files = [path] if path.is_file() else [f for f in sorted(path.rglob("*.py")) if "__pycache__" not in f.parts]
     if _count_test_functions(files) == 0:
-        return rel, [f"integration test path {rel} has no test function (def test_...): only existing tests are "
+        return rel, [f"{label} test path {rel} has no test function (def test_...): only existing tests are "
                      "registered"]
     return rel, []
+
+
+def integration_path_problems(root: Path, given: str, test_globs: list[str]) -> tuple[str, list[str]]:
+    return test_path_problems(root, given, test_globs, "integration")
+
+
+def _overlap(a: str, b: str) -> bool:
+    return a == b or a.startswith(b + "/") or b.startswith(a + "/")
+
+
+def _argv_paths(argv: Any) -> list[str]:
+    """Positional path-like arguments of a configured test command (what it runs), normalised."""
+    out = []
+    for a in argv if isinstance(argv, list) else []:
+        if not isinstance(a, str) or a.startswith("-") or "{" in a or a in ("pytest", "py.test"):
+            continue
+        out.append(posixpath.normpath(a.replace("\\", "/")))
+    return out
 
 
 def _detect_python(root: Path, given: str | None) -> str:
@@ -152,7 +173,7 @@ def detect_lint(root: Path, python: str, choice: str) -> dict | None:
 
 def init_project(root: Path, *, python: str | None = None, source: list[str] | None = None,
                  tests: list[str] | None = None, lint: str = "auto", allow_syntax_only: bool = False,
-                 integration_tests: str | None = None) -> dict:
+                 integration_tests: str | None = None, system_tests: str | None = None) -> dict:
     root = root.resolve()
     vdir = root / VMODEL_DIR
     if (vdir / "config.json").exists():
@@ -179,11 +200,28 @@ def init_project(root: Path, *, python: str | None = None, source: list[str] | N
             integration_note = f"{DEFAULT_INTEGRATION_DIR} not registered: " + "; ".join(probs)
         else:
             integration = rel
+    system, system_note = None, None  # 0.3.0 (REQ-G7-20): the same rules for the G7 system test folder
+    if system_tests is not None:
+        rel, probs = test_path_problems(root, system_tests, test_globs, "system")
+        if probs:
+            raise SetupError("--system-tests: " + "; ".join(probs))
+        system = rel
+    elif (root / DEFAULT_SYSTEM_DIR).is_dir():
+        rel, probs = test_path_problems(root, DEFAULT_SYSTEM_DIR, test_globs, "system")
+        if probs:
+            system_note = f"{DEFAULT_SYSTEM_DIR} not registered: " + "; ".join(probs)
+        else:
+            system = rel
+    if integration and system and _overlap(integration, system):
+        raise SetupError(f"integration test path {integration} and system test path {system} overlap: each command "
+                         "must run its own folder (G6 and G7 judge separate test levels)")
     py = _detect_python(root, python)
     lint_cfg = detect_lint(root, py, lint)
     unit_argv = list(UNIT_ARGV)
     if integration:
         unit_argv.insert(len(unit_argv) - 1, f"--ignore={integration}")
+    if system:
+        unit_argv.insert(len(unit_argv) - 1, f"--ignore={system}")
     config = {
         "schema": "vmodel.config/1",
         "project_id": uuid.uuid4().hex,
@@ -196,6 +234,8 @@ def init_project(root: Path, *, python: str | None = None, source: list[str] | N
     }
     if integration:
         config["integration_test"] = {"argv": integration_argv(integration), "timeout_s": INTEGRATION_TIMEOUT_S}
+    if system:
+        config["system_test"] = {"argv": integration_argv(system), "timeout_s": SYSTEM_TIMEOUT_S}
     errs = validate(config, load_schema("config"))
     if errs:
         raise SetupError("generated config invalid: " + "; ".join(errs))
@@ -224,7 +264,7 @@ def init_project(root: Path, *, python: str | None = None, source: list[str] | N
                             "core_hash": integ.core_hash, "mode": integ.mode},
                             "config_sha256": sha256_file(vdir / "config.json")})
     return {"project": str(root), "config": config, "lock": lock, "key": str(project.key_path()),
-            "integration_note": integration_note}
+            "integration_note": integration_note, "system_note": system_note}
 
 
 def _is_pytest(argv: list[str]) -> bool:
@@ -235,36 +275,62 @@ def _is_pytest(argv: list[str]) -> bool:
     return any(a == "-m" and i + 1 < len(argv) and argv[i + 1] == "pytest" for i, a in enumerate(argv))
 
 
-def plan_configure_tests(project: Project, integration: str, timeout_s: int = INTEGRATION_TIMEOUT_S) -> dict:
-    """REQ-G6-28: the config change that adds integration_test to an existing project (read-only)."""
+def plan_configure_tests(project: Project, integration: str | None = None, timeout_s: int = INTEGRATION_TIMEOUT_S,
+                         system: str | None = None) -> dict:
+    """REQ-G6-28 / REQ-G7-21: the config change that adds integration_test and/or system_test to an existing project
+    (read-only). Each command runs its own folder; the unit command ignores both."""
+    if integration is None and system is None:
+        raise SetupError("give --integration PATH and/or --system PATH")
     raw = project.config_path.read_bytes()
     cfg = load_json(project.config_path, ".vmodel/config.json")
     if not isinstance(cfg, dict):
         raise SetupError(".vmodel/config.json is not a JSON object")
-    rel, probs = integration_path_problems(project.root, integration, cfg["paths"]["tests"])
-    if probs:
-        raise SetupError("; ".join(probs))
+    rels: dict[str, str] = {}
+    for label, given in (("integration", integration), ("system", system)):
+        if given is None:
+            continue
+        rel, probs = test_path_problems(project.root, given, cfg["paths"]["tests"], label)
+        if probs:
+            raise SetupError("; ".join(probs))
+        rels[label] = rel
     if not isinstance(timeout_s, int) or timeout_s <= 0:
         raise SetupError("--timeout must be a positive number of seconds")
+    # the folders must not overlap, also with the command the user configured earlier (design review: G6/G7 split)
+    targets = dict(rels)
+    for label, key in (("integration", "integration_test"), ("system", "system_test")):
+        if label not in targets and isinstance(cfg.get(key), dict):
+            for a in _argv_paths(cfg[key].get("argv")):
+                for other, rel in rels.items():
+                    if other != label and _overlap(a, rel):
+                        raise SetupError(f"{other} test path {rel} and the configured {key} ({a}) overlap: each "
+                                         "command must run its own folder")
+    if len(rels) == 2 and _overlap(rels["integration"], rels["system"]):
+        raise SetupError(f"integration test path {rels['integration']} and system test path {rels['system']} overlap: "
+                         "each command must run its own folder")
     unit = cfg.get("unit_test") if isinstance(cfg.get("unit_test"), dict) else {}
     argv = list(unit.get("argv") or [])
     if not _is_pytest(argv):
         raise SetupError("unit_test.argv is not a pytest command; edit .vmodel/config.json by hand so the unit and "
-                         "integration commands run different tests")
-    if rel in argv or any(a.rstrip("/") == rel for a in argv):
-        raise SetupError(f"unit_test.argv names {rel} explicitly; edit .vmodel/config.json by hand")
-    ignore = f"--ignore={rel}"
-    if ignore not in argv:
-        at = next((i for i, a in enumerate(argv) if "{junit}" in a), len(argv))
-        argv.insert(at, ignore)
-    new = {**cfg, "unit_test": {**unit, "argv": argv},
-           "integration_test": {"argv": integration_argv(rel), "timeout_s": timeout_s}}
+                         f"{' and '.join(rels)} commands run different tests")
+    for rel in rels.values():
+        if rel in argv or any(a.rstrip("/") == rel for a in argv):
+            raise SetupError(f"unit_test.argv names {rel} explicitly; edit .vmodel/config.json by hand")
+        ignore = f"--ignore={rel}"
+        if ignore not in argv:
+            at = next((i for i, a in enumerate(argv) if "{junit}" in a), len(argv))
+            argv.insert(at, ignore)
+    new = {**cfg, "unit_test": {**unit, "argv": argv}}
+    for label, rel in rels.items():
+        new[f"{label}_test"] = {"argv": integration_argv(rel), "timeout_s": timeout_s}
     errs = validate(new, load_schema("config"))
     if errs:
         raise SetupError("resulting config invalid: " + "; ".join(errs))
-    return {"integration": rel, "old": cfg, "new": new, "old_sha256": sha256_bytes(raw),
-            "unit_argv_before": unit.get("argv"), "unit_argv_after": argv,
-            "integration_test": new["integration_test"], "replaces": cfg.get("integration_test")}
+    return {"integration": rels.get("integration"), "system": rels.get("system"), "old": cfg, "new": new,
+            "old_sha256": sha256_bytes(raw), "unit_argv_before": unit.get("argv"), "unit_argv_after": argv,
+            "integration_test": new.get("integration_test") if "integration" in rels else None,
+            "system_test": new.get("system_test") if "system" in rels else None,
+            "replaces": cfg.get("integration_test") if "integration" in rels else None,
+            "replaces_system": cfg.get("system_test") if "system" in rels else None}
 
 
 def apply_configure_tests(project: Project, plan: dict) -> dict:
@@ -272,11 +338,17 @@ def apply_configure_tests(project: Project, plan: dict) -> dict:
     if sha256_file(project.config_path) != plan["old_sha256"]:
         raise SetupError(".vmodel/config.json changed since the plan was shown; run the command again")
     data = (json.dumps(plan["new"], indent=2, ensure_ascii=False) + "\n").encode("utf-8")
-    entry = Ledger(project).append({"type": "config", "at": utc_now(), "change": "integration_test",
-                                    "integration_path": plan["integration"], "old_config_sha256": plan["old_sha256"],
-                                    "new_config_sha256": sha256_bytes(data),
-                                    "integration_test_sha256": hash_obj(plan["integration_test"]),
-                                    "by": "user (tty)"})
+    record: dict = {"type": "config", "at": utc_now(),
+                    "change": "+".join(k for k in ("integration_test", "system_test") if plan.get(k) is not None)}
+    if plan.get("integration_test") is not None:
+        record.update(integration_path=plan["integration"])
+    record.update(old_config_sha256=plan["old_sha256"], new_config_sha256=sha256_bytes(data))
+    if plan.get("integration_test") is not None:
+        record["integration_test_sha256"] = hash_obj(plan["integration_test"])
+    if plan.get("system_test") is not None:  # 0.3.0
+        record.update(system_path=plan["system"], system_test_sha256=hash_obj(plan["system_test"]))
+    record["by"] = "user (tty)"
+    entry = Ledger(project).append(record)
     write_bytes(project.config_path, data)
     return {"record": entry.id, "config_sha256": sha256_bytes(data)}
 

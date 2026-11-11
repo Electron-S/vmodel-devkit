@@ -1,7 +1,7 @@
 {
   "name": "vmodel",
   "version": "0.2.0",
-  "description": "VModel DevKit: V-Model development workflow (G1-G6) with an independent, evidence-based quality gate validator",
+  "description": "VModel DevKit: V-Model development workflow (G1-G7) with an independent, evidence-based quality gate validator",
   "author": {"name": "cyyoo"},
   "license": "UNLICENSED",
   "keywords": ["v-model", "aspice", "quality-gate", "verification", "traceability"]

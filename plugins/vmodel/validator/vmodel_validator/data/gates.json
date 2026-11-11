@@ -404,7 +404,7 @@
         {
           "id": "G5.SCOPE",
           "kind": "mechanical",
-          "desc": "only when integration_test is configured: the unit run executes no integration-level TEST id (fail) and no system-level id (warning); levels come from every work item's tests.json"
+          "desc": "only when integration_test or system_test is configured: the unit run executes no integration-level TEST id when integration_test is configured and no system-level id when system_test is configured (fail); a system-level id without system_test warns; levels come from every work item's tests.json"
         },
         {
           "id": "G5.REQ_COVERAGE",
@@ -414,7 +414,7 @@
         {
           "id": "G5.NO_WEAKENING",
           "kind": "mechanical",
-          "desc": "changed/removed test files justified in test_changes; previously executed TEST ids still executed (when integration_test is configured, ids that are integration level now are left to G6)"
+          "desc": "changed/removed test files justified in test_changes; previously executed TEST ids still executed (ids that are integration level now are left to G6 when integration_test is configured, system level ids to G7 when system_test is configured)"
         },
         {
           "id": "G5.INPUTS_UNCHANGED",
@@ -488,7 +488,7 @@
         {
           "id": "G6.SCOPE",
           "kind": "mechanical",
-          "desc": "the integration run executes no unit-level TEST id (fail); system-level ids warn"
+          "desc": "the integration run executes no unit-level TEST id (fail) and, when system_test is configured, no system-level id (fail); otherwise system-level ids warn"
         },
         {
           "id": "G6.TEST_MAPPING",
@@ -517,19 +517,22 @@
       "id": "G7",
       "phase": "P7",
       "name": "System Verification",
-      "implemented": false,
+      "implemented": true,
       "inputs": [
+        "G6 PASSED (or N/A) for the current inputs",
         "requirements.json acceptance criteria",
-        "tests.json system specs"
+        "tests.json system specs",
+        "the G5 code manifest (source, test code, config)"
       ],
       "outputs": [
-        "system test evidence"
+        "system test execution evidence (stdout/stderr/junit, hashes, environment) and the requirement -> acceptance criterion -> system test coverage of this run"
       ],
       "agents": {
-        "author": "validator",
-        "reviewer": "vmodel:verifier + user acceptance"
+        "author": "validator (executes the configured system_test command itself; black box, no runtime tracer)",
+        "reviewer": "none (mechanical); whether the system tests drive the external interface (CLI, API, public library API) and cover normal, boundary and error scenarios is reviewed at G3 (specs) and G4 (test code); user acceptance and deployment approval are not part of G7"
       },
       "required_artifacts": [
+        "requirements.json",
         "tests.json"
       ],
       "manifest": {
@@ -541,22 +544,57 @@
           "tests.json"
         ],
         "code": true,
-        "notes": "code gates hash every project file except VCS/tool/venv dirs and __pycache__ bytecode, plus .vmodel/config.json, defects.json and change-requests.json"
+        "notes": "the G5 code manifest (no review file: a G6 that is no longer PASSED makes G7 STALE through the upstream rule); adding G7 changes no G1-G6 manifest"
       },
       "item_artifacts": [],
       "checks": [
         {
+          "id": "G7.PREREQ",
+          "kind": "mechanical",
+          "desc": "G6 PASSED (or N/A) for the current manifest"
+        },
+        {
+          "id": "G7.CONFIG",
+          "kind": "mechanical",
+          "desc": "system_test is configured (argv with {junit}, positive timeout_s); missing or invalid -> BLOCKED misconfigured, nothing is executed and the unit or integration command is never used instead"
+        },
+        {
           "id": "G7.EXECUTION",
           "kind": "execution",
-          "desc": "[EXT] run system/acceptance tests"
+          "desc": "validator runs the system test command itself with a scrubbed environment (no runtime tracer); exit code 0; junit produced; a command that cannot start -> BLOCKED tool_unavailable"
+        },
+        {
+          "id": "G7.RESULTS",
+          "kind": "execution",
+          "desc": "tests > 0, failures = 0, errors = 0 (exit code 0 alone is never a PASS)"
+        },
+        {
+          "id": "G7.SCOPE",
+          "kind": "mechanical",
+          "desc": "the system run executes no unit-level (G5) or integration-level (G6) TEST id; levels come from every work item's tests.json"
+        },
+        {
+          "id": "G7.TEST_MAPPING",
+          "kind": "mechanical",
+          "desc": "at least one system test spec; every system TEST id has a passed test case (named with exactly one id) and no failed/skipped case in this run"
         },
         {
           "id": "G7.AC_COVERAGE",
           "kind": "mechanical",
-          "desc": "[EXT] every acceptance criterion verified by a passed system test"
+          "desc": "every acceptance criterion of every active functional requirement is verified by a system test spec that passed in this run; acceptance criteria of active non-functional/constraint requirements without a system test spec warn"
+        },
+        {
+          "id": "G7.NO_WEAKENING",
+          "kind": "mechanical",
+          "desc": "system TEST ids executed by the baseline G7 run (last PASS, else the first run that executed tests) are still executed, or listed in a CR/DEFECT removed_ids"
+        },
+        {
+          "id": "G7.INPUTS_UNCHANGED",
+          "kind": "mechanical",
+          "desc": "verified files did not change during the run"
         }
       ],
-      "pass_criteria": "[EXT] not implemented in the MVP"
+      "pass_criteria": "every check passes on this run's own evidence (execution, results, scope, every system spec passed, every acceptance criterion of the active functional requirements verified by a passed system test); missing/invalid system_test -> BLOCKED; no N/A"
     }
   ],
   "profiles": {
@@ -584,7 +622,7 @@
         "G6",
         "G7"
       ],
-      "notes": "implements G1-G6; a work item that passes G1-G6 (G6 PASSED or N/A) is PARTIALLY_VERIFIED, never COMPLETED, until G7 exists"
+      "notes": "implements G1-G7; a work item is COMPLETED only when G1-G7 are PASSED for the current inputs (G6 N/A counts as passed for the chain, never as an integration test pass). COMPLETED is automated verification, not user acceptance or deployment approval"
     },
     "STRICT": {
       "implemented": false,

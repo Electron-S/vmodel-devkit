@@ -42,8 +42,11 @@ class NaRed(NaBase):
         self.assertEqual((view["status"], view.get("applicability"), view.get("display_status")),
                          ("PASSED", "not_applicable", "N/A"))
         w = wi_status(self.sb)
-        self.assertEqual(w["status"], "PARTIALLY_VERIFIED")
-        self.assertIn("G6 N/A", w["next_action"])
+        # 0.3.0 (REQ-G7-17/18): G7 is not evaluated yet, so IN_PROGRESS and the next step is G7 (0.2.0:
+        # PARTIALLY_VERIFIED, next action "G1-G5 PASSED, G6 N/A ...")
+        self.assertEqual(w["status"], "IN_PROGRESS")
+        self.assertEqual(w["gate_summary"]["na"], ["G6"])
+        self.assertIn("G7", w["next_action"])
         self.assertNotIn("G1-G5 verified", w["next_action"])
         self.assertNotIn("G1-G6 verified", w["next_action"])
         code, text = self.sb.vm("status")
@@ -100,7 +103,7 @@ class NaRed(NaBase):
         self.rereview("G2", applicability(SINGLE_ENDPOINTS, reason="다시 검토한 사유"))
         st = {g["gate"]: g["status"] for g in wi_status(self.sb)["gates"]}
         self.assertEqual(st, {"G1": "PASSED", "G2": "PASSED", "G3": "PASSED", "G4": "PASSED", "G5": "PASSED",
-                              "G6": "STALE", "G7": "NOT_IMPLEMENTED"})
+                              "G6": "STALE", "G7": "IN_PROGRESS"})  # 0.3.0 REQ-G7-17 (0.2.0: NOT_IMPLEMENTED)
 
     def test_Cf_integration_spec_without_interface_is_required(self):
         tests = self.sb.load("tests.json")

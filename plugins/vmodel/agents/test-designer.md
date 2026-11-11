@@ -23,6 +23,11 @@ If a command is denied, retry it as a single plain command; never stop because o
      They must exercise the real provider through its consumer, the consumer calling the provider during the test (or
      the provider's public entry for an `EXTERNAL` consumer); the validator runs them separately from the unit tests (G6). Use the integration level only for
      interface verification, never to replace a unit test.
-   - System tests: cover every acceptance criterion of every functional requirement (`acceptance_criteria`).
+   - System tests: cover every acceptance criterion of every functional requirement (`acceptance_criteria`), black box:
+     `procedure` drives the program's external interface (CLI command and arguments, HTTP request, public library
+     call, batch input file) and `expected` is the observable result (output, exit code, response status and body,
+     error message). Plan normal, boundary and error scenarios for each requirement. Add system tests for
+     non-functional acceptance criteria that can be observed from outside. The validator runs them separately (G7,
+     `system_test` command) and counts a criterion only when every system test naming it passed.
 4. Run `"<VM path>" lint <WI>` and fix every problem it reports in tests.json.
 5. Reply with a short table: test id, level, category, what it verifies. Do not write any other file.

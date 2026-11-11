@@ -10,8 +10,10 @@ import os
 import platform
 import secrets
 import shutil
+import signal
 import subprocess
 import sys
+import tempfile
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -82,6 +84,53 @@ def run_command(argv: list[str], cwd: Path, timeout_s: int, env: dict | None = N
         out, err = proc.communicate()
     return RunResult(argv, str(cwd), started, utc_now(), round(time.monotonic() - t0, 3),
                      None if timed_out else proc.returncode, timed_out, out or b"", err or b"")
+
+
+def _kill_group(proc: subprocess.Popen) -> None:
+    """POSIX: kill the command's whole process group (its own session); elsewhere the command itself."""
+    try:
+        if os.name == "posix":
+            os.killpg(proc.pid, signal.SIGKILL)
+        elif proc.poll() is None:
+            proc.kill()
+    except (ProcessLookupError, PermissionError, OSError):
+        pass
+
+
+def run_command_files(argv: list[str], cwd: Path, timeout_s: int, env: dict | None = None) -> RunResult:
+    """run_command for commands whose children may outlive them (G7 system tests start CLIs and servers, 0.3.0).
+
+    Output goes to validator temporary files instead of pipes, so a leftover child that inherited stdout/stderr can
+    neither hang the validator nor stretch the run into a false timeout (G7 design review M1). The command waits with a
+    timeout; on POSIX it runs in its own session and its whole process group is killed on timeout and after it ends
+    (leftover servers). On Windows only the command itself is killed on timeout; a leftover child keeps running but no
+    longer holds the validator. The bytes are read once, after the command ended, and evidence is written from them.
+    """
+    started = utc_now()
+    t0 = time.monotonic()
+    with tempfile.TemporaryDirectory(prefix="vmodel-out-", ignore_cleanup_errors=True) as tmp:
+        out_p, err_p = Path(tmp) / "stdout", Path(tmp) / "stderr"
+        with open(out_p, "wb") as out_f, open(err_p, "wb") as err_f:
+            try:
+                proc = subprocess.Popen(argv, cwd=str(cwd), stdin=subprocess.DEVNULL, stdout=out_f, stderr=err_f,
+                                        env=env, start_new_session=(os.name == "posix"))
+            except (FileNotFoundError, PermissionError, OSError) as exc:
+                return RunResult(argv, str(cwd), started, utc_now(), 0.0, None, False, b"", b"",
+                                 f"cannot start: {exc.__class__.__name__}: {exc}")
+            timed_out = False
+            try:
+                proc.wait(timeout=timeout_s)
+            except subprocess.TimeoutExpired:
+                timed_out = True
+                _kill_group(proc)
+                try:
+                    proc.wait(timeout=60)
+                except subprocess.TimeoutExpired:
+                    pass
+            _kill_group(proc)
+        out, err = out_p.read_bytes(), err_p.read_bytes()
+    return RunResult(argv, str(cwd), started, utc_now(), round(time.monotonic() - t0, 3),
+                     None if timed_out else proc.returncode, timed_out, out, err)
 
 
 def executable_info(requested: str) -> dict:

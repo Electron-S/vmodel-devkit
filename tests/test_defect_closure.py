@@ -216,8 +216,9 @@ class DefectClosureInvariant(FailedG5Case):
         self.assertEqual(before, after)
         self.assertEqual(json.loads(json.dumps(before["gates"])), {"G1": "PASSED", "G2": "PASSED", "G3": "PASSED",
                                                                     "G4": "STALE", "G5": "STALE",
-                                                                    # 0.2.0 REQ-G6-25 (0.1.5: G6 NOT_IMPLEMENTED)
-                                                                    "G6": "IN_PROGRESS", "G7": "NOT_IMPLEMENTED"})
+                                                                    # 0.2.0 REQ-G6-25 (0.1.5: G6 NOT_IMPLEMENTED),
+                                                                    # 0.3.0 REQ-G7-17 (0.2.0: G7 NOT_IMPLEMENTED)
+                                                                    "G6": "IN_PROGRESS", "G7": "IN_PROGRESS"})
 
 
 if __name__ == "__main__":

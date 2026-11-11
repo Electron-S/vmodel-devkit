@@ -32,11 +32,13 @@ class HappyPath(GateTestBase):
         # 0.2.0 (REQ-G6-25, D41 decision 4): G6 is implemented and not evaluated yet, so the work item is IN_PROGRESS
         # (0.1.5: PARTIALLY_VERIFIED, gates PASSED x5 + NOT_IMPLEMENTED x2). G1-G5 stay PASSED.
         self.assertEqual(st["status"], "IN_PROGRESS")
+        # 0.3.0 (REQ-G7-17): G7 is implemented and not evaluated either (0.2.0: G7 NOT_IMPLEMENTED)
         self.assertEqual([g["status"] for g in st["gates"]],
-                         ["PASSED"] * 5 + ["IN_PROGRESS", "NOT_IMPLEMENTED"])
+                         ["PASSED"] * 5 + ["IN_PROGRESS", "IN_PROGRESS"])
         self.assertEqual(st["gate_summary"]["passed_current"], ["G1", "G2", "G3", "G4", "G5"])
-        self.assertEqual(st["gate_summary"]["not_evaluated"], ["G6"])
-        self.assertIn("NOT a full V-Model completion", self.sb.status()["mvp_note"])
+        self.assertEqual(st["gate_summary"]["not_evaluated"], ["G6", "G7"])  # 0.2.0: ["G6"]
+        # 0.3.0 (REQ-G7-18): COMPLETED is reachable now (0.2.0 note: "NOT a full V-Model completion")
+        self.assertIn("COMPLETED only when G1-G7 are PASSED", self.sb.status()["mvp_note"])
 
     def test_verify_reexecutes_everything(self):
         self.sb.advance("G5")

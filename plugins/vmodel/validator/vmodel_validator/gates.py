@@ -1,4 +1,4 @@
-"""Quality gate evaluation G1-G6 (SPEC section 3; G6 since 0.2.0, docs/g6).
+"""Quality gate evaluation G1-G7 (SPEC section 3; G6 since 0.2.0, docs/g6; G7 since 0.3.0, docs/g7).
 
 Only this module decides gate outcomes. Every evaluation is appended to the
 signed ledger; preconditions that prevent an evaluation return BLOCKED
@@ -269,8 +269,8 @@ def is_failure_record(rec: dict) -> bool:
         rec.get("status") == "BLOCKED" and rec.get("blocked_reason") == "three_consecutive_identical_failures")
 
 
-# Gates whose records carry per-TEST results (G7 joins when implemented). Other gates' failures are N/A for tests.
-TEST_EXECUTING_GATES = ("G5", "G6")
+# Gates whose records carry per-TEST results (G7 since 0.3.0). Other gates' failures are N/A for tests.
+TEST_EXECUTING_GATES = ("G5", "G6", "G7")
 NOT_EXECUTED = re.compile(r"^(TEST-\d{3,}): not executed$")
 DEFECT_CHECK_CATEGORIES = {"evidence_integrity": "error", "invalid_citation": "error",
                            "unlinked_failing_test": "warning", "unknown_test_result": "warning"}
@@ -466,6 +466,8 @@ def gate_state(ctx: Ctx, gate: str, current_manifests: dict[str, dict] | None = 
     st = _gate_state(ctx, gate, current_manifests)
     if gate == "G6" and st["status"] != "NOT_IMPLEMENTED":
         _g6_state(ctx, st)
+    if gate == "G7" and st["status"] != "NOT_IMPLEMENTED":
+        _g7_state(ctx, st)
     return st
 
 
@@ -496,6 +498,27 @@ def _g6_state(ctx: Ctx, st: dict) -> None:
                                           for i in ifs for t, v in sorted((i.get("tests") or {}).items())
                                           if isinstance(v, dict) and v.get("status") == "passed"
                                           and v.get("evidence_level") not in (None, "test_level")]}
+
+
+def _g7_state(ctx: Ctx, st: dict) -> None:
+    """G7 display facts from its last record (0.3.0): not evaluated yet, acceptance criteria verified by this PASS."""
+    last = last_eval(ctx.entries, ctx.wi, "G7")
+    if last is None:
+        if st["status"] in ("IN_PROGRESS", "NOT_STARTED"):
+            st["not_evaluated"] = True
+        return
+    rec = last.record
+    if st["status"] != "PASSED":
+        return
+    cov = rec.get("requirements_coverage") if isinstance(rec.get("requirements_coverage"), dict) else {}
+    acs = [(ac, v) for r in cov.values() if isinstance(r, dict)
+           for ac, v in (r.get("acceptance_criteria") or {}).items() if isinstance(v, dict)]
+    levels = rec.get("executed_levels") or {}
+    st["acceptance"] = {"requirements": len(cov), "acceptance_criteria": len(acs),
+                        "verified": sum(1 for _a, v in acs if v.get("verified")),
+                        "system_tests_passed": sum(1 for t, s in (rec.get("executed_tests") or {}).items()
+                                                   if s == "passed" and levels.get(t) == "system"),
+                        "not_system_tested": sorted(a for a, v in acs if not v.get("tests"))}
 
 
 def _gate_state(ctx: Ctx, gate: str, current_manifests: dict[str, dict] | None = None) -> dict:
@@ -1551,11 +1574,15 @@ def eval_g5(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
     checks.append(Check("G5.TEST_MAPPING", "mechanical", "fail" if probs else "pass",
                         "unit test specs not verified by passing tests" if probs
                         else f"{len(g.unit_tests())} unit test spec(s) passed", probs))
-    # 0.2.0 (REQ-G6-05/07): only a project that configured integration_test separates the levels in G5
-    separated = "integration_test" in p.config()
+    # 0.2.0 (REQ-G6-05/07): only a project that configured integration_test separates the levels in G5;
+    # 0.3.0 (REQ-G7-06): likewise system tests once system_test is configured
+    all_cfg = p.config()
+    sep_int, sep_sys = "integration_test" in all_cfg, "system_test" in all_cfg
+    separated = sep_int or sep_sys
     levels = project_test_levels(ctx) if separated else {}
     if separated:
-        checks.append(_scope_check("G5.SCOPE", executed, levels, wrong="integration", owner="G6", command="unit_test"))
+        wrong = {**({"integration": "G6"} if sep_int else {}), **({"system": "G7"} if sep_sys else {})}
+        checks.append(_scope_check("G5.SCOPE", executed, levels, wrong, command="unit_test"))
 
     passed_ids = {t for t, s in executed.items() if s == "passed"}
     probs = [rid for rid in g.active("functional") if not (set(g.tests_for_req(rid)) & passed_ids)]
@@ -1566,7 +1593,8 @@ def eval_g5(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
     roots = test_roots(p)
     test_files = {k: v for k, v in files.items() if any(k.startswith(r) for r in roots if r)}
     checks.append(_no_weakening(ctx, test_files, executed,
-                                skip={t for t, lvl in levels.items() if lvl == "integration"}))
+                                skip={t for t, lvl in levels.items()
+                                      if (lvl == "integration" and sep_int) or (lvl == "system" and sep_sys)}))
 
     changed = diff_manifest(files, after)
     checks.append(Check("G5.INPUTS_UNCHANGED", "mechanical", "fail" if changed else "pass",
@@ -1634,18 +1662,31 @@ def project_test_levels(ctx: Ctx) -> dict[str, str]:
     return levels
 
 
-def _scope_check(cid: str, executed: dict[str, str], levels: dict[str, str], wrong: str, owner: str,
-                 command: str) -> Check:
-    bad = sorted(t for t in executed if levels.get(t) == wrong)
-    system = sorted(t for t in executed if levels.get(t) == "system")
+def _scope_check(cid: str, executed: dict[str, str], levels: dict[str, str], wrong: dict[str, str],
+                 command: str, own: str | None = None) -> Check:
+    """`wrong`: level -> the gate that owns it; those levels must not run under `command` (fail). A system-level id
+    that is not in `wrong` (no system_test configured) only warns, unless the command is the system command itself
+    (`own`). With one wrong level the wording is the 0.2.0 one (REQ-G7-07)."""
+    bad = sorted(t for t in executed if levels.get(t) in wrong)
+    warn_system = "system" not in wrong and own != "system"
+    system = sorted(t for t in executed if levels.get(t) == "system") if warn_system else []
+    sys_items = [f"{t}: system test executed by the {command} command (it belongs to G7, which runs the separate "
+                 "system_test command; system_test is not configured)" for t in system]
     if bad:
-        return Check(cid, "mechanical", "fail", f"{wrong} tests executed by the {command} command (they belong to {owner})",
-                     [f"{t}: {wrong} test executed by the {command} command (it belongs to {owner})" for t in bad]
-                     + [f"{t}: system test executed (G7, not implemented)" for t in system])
+        lv = [x for x in wrong if any(levels.get(t) == x for t in bad)]
+        bad_items = [f"{t}: {levels[t]} test executed by the {command} command (it belongs to {wrong[levels[t]]})"
+                     for t in bad]
+        # the failure signature keeps the 0.2.0 wording of the system lines, so the 3-strike count of a project
+        # without system_test is the same as before the upgrade (design review L5); the display says what is true now
+        return Check(cid, "mechanical", "fail",
+                     f"{' and '.join(lv)} tests executed by the {command} command (they belong to "
+                     f"{', '.join(wrong[x] for x in lv)})", bad_items + sys_items,
+                     sig=bad_items + [f"{t}: system test executed (G7, not implemented)" for t in system])
     if system:
-        return Check(cid, "mechanical", "warn", "system tests executed (G7 is an extension gate)",
-                     [f"{t}: system test executed (G7, not implemented)" for t in system])
-    return Check(cid, "mechanical", "pass", f"no {wrong} or system test in this run")
+        return Check(cid, "mechanical", "warn", "system tests executed (they belong to G7; system_test is not configured)",
+                     sys_items)
+    names = [*wrong, *(["system"] if warn_system else [])]
+    return Check(cid, "mechanical", "pass", f"no {' or '.join(names)} test in this run")
 
 
 # ---------------------------------------------------------------- G6 (0.2.0, docs/g6/G6-DESIGN.md, WORKITEM)
@@ -2354,7 +2395,9 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
             prev = executed.get(tid)
             if prev is None or rank[c["status"]] > rank[prev]:
                 executed[tid] = c["status"]
-    checks.append(_scope_check("G6.SCOPE", executed, levels, wrong="unit", owner="G5", command="integration_test"))
+    checks.append(_scope_check("G6.SCOPE", executed, levels,
+                               {"unit": "G5", **({"system": "G7"} if "system_test" in all_cfg else {})},
+                               command="integration_test"))
     if unmapped:
         checks[-1].data["unmapped_cases"] = unmapped[:50]
     probs = list(ambiguous)
@@ -2636,8 +2679,287 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
     return checks, extra, evidence
 
 
+# ---------------------------------------------------------------- G7 (0.3.0, docs/g7/G7-DESIGN.md)
+def system_config_problems(cfg: Any) -> list[str]:
+    """REQ-G7-01: the system_test object is checked on every evaluation (config is schema-checked at init only)."""
+    if cfg is None:
+        return ["system_test is not configured in .vmodel/config.json"]
+    errs = validate(cfg, load_schema("config")["properties"]["system_test"])
+    if errs:
+        return [f"system_test {e}" for e in errs[:10]]
+    probs = []
+    if isinstance(cfg["timeout_s"], bool) or cfg["timeout_s"] <= 0:
+        probs.append("system_test.timeout_s must be a positive integer")
+    if "{junit}" not in " ".join(cfg["argv"]):
+        probs.append("system_test.argv must contain {junit} so the validator can collect results")
+    return probs
+
+
+def system_specs(ctx: Ctx) -> list[str]:
+    return sorted(tid for tid, t in ctx.graph.tests.items() if t.get("level") == "system")
+
+
+def system_tests_without_function(ctx: Ctx) -> list[str]:
+    """Display only (status / next action, design review M2): system TEST specs with no test function named with that
+    one id in the project's test files (the G4.TEST_CODE scan; G4 itself does not judge system tests)."""
+    present: set[str] = set()
+    p = ctx.project
+    for f in p.test_files():
+        try:
+            tree = ast.parse(f.read_bytes(), filename=p.rel(f))
+        except (SyntaxError, ValueError, OSError, RecursionError, MemoryError):
+            continue
+        for fn in _test_functions(tree):
+            ids = test_ids_in_text(fn)
+            if len(ids) == 1:
+                present |= ids
+    return [t for t in system_specs(ctx) if t not in present]
+
+
+def _read_junit(junit: Path) -> tuple[dict | None, str | None]:
+    if not junit.is_file():
+        return None, "junit.xml was not produced by the test run"
+    try:
+        return parse_junit(junit), None
+    except ET.ParseError as exc:
+        return None, f"junit.xml unparseable: {exc}"
+
+
+def _suite_checks(gate: str, run: runner.RunResult, timeout_s: Any, junit_summary: dict | None,
+                  junit_error: str | None, ev_path: str) -> list[Check]:
+    """EXECUTION and RESULTS with the G5/G6 rules (G5 and G6 keep their own unchanged copies). A command that cannot
+    start is the only BLOCKED (tool_unavailable); every other execution problem is a FAILED; exit 0 is not enough."""
+    tail = [ln for ln in display_decode(run.stdout + run.stderr, limit=4000).splitlines() if ln.strip()][-40:]
+    if run.error:
+        return [Check(f"{gate}.EXECUTION", "execution", "blocked", f"test command could not start: {run.error}",
+                      data={"blocked_reason": "tool_unavailable", "evidence": ev_path})]
+    if run.timed_out:
+        out = [Check(f"{gate}.EXECUTION", "execution", "fail", f"timed out after {timeout_s}s", tail,
+                     data={"evidence": ev_path}, sig=["timeout"])]
+    elif run.exit_code != 0:
+        out = [Check(f"{gate}.EXECUTION", "execution", "fail", f"test command exit code {run.exit_code}", tail,
+                     data={"evidence": ev_path, "exit_code": run.exit_code}, sig=[f"exit {run.exit_code}"])]
+    elif junit_error:
+        out = [Check(f"{gate}.EXECUTION", "execution", "fail", junit_error, data={"evidence": ev_path})]
+    else:
+        out = [Check(f"{gate}.EXECUTION", "execution", "pass", "exit code 0, junit produced",
+                     data={"evidence": ev_path, "exit_code": 0})]
+    cases = (junit_summary or {}).get("cases", [])
+    failed = [c for c in cases if c["status"] in ("failed", "error")]
+    if junit_summary is None:
+        out.append(Check(f"{gate}.RESULTS", "execution", "fail", junit_error or "no results"))
+    elif junit_summary["tests"] == 0:
+        out.append(Check(f"{gate}.RESULTS", "execution", "fail", "0 tests executed"))
+    elif failed:
+        out.append(Check(f"{gate}.RESULTS", "execution", "fail",
+                         f"{junit_summary['failures']} failed, {junit_summary['errors']} error(s) of "
+                         f"{junit_summary['tests']}",
+                         [f"{c['classname']}::{c['name']} [{c['status']}] {c['message'][:200]}" for c in failed],
+                         sig=[f"{c['classname']}::{c['name']}" for c in failed]))
+    else:
+        out.append(Check(f"{gate}.RESULTS", "execution", "pass",
+                         f"{junit_summary['passed']} passed, {junit_summary['skipped']} skipped of "
+                         f"{junit_summary['tests']}"))
+    return out
+
+
+def _map_cases(cases: list[dict], levels: dict[str, str]) -> tuple[dict[str, str], list[str], list[str]]:
+    """JUnit cases -> TEST id -> worst status (G5/G6 rule: a name must carry exactly one id), ambiguous and
+    unmapped case names."""
+    executed: dict[str, str] = {}
+    rank = {"passed": 0, "skipped": 1, "failed": 2, "error": 2}
+    ambiguous, unmapped = [], []
+    for c in cases:
+        ids = test_ids_in_text(c["name"])
+        if len(ids) > 1:
+            ambiguous.append(f"{c['classname']}::{c['name']} names more than one TEST id")
+            continue
+        if not ids or not ids <= set(levels):
+            unmapped.append(f"{c['classname']}::{c['name']}")
+        for tid in ids:
+            prev = executed.get(tid)
+            if prev is None or rank[c["status"]] > rank[prev]:
+                executed[tid] = c["status"]
+    return executed, ambiguous, unmapped
+
+
+def _ac_coverage(ctx: Ctx, specs: list[str], executed: dict[str, str]) -> tuple[dict, Check]:
+    """REQ-G7-09/10: every acceptance criterion of every active functional requirement is verified when every system
+    spec naming it passed in this run (and there is at least one). Non-functional / constraint criteria without a
+    system spec warn (G3 does not require one); with a spec they are judged like the functional ones."""
+    g = ctx.graph
+    by_ac: dict[str, list[str]] = {}
+    for tid in specs:
+        for ac in _str_list(g.tests[tid].get("acceptance_criteria")):
+            by_ac.setdefault(ac, []).append(tid)
+    coverage: dict[str, dict] = {}
+    fails: list[str] = []
+    warns: list[str] = []
+    total = verified_n = 0
+    for rid in sorted(g.reqs):
+        r = g.reqs[rid]
+        if r.get("status") != "active":
+            continue
+        rtype = r.get("type")
+        functional = rtype == "functional"
+        acs = [a for a in r.get("acceptance_criteria") or [] if isinstance(a, dict) and isinstance(a.get("id"), str)]
+        ac_ids = {a["id"] for a in acs}
+        cats: dict[str, list[str]] = {}
+        for tid in specs:
+            t = g.tests[tid]
+            if rid in _str_list(t.get("verifies")) or ac_ids & set(_str_list(t.get("acceptance_criteria"))):
+                cats.setdefault(str(t.get("category")), []).append(tid)
+        entry: dict[str, Any] = {"type": rtype, "priority": r.get("priority"), "acceptance_criteria": {},
+                                 "categories": cats}
+        if functional and not acs:
+            fails.append(f"{rid}: active functional requirement without an acceptance criterion")
+        for a in acs:
+            tests = {t: executed.get(t, "not executed") for t in by_ac.get(a["id"], [])}
+            ok = bool(tests) and all(s == "passed" for s in tests.values())
+            entry["acceptance_criteria"][a["id"]] = {"tests": tests, "verified": ok}
+            total += 1
+            verified_n += ok
+            if ok:
+                continue
+            label = f"{a['id']} ({rid})" if functional else f"{a['id']} ({rid}, {rtype})"
+            if not tests and not functional:
+                warns.append(f"{label}: no system test spec; not verified by an executed system test (G3 does not "
+                             "require one for non-functional/constraint requirements)")
+            elif not tests:
+                fails.append(f"{label}: no system test spec")
+            else:
+                fails.append(f"{label}: " + ", ".join(f"{t} {s}" for t, s in sorted(tests.items()) if s != "passed"))
+        coverage[rid] = entry
+    head = f"{verified_n}/{total} acceptance criteria verified by system tests that passed in this run"
+    if fails:
+        return coverage, Check("G7.AC_COVERAGE", "mechanical", "fail", f"acceptance criteria not verified ({head})",
+                               fails + warns)
+    if warns:
+        return coverage, Check("G7.AC_COVERAGE", "mechanical", "warn",
+                               f"{head}; some non-functional criteria have no system test", warns)
+    return coverage, Check("G7.AC_COVERAGE", "mechanical", "pass", head)
+
+
+def _g7_no_weakening(ctx: Ctx, executed: dict[str, str]) -> Check:
+    """REQ-G7-12: baseline = last PASSED G7, else the first G7 run that executed anything."""
+    runs = [e for e in gate_entries(ctx.entries, ctx.wi, "G7")
+            if e.record.get("type") == "gate" and e.record.get("executed_tests")]
+    passed = [e for e in runs if e.record.get("status") == "PASSED"]
+    base = passed[-1] if passed else (runs[0] if runs else None)
+    if base is None:
+        return Check("G7.NO_WEAKENING", "mechanical", "pass", "first G7 run; baseline recorded")
+    removed_ok: set[str] = set()
+    for cr in _change_requests(ctx):
+        if cr.get("status") != "rejected":
+            removed_ok.update(_str_list(cr.get("removed_ids")))
+    for d in _defects(ctx):
+        removed_ok.update(_str_list(d.get("removed_ids")))
+    old = base.record.get("executed_tests") or {}
+    lost = [t for t in _str_list(base.record.get("system_specs"))
+            if t in old and t not in executed and t not in removed_ok]
+    if lost:
+        return Check("G7.NO_WEAKENING", "mechanical", "fail", "possible system test weakening",
+                     [f"{t} was executed in {base.id} but not now" for t in lost])
+    return Check("G7.NO_WEAKENING", "mechanical", "pass", f"no system test lost since {base.id}")
+
+
+def eval_g7(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[dict]]:
+    """System verification (black box): run the configured system_test command and judge the acceptance criteria of
+    the requirements from this run's own results only. No runtime tracer: missing internal call evidence is never a
+    reason to block (REQ-G7-03)."""
+    p = ctx.project
+    checks = [Check("G7.PREREQ", "mechanical", "pass", "G6 PASSED (or N/A) for the current manifest hash")]
+    evidence: list[dict] = []
+    specs = system_specs(ctx)
+    extra: dict[str, Any] = {"system_specs": specs, "executed_tests": {}}
+    all_cfg = p.config()
+    cfg = all_cfg.get("system_test")
+    cfg_data = {"config_sha256": sha256_file(p.config_path),
+                "system_test_sha256": hash_obj(cfg) if cfg is not None else None,
+                "unit_test_sha256": hash_obj(all_cfg.get("unit_test")),
+                "integration_test_sha256": hash_obj(all_cfg["integration_test"]) if "integration_test" in all_cfg
+                else None}
+    probs = system_config_problems(cfg)
+    if probs:
+        checks.append(Check("G7.CONFIG", "mechanical", "blocked",
+                            "system_test is not usable: the user must add or fix it in .vmodel/config.json ('vmodel "
+                            "configure-tests --system <path>' in a terminal; the agent cannot edit it). The unit_test "
+                            "and integration_test commands are never used instead", probs,
+                            data={"blocked_reason": "misconfigured", **cfg_data}))
+        return checks, extra, evidence
+    checks.append(Check("G7.CONFIG", "mechanical", "pass", "system_test configured",
+                        data={"argv": cfg["argv"], **cfg_data}))
+    run_dir = runner.new_run_dir(p.evidence_dir, ctx.wi, "G7", "system")
+    junit = run_dir / "junit.xml"
+    argv = _substitute(cfg["argv"], {"{python}": p.python_exe(), "{junit}": str(junit)})
+    exe = runner.executable_info(argv[0])
+    if exe["resolved"]:
+        argv[0] = exe["resolved"]
+    with tempfile.TemporaryDirectory(prefix="vmodel-pyc-") as pyc:
+        env, dropped = runner.scrubbed_env(Path(pyc))
+        if cfg.get("plugin_autoload"):
+            env.pop("PYTEST_DISABLE_PLUGIN_AUTOLOAD", None)
+        # files, not pipes: a server a system test left running must not hang or time out the run (review M1)
+        run = runner.run_command_files(argv, p.root, timeout_s=int(cfg["timeout_s"]), env=env)
+    env_info = {"scrubbed": dropped, "set": {"PYTHONDONTWRITEBYTECODE": "1", "PYTHONPYCACHEPREFIX": "<validator temp>",
+                                             "PYTEST_DISABLE_PLUGIN_AUTOLOAD": env.get("PYTEST_DISABLE_PLUGIN_AUTOLOAD")},
+                "output_capture": "files; POSIX: own session, process group killed after the run",
+                "distributions": _distributions(argv[0])}
+    junit_summary, junit_error = _read_junit(junit)
+    ev = runner.write_evidence(
+        p, ctx.ledger, run_dir, wi=ctx.wi, gate="G7", kind="system_test", run=run, exe=exe,
+        git=runner.git_info(p.root), manifest_hash=mhash, core_hash=ctx.integrity.core_hash,
+        extra={"command_source": "system_test", **cfg_data,
+               "junit_summary": {k: v for k, v in (junit_summary or {}).items() if k != "cases"} or None,
+               "junit_error": junit_error, "verified_files": files, "environment": env_info},
+        extra_files={"junit.xml": junit})
+    evidence.append(ev)
+    checks += _suite_checks("G7", run, cfg["timeout_s"], junit_summary, junit_error, ev["path"])
+    if run.error:
+        return checks, extra, evidence
+    cases = (junit_summary or {}).get("cases", [])
+    levels = project_test_levels(ctx)
+    executed, ambiguous, unmapped = _map_cases(cases, levels)
+    checks.append(_scope_check("G7.SCOPE", executed, levels, {"unit": "G5", "integration": "G6"},
+                               command="system_test", own="system"))
+    if unmapped:
+        checks[-1].data["unmapped_cases"] = unmapped[:50]
+    probs = list(ambiguous)
+    if not specs:
+        probs.append("no system test spec in tests.json: G7 needs at least one (G3 plans one per acceptance criterion "
+                     "of every active functional requirement)")
+    for tid in specs:
+        st = executed.get(tid)
+        if st is None:
+            probs.append(f"{tid}: not executed")
+        elif st != "passed":
+            probs.append(f"{tid}: {st}")
+    checks.append(Check("G7.TEST_MAPPING", "mechanical", "fail" if probs else "pass",
+                        "system test specs not verified by passing tests" if probs
+                        else f"{len(specs)} system test spec(s) passed", probs))
+    coverage, cov_check = _ac_coverage(ctx, specs, executed)
+    checks.append(cov_check)
+    checks.append(_g7_no_weakening(ctx, executed))
+    checks.append(_inputs_unchanged(ctx, "G7", files))
+    roots = test_roots(p)
+    g5_pass = last_with_status(ctx.entries, ctx.wi, "G5", "PASSED")
+    g6_pass = last_with_status(ctx.entries, ctx.wi, "G6", "PASSED")
+    extra.update({
+        "test_files": {k: v for k, v in files.items() if any(k.startswith(r) for r in roots if r)},
+        "executed_tests": dict(sorted(executed.items())),
+        "executed_levels": {t: levels.get(t) for t in sorted(executed)},
+        "unmapped_cases": unmapped[:50],
+        "requirements_coverage": coverage,
+        "basis_records": {"G5": g5_pass.id if g5_pass else None, "G6": g6_pass.id if g6_pass else None},
+        "junit": {k: v for k, v in (junit_summary or {}).items() if k != "cases"},
+        "failed_cases": [f"{c['classname']}::{c['name']} [{c['status']}] {c['message'][:200]}"
+                         for c in cases if c["status"] in ("failed", "error")][:50],
+    })
+    return checks, extra, evidence
+
+
 EVALUATORS: dict[str, Callable[[Ctx, dict, str], tuple[list[Check], dict, list[dict]]]] = {
-    "G1": eval_g1, "G2": eval_g2, "G3": eval_g3, "G4": eval_g4, "G5": eval_g5, "G6": eval_g6,
+    "G1": eval_g1, "G2": eval_g2, "G3": eval_g3, "G4": eval_g4, "G5": eval_g5, "G6": eval_g6, "G7": eval_g7,
 }
 
 

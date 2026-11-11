@@ -39,7 +39,8 @@ class CompatRed(SandboxClass):
         self.sb.review("G2", extra={"summary": "G2 re-reviewed"})
         self.assertEqual(self.sb.gate("G2")[1]["status"], "PASSED")
         self.assertEqual(states(self.sb), {"G1": "PASSED", "G2": "PASSED", "G3": "PASSED", "G4": "PASSED",
-                                           "G5": "PASSED", "G6": "STALE", "G7": "NOT_IMPLEMENTED"})
+                                           "G5": "PASSED", "G6": "STALE",
+                                           "G7": "IN_PROGRESS"})  # 0.3.0 REQ-G7-17 (0.2.0: NOT_IMPLEMENTED)
         self.assertEqual(self.g6()["status"], "PASSED")
         # (2) an integration test file change: G4, G5 and G6
         t = self.sb.root / "tests/integration/test_pipeline.py"

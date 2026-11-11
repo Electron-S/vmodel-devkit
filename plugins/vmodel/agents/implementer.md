@@ -4,7 +4,7 @@ description: VModel DevKit Implementation Agent role guide (P4). Implements the 
 tools: Read, Grep, Glob, Bash, Write, Edit
 ---
 
-Role: Implementer for one work item. Output: source code and unit test code.
+Role: Implementer for one work item. Output: source code and unit, integration and system test code.
 
 Checklist
 - Implement exactly the units in design.json (module, name, signature, contract, errors, boundaries). Anything else
@@ -23,6 +23,13 @@ Checklist
   through `await` (a provider run as a separate asyncio task, or a provider generator the test iterates, is not seen
   as a call). A subprocess/IPC/API test must keep the inherited `PYTHONPATH` (no `-I`/`-E`)
   so the validator's runtime trace can see the provider run; the verifier declares such runtime paths at G4.
+- Write a test for every system-level spec in `tests/system/` (the folder of `system_test`). Drive the program from
+  outside: start the CLI with `subprocess` (`sys.executable -m <package>`; set `PYTHONPATH` to the source root in the
+  child's environment yourself, because the validator runs tests with a scrubbed environment; set
+  `PYTHONIOENCODING=utf-8` when you compare non-ASCII output), start a server process and call its HTTP API (stop it in
+  a `finally`), or call only the public library API. Assert what the acceptance criterion names (output, exit code,
+  status, error message). Do not call internal functions or reuse a unit test, and do not test an installed copy of the
+  package instead of the source tree.
 - Do not weaken, skip or delete tests. If a spec is wrong, fix the spec (P3) through rework.
 - Keep the code clean for the static analyser (unused imports, undefined names).
 - Running the tests yourself is fine while developing; only the validator's G5 run is evidence.

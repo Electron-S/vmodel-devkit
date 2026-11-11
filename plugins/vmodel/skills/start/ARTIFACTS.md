@@ -91,10 +91,14 @@ Ids are project-unique (`VM next-id <KIND>`). The authoritative schemas are the 
 - Per design unit: >= 1 unit test with category `normal`; `abnormal` if it declares errors; `boundary` (always, since
   every unit declares boundaries). Every interface needs an integration test spec; every acceptance criterion of a
   functional requirement needs a system test spec. Integration specs are planned now and executed in G6 (the
-  `integration_test` command); system specs belong to G7 (extension, not implemented).
-- Test code: each unit-level and integration-level spec is implemented by test function(s) whose name contains the
-  token, e.g. `def test_TEST_001_tokenize_lowercases():`. Integration tests live in the integration folder and call the
-  real provider (G4 checks a call path, or a runtime path the verifier declares).
+  `integration_test` command); system specs are executed in G7 (the `system_test` command). A system spec names the
+  external interface it drives in `procedure` (CLI command, HTTP request, public API call) and the observable result in
+  `expected`; plan normal, boundary and error scenarios (`category`) for each requirement.
+- Test code: each unit-level, integration-level and system-level spec is implemented by test function(s) whose name
+  contains the token, e.g. `def test_TEST_001_tokenize_lowercases():`. Integration tests live in the integration folder
+  and call the real provider (G4 checks a call path, or a runtime path the verifier declares). System tests live in
+  `tests/system/` and drive the program from outside (subprocess CLI with `PYTHONPATH` set by the test, a server
+  process plus HTTP calls, or the public library API); G7 runs them with the validator's scrubbed environment.
 
 ## reviews/G1..G4.json (written only by vmodel:verifier)
 ```json
@@ -115,7 +119,7 @@ Ids are project-unique (`VM next-id <KIND>`). The authoritative schemas are the 
    "test_changes": [{"file": "tests/test_x.py", "since_record": "R00010", "reason": "...",
                      "requirements": ["REQ-002"], "impact": "..."}]}]}
 ```
-`related` lists the REQ/DESIGN ids and every failing TEST id of the cited record (`vmodel status` shows them). Set `status` to `fixed` in the same edit as the fix, before the re-review; never edit defects.json after the gate passed (it is a G4/G5 input). `removed_ids` (DESIGN/TEST ids) is allowed on defects and change requests when an item is intentionally removed.
+`related` lists the REQ/DESIGN ids and every failing TEST id of the cited record (`vmodel status` shows them). Set `status` to `fixed` in the same edit as the fix, before the re-review; never edit defects.json after the gate passed (it is a G4/G5 input). `removed_ids` (IF/DESIGN/TEST ids) is allowed on defects and change requests when an item is intentionally removed. `gate` is G1..G7; `root_cause_phase` is P1..P4, P6 (integration environment) or P7 (system test environment).
 
 ## change-requests.json (requirement changes after G1 passed)
 ```json

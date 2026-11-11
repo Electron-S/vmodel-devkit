@@ -96,7 +96,8 @@ def _require_tty(action: str) -> bool:
 def cmd_init(args) -> int:
     root = Path(args.project or ".")
     res = init_project(root, python=args.python, source=args.source, tests=args.tests, lint=args.lint,
-                       allow_syntax_only=args.allow_syntax_only, integration_tests=args.integration_tests)
+                       allow_syntax_only=args.allow_syntax_only, integration_tests=args.integration_tests,
+                       system_tests=args.system_tests)
     cfg = res["config"]
     out(f"initialised {res['project']}")
     out(f"  python: {cfg['python']}")
@@ -108,6 +109,13 @@ def cmd_init(args) -> int:
             "specs; once the tests exist run 'vmodel configure-tests --integration tests/integration' in a terminal)")
     if res.get("integration_note"):
         out(f"  note: {res['integration_note']}")
+    if cfg.get("system_test"):
+        out(f"  system_test: {' '.join(cfg['system_test']['argv'])}")
+    else:
+        out("  system_test: not configured (G7 needs it; once the system tests exist run "
+            "'vmodel configure-tests --system tests/system' in a terminal)")
+    if res.get("system_note"):
+        out(f"  note: {res['system_note']}")
     lint = cfg["static_analysis"]["lint"]
     out(f"  lint: {lint['name'] if lint else 'none'} (on_missing_lint={cfg['static_analysis']['on_missing_lint']})")
     out(f"  validator {res['lock']['validator_version']} core {short(res['lock']['core_hash'])} pinned")
@@ -436,32 +444,39 @@ def cmd_lock(args) -> int:
         if "integration_test" not in p.config():
             out("  G6 (integration verification): integration_test is not configured. Work items with interfaces need "
                 "it: 'vmodel configure-tests --integration <path>' (in a terminal, after the integration tests exist)")
+        if "system_test" not in p.config():
+            out("  G7 (system verification, 0.3.0): system_test is not configured. Every STANDARD work item needs it to "
+                "be COMPLETED: 'vmodel configure-tests --system tests/system' (in a terminal, after the system tests "
+                "exist)")
     except ArtifactError:
         pass
     return 0
 
 
 def cmd_configure_tests(args) -> int:
-    """USER ONLY (TTY): add integration_test to an existing project (0.2.0, REQ-G6-28)."""
+    """USER ONLY (TTY): add integration_test (0.2.0, REQ-G6-28) and/or system_test (0.3.0, REQ-G7-21)."""
     p = _project(args)
     action = "change the test commands in .vmodel/config.json"
     if not _has_tty(action):
         return 3
     try:
-        plan = plan_configure_tests(p, args.integration, args.timeout)
+        plan = plan_configure_tests(p, args.integration, args.timeout, system=args.system)
     except SetupError as exc:
         out(f"vmodel: error: {exc}")
         return 2
     out("The test commands in .vmodel/config.json will become:")
     out(f"  unit_test:        {' '.join(plan['unit_argv_after'])}")
-    out(f"  integration_test: {' '.join(plan['integration_test']['argv'])} (timeout {plan['integration_test']['timeout_s']}s)")
-    if plan["replaces"] is not None:
-        out(f"  (replaces integration_test: {json.dumps(plan['replaces'])})")
-    out("  The config is part of the G4/G5/G6 inputs: G4 needs a new verifier review, then G4, G5 and G6 run again.")
+    for key, rep in (("integration_test", "replaces"), ("system_test", "replaces_system")):
+        if plan.get(key) is not None:
+            out(f"  {key + ':':<17} {' '.join(plan[key]['argv'])} (timeout {plan[key]['timeout_s']}s)")
+            if plan.get(rep) is not None:
+                out(f"  (replaces {key}: {json.dumps(plan[rep])})")
+    out("  The config is part of the G4-G7 inputs: G4 needs a new verifier review, then G4, G5, G6 and G7 run again.")
     if not _require_tty(action):
         return 3
     res = apply_configure_tests(p, plan)
-    out(f"configured integration_test ({res['record']}); config {short(res['config_sha256'])}")
+    done = " and ".join(k for k in ("integration_test", "system_test") if plan.get(k) is not None)
+    out(f"configured {done} ({res['record']}); config {short(res['config_sha256'])}")
     return 0
 
 
@@ -559,6 +574,9 @@ def build_parser() -> argparse.ArgumentParser:
         s.add_argument("--integration-tests", metavar="PATH",
                        help="existing integration test folder for G6 (default: tests/integration when it holds tests); "
                             "the unit command then ignores it")
+        s.add_argument("--system-tests", metavar="PATH",
+                       help="existing system test folder for G7 (default: tests/system when it holds tests); the unit "
+                            "command then ignores it")
     inst = sub.choices["install"]
     inst.add_argument("--claude-md-import", action="store_true")
     inst.add_argument("--enable-plugin", metavar="MARKETPLACE_DIR")
@@ -584,7 +602,7 @@ def build_parser() -> argparse.ArgumentParser:
         sp.add_argument("wi")
         sp.add_argument("gate", choices=GATE_ORDER)
         sp.add_argument("--json", action="store_true")
-    sp = add("verify", cmd_verify, "fresh re-evaluation of G1..G6 in order (stops at the first non-PASS)")
+    sp = add("verify", cmd_verify, "fresh re-evaluation of G1..G7 in order (stops at the first non-PASS)")
     sp.add_argument("wi")
     sp.add_argument("gate", nargs="?", choices=GATE_ORDER)
     sp.add_argument("--json", action="store_true")
@@ -609,8 +627,10 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("gate", choices=GATE_ORDER)
     sp.add_argument("--reason", required=True)
     sp = add("configure-tests", cmd_configure_tests,
-             "USER ONLY (TTY): add the integration_test command for G6 and keep it out of the unit command")
-    sp.add_argument("--integration", required=True, metavar="PATH", help="existing integration test folder or file")
+             "USER ONLY (TTY): add the integration_test (G6) and/or system_test (G7) command and keep their folders "
+             "out of the unit command")
+    sp.add_argument("--integration", metavar="PATH", help="existing integration test folder or file")
+    sp.add_argument("--system", metavar="PATH", help="existing system test folder or file (G7, 0.3.0)")
     sp.add_argument("--timeout", type=int, default=INTEGRATION_TIMEOUT_S)
     sp = add("wiring", cmd_wiring, "static integration analysis per interface and integration test (read-only)")
     sp.add_argument("wi")
