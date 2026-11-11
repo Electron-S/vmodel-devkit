@@ -1,0 +1,25 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/d313df71-da6e-4a2c-b750-207928cd3ba3/scratchpad/build-68b4d67/plugins/vmodel",
+    "release_manifest": null
+  },
+  "git_head": "7939f97",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "marker": "RED-TARGET",
+  "tests": 5,
+  "expectations_met": 5,
+  "violations": 0,
+  "seconds": 16.1
+}
+
+OK  expect=ok   got=ok      test_g7_review.OverlapChar.test_R3_option_values_are_not_paths
+OK  expect=FAIL got=FAIL    test_g7_review.OverlapRed.test_R3_integration_command_without_folder_or_dot_overlaps_the_system_folder
+      AssertionError: 'system_test' unexpectedly found in {'schema': 'vmodel.config/1', 'project_id': '78b38420345741aba6a42abdbd4d85b5', 'default_profile': 'STANDARD', 'language': 'python', 'python': '/usr/bin/python3', 'paths': {'source': ['src/**/*.py'], 'tests': ['tests/**/*.py'], 'build_config': ['pyproject.toml', 'setup.cfg', 'setup.py', 'pytest.ini', 'tox.ini', 'requirements*.txt', 'conftest.py',
+OK  expect=FAIL got=FAIL    test_g7_review.ProfileRed.test_R2_next_action_does_not_claim_completed_for_an_unimplemented_profile
+      AssertionError: 'report COMPLETED' unexpectedly found in 'all gates passed: G1-G7 verified, G6 N/A (no integration test executed); report COMPLETED (automated verification, not user acceptance or a deployment approval)' : RED-TARGET all gates passed: G1-G7 verified, G6 N/A (no integration test executed); report COMPLETED (automated verification, not user acceptance or a deployment approval)
+OK  expect=FAIL got=FAIL    test_g7_review.TraceRecordRed.test_R1_new_ac_is_not_verified_by_an_older_run
+      AssertionError: True is not false : RED-TARGET {'req': 'REQ-001', 'ac': 'AC-001-4', 'tests': {'TEST-102': 'passed'}, 'verified': True, 'g7_record': 'R00012'}
+OK  expect=FAIL got=FAIL    test_g7_review.TraceRecordRed.test_R1_remapped_ac_keeps_the_recorded_failure
+      AssertionError: True is not false : RED-TARGET {'req': 'REQ-001', 'ac': 'AC-001-3', 'tests': {'TEST-101': 'passed'}, 'verified': True, 'g7_record': 'R00016'}

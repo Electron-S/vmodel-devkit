@@ -1,0 +1,107 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.2.0",
+    "release_manifest": {
+      "version": "0.2.0",
+      "core_hash": "sha256:2a95adb35aa82abc1ab6380350fd2f3b03ce3d645255d0263f4e48e234228a47"
+    }
+  },
+  "git_head": "7939f97",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "marker": "RED-TARGET",
+  "tests": 46,
+  "expectations_met": 46,
+  "violations": 0,
+  "seconds": 123.8
+}
+
+OK  expect=FAIL got=FAIL    test_g7_gate.GateRed.test_T01_T09_T10_system_tests_pass_with_signed_evidence
+      AssertionError: 'BLOCKED' != 'PASSED'
+OK  expect=FAIL got=FAIL    test_g7_gate.GateRed.test_T02_real_defect_fails_g7
+      AssertionError: 'BLOCKED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g7_gate.GateRed.test_T06_exit_zero_without_junit_is_not_a_pass
+      AssertionError: 'BLOCKED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g7_gate.GateRed.test_T06_fake_pass_files_are_not_evidence
+      AssertionError: None is not true : RED-TARGET {'gate': 'G7', 'name': 'System Verification', 'status': 'NOT_IMPLEMENTED', 'notes': ['extension gate, not implemented in the MVP']}
+OK  expect=FAIL got=FAIL    test_g7_gate.GateRed.test_T07_exit_zero_with_empty_junit_fails
+      AssertionError: 'BLOCKED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g7_gate.GateRed.test_T07_no_test_collected_fails
+      AssertionError: 'BLOCKED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g7_gate.GateRed.test_T08_boundary_scenario_failure_fails_g7
+      AssertionError: 'BLOCKED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g7_gate.GateRed.test_T08_normal_boundary_error_scenarios_are_recorded_and_judged
+      AssertionError: 'BLOCKED' != 'PASSED'
+OK  expect=FAIL got=FAIL    test_g7_gate.GateRed.test_T19_korean_output_of_a_failed_run_is_readable
+      AssertionError: 'BLOCKED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g7_gate.GateRed.test_a_process_left_running_by_a_system_test_neither_hangs_nor_times_out_g7
+      AssertionError: 'BLOCKED' != 'PASSED'
+OK  expect=FAIL got=FAIL    test_g7_gate.GateRed.test_command_that_cannot_start_is_blocked_tool_unavailable
+      AssertionError: None != 'tool_unavailable' : RED-TARGET {'work_item': 'WI-001', 'gate': 'G7', 'status': 'BLOCKED', 'recorded': False, 'reasons': ['G7 (System Verification) is an extension gate and is not implemented in this DevKit version']}
+OK  expect=FAIL got=FAIL    test_g7_config.ConfigRed.test_T03_invalid_system_test_blocks_misconfigured
+      AssertionError: None != 'misconfigured' : RED-TARGET ['{python}', '-m', 'pytest', '-q', '-p', 'no:cacheprovider'] {'work_item': 'WI-001', 'gate': 'G7', 'status': 'BLOCKED', 'recorded': False, 'reasons': ['G7 (System Verification) is an extension gate and is not implemented in this DevKit version']}
+OK  expect=FAIL got=FAIL    test_g7_config.ConfigRed.test_T03_misconfigured_block_needs_no_defect_and_is_not_counted
+      AssertionError: None != 'misconfigured' : RED-TARGET {'work_item': 'WI-001', 'gate': 'G7', 'status': 'BLOCKED', 'recorded': False, 'reasons': ['G7 (System Verification) is an extension gate and is not implemented in this DevKit version']}
+OK  expect=FAIL got=FAIL    test_g7_config.ConfigRed.test_T03_missing_system_test_blocks_without_running_anything
+      AssertionError: False is not true : RED-TARGET G7 must be evaluated and recorded: {'work_item': 'WI-001', 'gate': 'G7', 'status': 'BLOCKED', 'recorded': False, 'reasons': ['G7 (System Verification) is an extension gate and is not implemented in this DevKit version']}
+OK  expect=FAIL got=FAIL    test_g7_config.ConfigRed.test_T03_preview_names_the_missing_command_before_the_first_evaluation
+      AssertionError: 'configure-tests --system' not found in 'G1-G5 PASSED, G6 N/A (no integration scope: single component; no interface to integrate; no integration test executed). G7+ are extension gates (not implemented); report PARTIALLY_VERIFIED.' : RED-TARGET G1-G5 PASSED, G6 N/A (no integration scope: single component; no interface to integrate; no integration test executed). G7+ are extension g
+OK  expect=FAIL got=FAIL    test_g7_config.ConfigureTestsRed.test_configure_tests_needs_a_terminal
+      AssertionError: 2 != 3 : RED-TARGET usage: vmodel configure-tests [-h] [--project PROJECT] --integration PATH
+OK  expect=FAIL got=FAIL    test_g7_config.ConfigureTestsRed.test_configure_tests_refuses_unit_scope_and_overlap
+      AssertionError: 'same scope as the unit test command' not found in 'yes\r\nusage: vmodel configure-tests [-h] [--project PROJECT] --integration PATH\r\n                              [--timeout TIMEOUT]\r\nvmodel configure-tests: error: the following arguments are required: --integration\r\n' : RED-TARGET yes
+OK  expect=FAIL got=FAIL    test_g7_config.ConfigureTestsRed.test_configure_tests_system_writes_a_signed_record_then_the_config
+      AssertionError: 'system_test' not found in {'schema': 'vmodel.config/1', 'project_id': 'a4dafc06442b4151bf42890fc836c287', 'default_profile': 'STANDARD', 'language': 'python', 'python': '/usr/bin/python3', 'paths': {'source': ['src/**/*.py'], 'tests': ['tests/**/*.py'], 'build_config': ['pyproject.toml', 'setup.cfg', 'setup.py', 'pytest.ini', 'tox.ini', 'requirements*.txt', 'conftest.py', 'tests/c
+OK  expect=ok   got=ok      test_g7_config.InitChar.test_init_without_system_folder_leaves_system_test_out
+OK  expect=FAIL got=FAIL    test_g7_config.InitRed.test_init_refuses_a_system_path_without_tests
+      AssertionError: 'system test path tests/empty has no test function' not found in 'usage: vmodel [-h]\n              {init,install,uninstall,new-wi,next-id,lint,hash,gate,verify,status,trace,impact,report,audit,verify-evidence,review-submit,unblock,configure-tests,wiring,lock,hook,version,guide}\n              ...\nvmodel: error: unrecognized arguments: --system-tests tests/empty\n' : RED-TARGET us
+OK  expect=FAIL got=FAIL    test_g7_config.InitRed.test_init_refuses_overlapping_integration_and_system_paths
+      AssertionError: 'overlap' not found in 'usage: vmodel [-h]\n              {init,install,uninstall,new-wi,next-id,lint,hash,gate,verify,status,trace,impact,report,audit,verify-evidence,review-submit,unblock,configure-tests,wiring,lock,hook,version,guide}\n              ...\nvmodel: error: unrecognized arguments: --system-tests tests/system\n' : RED-TARGET usage: vmodel [-h]
+OK  expect=FAIL got=FAIL    test_g7_config.InitRed.test_init_registers_tests_system
+      AssertionError: 'system_test' not found in {'schema': 'vmodel.config/1', 'project_id': '5f52550906314a99b26e2dd38dfa28a3', 'default_profile': 'STANDARD', 'language': 'python', 'python': '/usr/bin/python3', 'paths': {'source': ['src/**/*.py'], 'tests': ['tests/**/*.py'], 'build_config': ['pyproject.toml', 'setup.cfg', 'setup.py', 'pytest.ini', 'tox.ini', 'requirements*.txt', 'conftest.py', 'tests/c
+OK  expect=FAIL got=FAIL    test_g7_config.NoSystemTestsYetRed.test_next_action_asks_for_the_system_tests_before_the_command
+      AssertionError: 'G7 needs system tests' not found in 'G1-G5 PASSED, G6 N/A (no integration scope: single component; no interface to integrate; no integration test executed). G7+ are extension gates (not implemented); report PARTIALLY_VERIFIED.' : RED-TARGET G1-G5 PASSED, G6 N/A (no integration scope: single component; no interface to integrate; no integration test executed). G7+ are extension gate
+OK  expect=FAIL got=FAIL    test_g7_scope.MixedRed.test_G5_no_weakening_accepts_system_tests_moving_to_g7
+      AssertionError: 'FAILED' != 'PASSED'
+OK  expect=FAIL got=FAIL    test_g7_scope.MixedRed.test_status_warns_that_the_unit_command_ran_system_tests
+      AssertionError: False is not true : RED-TARGET []
+OK  expect=ok   got=ok      test_g7_scope.ScopeChar.test_T04_unit_test_relabelled_as_system_test_fails_g4
+OK  expect=FAIL got=FAIL    test_g7_scope.ScopeRed.test_G5_scope_fails_when_the_unit_command_runs_system_tests
+      AssertionError: 'PASSED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g7_scope.ScopeRed.test_T04_system_command_on_the_unit_folder_fails
+      AssertionError: 'BLOCKED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g7_scope.ScopeRed.test_T04_system_command_running_the_unit_command_fails
+      AssertionError: 'BLOCKED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g7_trace.NfrWithoutSystemTestRed.test_T05_non_functional_ac_without_system_test_is_a_warning
+      AssertionError: 'BLOCKED' != 'PASSED'
+OK  expect=FAIL got=FAIL    test_g7_trace.TraceRed.test_T05_system_test_not_mapped_by_name_fails_ac_coverage
+      AssertionError: 'BLOCKED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g7_trace.TraceRed.test_T18_requirement_change_restales_g1_to_g7_and_reverifies
+      AssertionError: 'BLOCKED' != 'PASSED'
+OK  expect=FAIL got=FAIL    test_g7_trace.TraceRed.test_trace_and_report_show_req_ac_system_test_results
+      AssertionError: 'BLOCKED' != 'PASSED'
+OK  expect=FAIL got=FAIL    test_g7_rework.ReworkRed.test_T11_failed_g7_needs_a_defect_then_the_fix_is_verified_and_closed
+      AssertionError: 'BLOCKED' != 'PASSED'
+OK  expect=FAIL got=FAIL    test_g7_rework.ReworkRed.test_T12_closure_is_withdrawn_when_g7_is_stale_or_blocked
+      AssertionError: 'BLOCKED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g7_rework.ReworkRed.test_T12_defect_schema_accepts_g7_and_p7
+      AssertionError: 'BLOCKED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g7_rework.ReworkRed.test_T12_failed_reverification_and_unknown_results
+      AssertionError: 'BLOCKED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g7_rework.ReworkRed.test_T12_three_identical_g7_failures_block
+      AssertionError: 'BLOCKED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g7_status.PipelineRed.test_G6_scope_fails_when_the_integration_command_runs_system_tests
+      AssertionError: 'PASSED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g7_status.PipelineRed.test_T13_g1_to_g7_passed_is_completed
+      AssertionError: 'BLOCKED' != 'PASSED'
+OK  expect=FAIL got=FAIL    test_g7_status.StatusRed.test_T14_stale_g7_blocks_completion
+      AssertionError: 'BLOCKED' != 'PASSED'
+OK  expect=FAIL got=FAIL    test_g7_status.StatusRed.test_T15_g6_na_and_g7_pass_complete_the_work_item
+      AssertionError: 'PARTIALLY_VERIFIED' != 'IN_PROGRESS'
+OK  expect=FAIL got=FAIL    test_g7_status.StatusRed.test_T16_failed_or_blocked_g7_blocks_completion
+      AssertionError: 'BLOCKED' != 'FAILED'
+OK  expect=FAIL got=FAIL    test_g7_status.StatusRed.test_verify_runs_g1_to_g7
+      AssertionError: Lists differ: ['G1', 'G2', 'G3', 'G4', 'G5', 'G6'] != ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7']
+OK  expect=ok   got=ok      test_g7_compat.CompatInvariant.test_C1_C2_gradecalc_mixed_unit_command_with_a_rework
+OK  expect=ok   got=ok      test_g7_compat.CompatInvariant.test_C1_C2_pipeline_split_integration_unit_command_also_runs_system_tests

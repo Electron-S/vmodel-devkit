@@ -1,10 +1,12 @@
 # VModel DevKit
 
-Claude Code용 V-Model 개발 환경입니다. 요구사항(G1) → 아키텍처(G2) → 상세 설계·테스트 명세(G3) → 구현(G4) → 단위 검증(G5) → 통합 검증(G6)을 Quality Gate로 나누고, **독립 Validator가 직접 실행하고 서명한 증거로만** Gate를 통과시킵니다. AI가 "통과했다"고 쓴 파일이나 보고는 증거로 인정하지 않습니다.
+Claude Code용 V-Model 개발 환경입니다. 요구사항(G1) → 아키텍처(G2) → 상세 설계·테스트 명세(G3) → 구현(G4) → 단위 검증(G5) → 통합 검증(G6) → 시스템 검증(G7)을 Quality Gate로 나누고, **독립 Validator가 직접 실행하고 서명한 증거로만** Gate를 통과시킵니다. AI가 "통과했다"고 쓴 파일이나 보고는 증거로 인정하지 않습니다.
 
-확정 버전은 **0.2.0**(2026-11-11, 태그 `v0.2.0`, G1~G6, core `sha256:2a95adb3…`)입니다(이전 0.1.5는 G1~G5). 알려진 한계: 실제 Claude 세션에서 G6 FAILED → DEFECT → CLOSED 경로는 관찰되지 않았고 독립 하네스로만 검증했습니다. 판정이 보수적이라 정상 코드가 BLOCKED될 수 있는 경우와 그 밖의 미검증 항목은 TEST_RESULTS §17.8에 있습니다. 0.2.0은 STANDARD 프로필의 G1~G6을 실행하고, G7(시스템)·LITE·STRICT는 설계만 되어 있습니다. 그래서 G1~G6(G6은 통과 또는 확인된 N/A)을 모두 통과한 Work Item도 `PARTIALLY_VERIFIED`까지만 갑니다. V-Model 전체 완료가 아닙니다.
+확정 버전은 **0.2.0**(2026-11-11, 태그 `v0.2.0`, G1~G6, core `sha256:2a95adb3…`)입니다. 브랜치 `g7-dev`의 **0.3.0 릴리스 후보**가 G7 시스템 검증을 더합니다(병합·태그 전, TEST_RESULTS §18). 0.3.0에서 STANDARD Work Item은 G1~G7(G6은 통과 또는 확인된 N/A)이 모두 현재 해시로 PASSED일 때 `COMPLETED`입니다. COMPLETED는 자동화된 검증 결과이지 사용자 수용 승인·배포 승인이 아닙니다. LITE·STRICT는 설계만 되어 있습니다. 0.2.0의 알려진 한계(실제 세션의 G6 FAILED 경로 미관찰 등)는 TEST_RESULTS §17.8에 있습니다.
 
 G6은 프로젝트 설정의 별도 `integration_test` 명령을 Validator가 직접 실행합니다. 이 명령이 없으면 단위 테스트로 대신하지 않고 BLOCKED입니다. 인터페이스(IF)마다 통과한 통합 테스트가 provider에 실제로 닿아야 하며, 닿았는지는 Validator의 정적 호출 분석(경로 A) 또는 G4 리뷰가 선언한 실행 경로(subprocess·IPC·API)의 실행 계측(경로 B)으로 확인합니다. 인터페이스가 없는 단일 컴포넌트는 G2·G3 리뷰가 확인했을 때만 N/A이고, N/A는 통합 테스트 통과로 표시하지 않습니다. 정본은 `docs/g6/G6-DESIGN.md`와 `docs/g6/WORKITEM.md`입니다.
+
+G7(0.3.0)은 프로젝트 설정의 별도 `system_test` 명령(보통 `tests/system/`)을 Validator가 블랙박스로 직접 실행합니다. 이 명령이 없으면 단위·통합 테스트로 대신하지 않고 BLOCKED입니다. 활성 기능 요구사항의 모든 수용 기준(AC)이 그 AC를 가리키는 시스템 테스트 전부의 이번 실행 통과로 검증돼야 PASS이고, 종료 코드 0만으로는 PASS가 아닙니다. 시스템 테스트가 CLI·HTTP API·공개 라이브러리 API 같은 외부 인터페이스를 쓰는지는 G3·G4 verifier 리뷰가 판단합니다(기계 판정 아님). 정본은 `docs/g7/G7-DESIGN.md`입니다.
 
 자세한 요구사항과 Gate 정의는 [SPEC.md](SPEC.md), 설계 결정은 [DECISIONS.md](DECISIONS.md), 검증 결과는 [TEST_RESULTS.md](TEST_RESULTS.md)에 있습니다.
 
@@ -69,6 +71,7 @@ guard 훅이 에이전트의 실행을 막습니다. 터미널에서 직접 실�
 
 - 3회 연속 같은 원인으로 막힌 Gate 해제: `vmodel unblock WI-001 G5 --reason "..."` (TTY 필요)
 - G6 통합 테스트 명령 등록(0.2.0): 통합 테스트가 실제로 있는 폴더를 지정해 `vmodel configure-tests --integration tests/integration` (TTY 필요). unit 명령에는 `--ignore=<폴더>`가 붙어 두 명령이 같은 범위를 갖지 않습니다. 없는 경로나 테스트 함수가 없는 경로는 거부합니다. 새 프로젝트는 `vmodel init`이 `tests/integration/`에 테스트가 있을 때만 자동 등록합니다(`--integration-tests PATH`로 지정 가능).
+- G7 시스템 테스트 명령 등록(0.3.0): 시스템 테스트가 실제로 있는 폴더를 지정해 `vmodel configure-tests --system tests/system` (TTY 필요, `--integration`과 함께 줄 수 있음). unit 명령에 `--ignore=<폴더>`가 붙고, integration 폴더와 겹치면 거부합니다. 새 프로젝트는 `vmodel init`이 `tests/system/`에 테스트가 있을 때만 자동 등록합니다(`--system-tests PATH`).
 - Validator 업그레이드(재고정 + DevKit 권한 규칙 이동): 새 릴리스로 `vmodel lock --accept-current --reason "0.2.0으로 업그레이드"` (TTY 필요, 이전 PASS는 모두 STALE)
 - 설치/제거: `vmodel install`, `vmodel uninstall`, 데이터까지 삭제 `vmodel uninstall --purge` (TTY 필요)
 
@@ -81,6 +84,7 @@ guard 훅이 에이전트의 실행을 막습니다. 터미널에서 직접 실�
   - 중간에 실패하면: 재고정 전 단계의 실패는 settings·설치 기록·lock을 원래대로 되돌립니다. 이전 규칙 제거만 실패하면 이전+새 규칙이 함께 남은 안전한 상태로 끝나므로 같은 명령을 다시 실행하면 됩니다. 같은 명령을 여러 번 실행해도 settings는 한 번만 바뀝니다.
   - 0.1.4 이하로 내리기: 그 릴리스에는 설정 갱신이 없으므로 세션을 닫고 `<현재>/bin/vmodel uninstall` → `<이전>/bin/vmodel install` → `<이전>/bin/vmodel lock --accept-current` 순서로 합니다(uninstall과 install 사이에는 DevKit 규칙이 없습니다).
   - 0.1.4까지의 절차(재고정만 하거나 uninstall 후 install)는 규칙이 이전 릴리스 경로에 남거나, 두 명령 사이에 보호 규칙이 비는 문제가 있었습니다(DECISIONS D38).
+  - 0.2.0 → 0.3.0: 위 절차 뒤 G1~G6은 Core 변경으로 STALE이 되고(기존 기록·증거는 그대로) Work Item은 G7 평가 전까지 IN_PROGRESS입니다. 시스템 테스트가 없으면 먼저 `tests/system/`에 작성하고(`vmodel status`의 next가 테스트 함수가 없는 system TEST를 알려 줍니다), `vmodel configure-tests --system tests/system`, 그다음 G1~G3 재평가 → G4 재리뷰(config 변경) → G5 → G6 → G7 순서입니다.
   - 0.1.5 → 0.2.0: 위 절차 뒤 각 Work Item은 G6 평가 전까지 IN_PROGRESS로 보입니다(기존 G1~G5 기록·증거는 그대로). 인터페이스가 있는 Work Item은 먼저 `vmodel configure-tests --integration <폴더>`로 통합 명령을 분리하고(통합 테스트가 단위 테스트 파일에 섞여 있었다면 옮긴 파일을 CR의 `test_changes`로 정당화), 그다음 G4 재리뷰 → G5 → G6 순서로 진행합니다. 인터페이스가 없는 Work Item은 verifier가 G2·G3 리뷰에 `integration_applicability`를 기록한 뒤 G6이 N/A로 끝납니다.
 - 제거: `vmodel uninstall --project <dir>`는 설치 기록에 있는 항목만 되돌립니다(deny 규칙, 선택적으로 추가한 CLAUDE.md 한 줄·플러그인 항목). 프로젝트 범위로 등록했다면 `claude plugin uninstall vmodel@vmodel-devkit --scope project`, `claude plugin marketplace remove vmodel-devkit --scope project`도 실행합니다.
 

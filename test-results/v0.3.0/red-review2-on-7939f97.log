@@ -1,0 +1,20 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/d313df71-da6e-4a2c-b750-207928cd3ba3/scratchpad/build-7939f97/plugins/vmodel",
+    "release_manifest": null
+  },
+  "git_head": "7939f97",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "marker": "RED-TARGET",
+  "tests": 2,
+  "expectations_met": 2,
+  "violations": 0,
+  "seconds": 0.9
+}
+
+OK  expect=FAIL got=FAIL    test_g7_review2.ConfigureReview2Red.test_S1_non_pytest_system_command_is_a_note_not_a_refusal
+      AssertionError: 'integration_test' not found in {'schema': 'vmodel.config/1', 'project_id': '5176514b669e4858bebb6235c06f288a', 'default_profile': 'STANDARD', 'language': 'python', 'python': '/usr/bin/python3', 'paths': {'source': ['src/**/*.py'], 'tests': ['tests/**/*.py'], 'build_config': ['pyproject.toml', 'setup.cfg', 'setup.py', 'pytest.ini', 'tox.ini', 'requirements*.txt', 'conftest.py', 'te
+OK  expect=FAIL got=FAIL    test_g7_review2.ConfigureReview2Red.test_S2_pyargs_is_a_flag
+      AssertionError: 'integration_test' not found in {'schema': 'vmodel.config/1', 'project_id': '2463dabaa7c94f279d97985553fb7f0a', 'default_profile': 'STANDARD', 'language': 'python', 'python': '/usr/bin/python3', 'paths': {'source': ['src/**/*.py'], 'tests': ['tests/**/*.py'], 'build_config': ['pyproject.toml', 'setup.cfg', 'setup.py', 'pytest.ini', 'tox.ini', 'requirements*.txt', 'conftest.py', 'te
