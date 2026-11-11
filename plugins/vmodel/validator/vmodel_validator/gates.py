@@ -1912,9 +1912,13 @@ def _provider_defs(ix, rel: str, component: set | frozenset = frozenset()) -> di
         (strict if b and b[0] == "class" and name not in rebound else weak).append(name)
     # names imported from outside the provider component are its dependencies: replacing one (stubbing an external
     # service or another component) stays a G4 warning (D44 item 2 / review 8 P1); names the module binds itself and
-    # names imported from the same component's modules are checked for a test-tree replacement
-    imported = sorted(n for n, b in m.bindings.items() if b and b[0] == "import"
-                      and not (isinstance(b[1], tuple) and len(b[1]) > 1 and b[1][0] == "src" and b[1][1] in component))
+    # names imported from the same component's modules are checked for a test-tree replacement. An absolute import is
+    # kept as ("dotted", name) in the bindings, so it is resolved first (review 28).
+    def outside(tgt) -> bool:
+        t = ix.normal(tgt) if isinstance(tgt, tuple) and tgt else None
+        return not (isinstance(t, tuple) and len(t) > 1 and t[0] == "src" and t[1] in component)
+
+    imported = sorted(n for n, b in m.bindings.items() if b and b[0] == "import" and outside(b[1]))
     return {"strict": sorted(strict), "weak": sorted(weak), "imported": imported}
 
 
