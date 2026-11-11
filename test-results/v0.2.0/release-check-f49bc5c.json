@@ -1,0 +1,179 @@
+{
+  "head": "f49bc5c43a3bdf27c2d40c1ea8abf6cc4e924478",
+  "releases": {
+    "0.1.0": {
+      "record_version": "0.1.0",
+      "record_core_hash": "sha256:ed08cc8f9a2ad33562e59ddb1a879cb9283a29e450f6d72a59a0b7c7f0e05fdb",
+      "record_files": 43,
+      "dist_files": 43,
+      "dist_files_match_record": true,
+      "dist_core_hash_recomputed": "sha256:ed08cc8f9a2ad33562e59ddb1a879cb9283a29e450f6d72a59a0b7c7f0e05fdb",
+      "dist_manifest_equals_record": true,
+      "selfcheck": {
+        "version": "0.1.0",
+        "core_hash": "sha256:ed08cc8f9a2ad33562e59ddb1a879cb9283a29e450f6d72a59a0b7c7f0e05fdb",
+        "mode": "release",
+        "integrity_ok": true,
+        "problems": []
+      },
+      "ok": true
+    },
+    "0.1.1": {
+      "record_version": "0.1.1",
+      "record_core_hash": "sha256:85f7df6b6752024b0c4a0135e6e060aca16428631e05333e3a4d20679e6f52b7",
+      "record_files": 43,
+      "dist_files": 43,
+      "dist_files_match_record": true,
+      "dist_core_hash_recomputed": "sha256:85f7df6b6752024b0c4a0135e6e060aca16428631e05333e3a4d20679e6f52b7",
+      "dist_manifest_equals_record": true,
+      "selfcheck": {
+        "version": "0.1.1",
+        "core_hash": "sha256:85f7df6b6752024b0c4a0135e6e060aca16428631e05333e3a4d20679e6f52b7",
+        "mode": "release",
+        "integrity_ok": true,
+        "problems": []
+      },
+      "ok": true
+    },
+    "0.1.2": {
+      "record_version": "0.1.2",
+      "record_core_hash": "sha256:a0555e328413d22afeb7f3171d9969e22721f4fc3ee25b3084d9419154876e09",
+      "record_files": 43,
+      "dist_files": 43,
+      "dist_files_match_record": true,
+      "dist_core_hash_recomputed": "sha256:a0555e328413d22afeb7f3171d9969e22721f4fc3ee25b3084d9419154876e09",
+      "dist_manifest_equals_record": true,
+      "selfcheck": {
+        "version": "0.1.2",
+        "core_hash": "sha256:a0555e328413d22afeb7f3171d9969e22721f4fc3ee25b3084d9419154876e09",
+        "mode": "release",
+        "integrity_ok": true,
+        "problems": []
+      },
+      "ok": true
+    },
+    "0.1.3": {
+      "record_version": "0.1.3",
+      "record_core_hash": "sha256:0208c7988516f050d2eabf8c50704d9e36be7c4d6eb94b4ff098dc7c2c73e0ea",
+      "record_files": 43,
+      "dist_files": 43,
+      "dist_files_match_record": true,
+      "dist_core_hash_recomputed": "sha256:0208c7988516f050d2eabf8c50704d9e36be7c4d6eb94b4ff098dc7c2c73e0ea",
+      "dist_manifest_equals_record": true,
+      "selfcheck": {
+        "version": "0.1.3",
+        "core_hash": "sha256:0208c7988516f050d2eabf8c50704d9e36be7c4d6eb94b4ff098dc7c2c73e0ea",
+        "mode": "release",
+        "integrity_ok": true,
+        "problems": []
+      },
+      "ok": true
+    },
+    "0.1.4": {
+      "record_version": "0.1.4",
+      "record_core_hash": "sha256:5dd1d010cc57c477c6a96e3c989eed49d09fc31c51e09f5d785d9b132db1e997",
+      "record_files": 43,
+      "dist_files": 43,
+      "dist_files_match_record": true,
+      "dist_core_hash_recomputed": "sha256:5dd1d010cc57c477c6a96e3c989eed49d09fc31c51e09f5d785d9b132db1e997",
+      "dist_manifest_equals_record": true,
+      "selfcheck": {
+        "version": "0.1.4",
+        "core_hash": "sha256:5dd1d010cc57c477c6a96e3c989eed49d09fc31c51e09f5d785d9b132db1e997",
+        "mode": "release",
+        "integrity_ok": true,
+        "problems": []
+      },
+      "ok": true
+    },
+    "0.1.5": {
+      "record_version": "0.1.5",
+      "record_core_hash": "sha256:37071459bd445eb9873c102d3b20a605478feb0b1dc9943f0130f670c2bbf5e8",
+      "record_files": 43,
+      "dist_files": 43,
+      "dist_files_match_record": true,
+      "dist_core_hash_recomputed": "sha256:37071459bd445eb9873c102d3b20a605478feb0b1dc9943f0130f670c2bbf5e8",
+      "dist_manifest_equals_record": true,
+      "selfcheck": {
+        "version": "0.1.5",
+        "core_hash": "sha256:37071459bd445eb9873c102d3b20a605478feb0b1dc9943f0130f670c2bbf5e8",
+        "mode": "release",
+        "integrity_ok": true,
+        "problems": []
+      },
+      "ok": true
+    },
+    "0.2.0": {
+      "record_version": "0.2.0",
+      "record_core_hash": "sha256:2a95adb35aa82abc1ab6380350fd2f3b03ce3d645255d0263f4e48e234228a47",
+      "record_files": 46,
+      "dist_files": 46,
+      "dist_files_match_record": true,
+      "dist_core_hash_recomputed": "sha256:2a95adb35aa82abc1ab6380350fd2f3b03ce3d645255d0263f4e48e234228a47",
+      "dist_manifest_equals_record": true,
+      "selfcheck": {
+        "version": "0.2.0",
+        "core_hash": "sha256:2a95adb35aa82abc1ab6380350fd2f3b03ce3d645255d0263f4e48e234228a47",
+        "mode": "release",
+        "integrity_ok": true,
+        "problems": []
+      },
+      "ok": true
+    }
+  },
+  "source_matches_record": true,
+  "source_core_hash": "sha256:2a95adb35aa82abc1ab6380350fd2f3b03ce3d645255d0263f4e48e234228a47",
+  "versions": {
+    "validator_VERSION": true,
+    "plugin_json": "0.2.0",
+    "dist_plugin_json": "0.2.0",
+    "release_record": "0.2.0",
+    "marketplace_version": "0.2.0",
+    "marketplace_source": "./vmodel-0.2.0"
+  },
+  "old_records_unchanged_since_v0.1.5": true,
+  "tags": {
+    "v0.1.2": "bbd6a3d",
+    "v0.1.3": "0df13b7",
+    "v0.1.4": "991af67",
+    "v0.1.5": "78517d5"
+  },
+  "tag_v0.2.0_exists": false,
+  "main": "78517d5",
+  "main_is_ancestor_of_head": true,
+  "main_still_v0.1.5": true,
+  "plugin_tree_v0.1.5_to_head_changed_files": [
+    "plugins/vmodel/.claude-plugin/plugin.json",
+    "plugins/vmodel/README.md",
+    "plugins/vmodel/agents/implementer.md",
+    "plugins/vmodel/agents/test-designer.md",
+    "plugins/vmodel/agents/verifier.md",
+    "plugins/vmodel/skills/report/SKILL.md",
+    "plugins/vmodel/skills/rework/SKILL.md",
+    "plugins/vmodel/skills/start/ARTIFACTS.md",
+    "plugins/vmodel/skills/start/SKILL.md",
+    "plugins/vmodel/skills/status/SKILL.md",
+    "plugins/vmodel/skills/verify/SKILL.md",
+    "plugins/vmodel/validator/vmodel_validator/__init__.py",
+    "plugins/vmodel/validator/vmodel_validator/cli.py",
+    "plugins/vmodel/validator/vmodel_validator/data/VMODEL.md",
+    "plugins/vmodel/validator/vmodel_validator/data/gates.json",
+    "plugins/vmodel/validator/vmodel_validator/data/schemas/change_requests.schema.json",
+    "plugins/vmodel/validator/vmodel_validator/data/schemas/config.schema.json",
+    "plugins/vmodel/validator/vmodel_validator/data/schemas/defects.schema.json",
+    "plugins/vmodel/validator/vmodel_validator/data/schemas/review.schema.json",
+    "plugins/vmodel/validator/vmodel_validator/gates.py",
+    "plugins/vmodel/validator/vmodel_validator/hook.py",
+    "plugins/vmodel/validator/vmodel_validator/ledger.py",
+    "plugins/vmodel/validator/vmodel_validator/runner.py",
+    "plugins/vmodel/validator/vmodel_validator/setup_project.py",
+    "plugins/vmodel/validator/vmodel_validator/status.py",
+    "plugins/vmodel/validator/vmodel_validator/textio.py",
+    "plugins/vmodel/validator/vmodel_validator/trace.py",
+    "plugins/vmodel/validator/vmodel_validator/tracer/sitecustomize.py",
+    "plugins/vmodel/validator/vmodel_validator/tracer/vmodel_trace_plugin.py",
+    "plugins/vmodel/validator/vmodel_validator/wiring.py"
+  ],
+  "problems": [],
+  "ok": true
+}

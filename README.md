@@ -2,7 +2,7 @@
 
 Claude Code용 V-Model 개발 환경입니다. 요구사항(G1) → 아키텍처(G2) → 상세 설계·테스트 명세(G3) → 구현(G4) → 단위 검증(G5) → 통합 검증(G6)을 Quality Gate로 나누고, **독립 Validator가 직접 실행하고 서명한 증거로만** Gate를 통과시킵니다. AI가 "통과했다"고 쓴 파일이나 보고는 증거로 인정하지 않습니다.
 
-확정 버전은 **0.1.5**(2026-11-09, 태그 `v0.1.5`, G1~G5)이고, 브랜치 `g6-dev`에 **0.2.0 릴리스 후보**(G6 통합 검증 추가, 사용자 확정 전)가 있습니다. 0.2.0은 STANDARD 프로필의 G1~G6을 실행하고, G7(시스템)·LITE·STRICT는 설계만 되어 있습니다. 그래서 G1~G6(G6은 통과 또는 확인된 N/A)을 모두 통과한 Work Item도 `PARTIALLY_VERIFIED`까지만 갑니다. V-Model 전체 완료가 아닙니다.
+확정 버전은 **0.2.0**(2026-11-11, 태그 `v0.2.0`, G1~G6, core `sha256:2a95adb3…`)입니다(이전 0.1.5는 G1~G5). 알려진 한계: 실제 Claude 세션에서 G6 FAILED → DEFECT → CLOSED 경로는 관찰되지 않았고 독립 하네스로만 검증했습니다. 판정이 보수적이라 정상 코드가 BLOCKED될 수 있는 경우와 그 밖의 미검증 항목은 TEST_RESULTS §17.8에 있습니다. 0.2.0은 STANDARD 프로필의 G1~G6을 실행하고, G7(시스템)·LITE·STRICT는 설계만 되어 있습니다. 그래서 G1~G6(G6은 통과 또는 확인된 N/A)을 모두 통과한 Work Item도 `PARTIALLY_VERIFIED`까지만 갑니다. V-Model 전체 완료가 아닙니다.
 
 G6은 프로젝트 설정의 별도 `integration_test` 명령을 Validator가 직접 실행합니다. 이 명령이 없으면 단위 테스트로 대신하지 않고 BLOCKED입니다. 인터페이스(IF)마다 통과한 통합 테스트가 provider에 실제로 닿아야 하며, 닿았는지는 Validator의 정적 호출 분석(경로 A) 또는 G4 리뷰가 선언한 실행 경로(subprocess·IPC·API)의 실행 계측(경로 B)으로 확인합니다. 인터페이스가 없는 단일 컴포넌트는 G2·G3 리뷰가 확인했을 때만 N/A이고, N/A는 통합 테스트 통과로 표시하지 않습니다. 정본은 `docs/g6/G6-DESIGN.md`와 `docs/g6/WORKITEM.md`입니다.
 
@@ -35,17 +35,17 @@ tests/                     Validator 부트스트랩 하네스 (unittest, 94개)
 
 1. 릴리스를 만듭니다. 이미 있는 버전 디렉터리는 덮어쓰지 않습니다.
    ```bash
-   python3 scripts/release.py          # -> dist/vmodel-0.1.5/
+   python3 scripts/release.py          # -> dist/vmodel-0.2.0/
    ```
 2. 대상 프로젝트에 설치합니다. 프로젝트 파일만 바꿉니다: `.vmodel/` 생성, `.claude/settings.json`에 보호용 deny 규칙과 validator CLI 허용(allow) 규칙 병합(기존 값 보존·백업·충돌 보고). CLAUDE.md는 건드리지 않습니다.
    ```bash
-   dist/vmodel-0.1.5/bin/vmodel install --project /path/to/project            # ruff 자동 탐지
-   dist/vmodel-0.1.5/bin/vmodel install --project . --lint none --allow-syntax-only   # 린터 없이(축소 범위를 명시)
-   dist/vmodel-0.1.5/bin/vmodel install --project . --claude-md-import        # 선택: CLAUDE.md 끝에 @.vmodel/VMODEL.md 한 줄 추가
+   dist/vmodel-0.2.0/bin/vmodel install --project /path/to/project            # ruff 자동 탐지
+   dist/vmodel-0.2.0/bin/vmodel install --project . --lint none --allow-syntax-only   # 린터 없이(축소 범위를 명시)
+   dist/vmodel-0.2.0/bin/vmodel install --project . --claude-md-import        # 선택: CLAUDE.md 끝에 @.vmodel/VMODEL.md 한 줄 추가
    ```
    소스가 `src/`에 없으면 `--source 'mypkg/**/*.py'`를 지정합니다. 서명 키는 `$VMODEL_HOME`(기본 `~/.vmodel-devkit`)에 생깁니다.
 3. 플러그인을 붙입니다. 둘 중 하나를 고르세요.
-   - 세션 한정 (전역 설정 변경 없음): `claude --plugin-dir /path/to/dist/vmodel-0.1.5`
+   - 세션 한정 (전역 설정 변경 없음): `claude --plugin-dir /path/to/dist/vmodel-0.2.0`
    - 프로젝트 범위 등록 (`~/.claude/plugins` 레지스트리에 기록됨):
      ```bash
      claude plugin marketplace add /path/to/dist --scope project
@@ -69,13 +69,13 @@ guard 훅이 에이전트의 실행을 막습니다. 터미널에서 직접 실�
 
 - 3회 연속 같은 원인으로 막힌 Gate 해제: `vmodel unblock WI-001 G5 --reason "..."` (TTY 필요)
 - G6 통합 테스트 명령 등록(0.2.0): 통합 테스트가 실제로 있는 폴더를 지정해 `vmodel configure-tests --integration tests/integration` (TTY 필요). unit 명령에는 `--ignore=<폴더>`가 붙어 두 명령이 같은 범위를 갖지 않습니다. 없는 경로나 테스트 함수가 없는 경로는 거부합니다. 새 프로젝트는 `vmodel init`이 `tests/integration/`에 테스트가 있을 때만 자동 등록합니다(`--integration-tests PATH`로 지정 가능).
-- Validator 업그레이드(재고정 + DevKit 권한 규칙 이동): 새 릴리스로 `vmodel lock --accept-current --reason "0.1.5로 업그레이드"` (TTY 필요, 이전 PASS는 모두 STALE)
+- Validator 업그레이드(재고정 + DevKit 권한 규칙 이동): 새 릴리스로 `vmodel lock --accept-current --reason "0.2.0으로 업그레이드"` (TTY 필요, 이전 PASS는 모두 STALE)
 - 설치/제거: `vmodel install`, `vmodel uninstall`, 데이터까지 삭제 `vmodel uninstall --purge` (TTY 필요)
 
 ## 업그레이드와 제거
 
 - 업그레이드 (0.1.5부터):
-  1. Claude 세션을 닫고, 터미널에서 새 릴리스로 `dist/vmodel-0.1.5/bin/vmodel lock --project <dir> --accept-current --reason "0.1.5로 업그레이드"`를 실행합니다. 확인 전에 `.claude/settings.json`에서 추가·제거될 DevKit 규칙(이전 릴리스 경로 → 새 릴리스 경로)을 보여 줍니다. `yes`를 입력하면 새 규칙을 먼저 추가하고, Core 해시를 재고정한 뒤, 설치가 추가했던 이전 릴리스 규칙만 지웁니다. 직접 추가한 규칙은 그대로 둡니다. 이전 파일 사본은 `.vmodel/install/backup/upgrade-<시각>/`에 남습니다.
+  1. Claude 세션을 닫고, 터미널에서 새 릴리스로 `dist/vmodel-0.2.0/bin/vmodel lock --project <dir> --accept-current --reason "0.2.0으로 업그레이드"`를 실행합니다. 확인 전에 `.claude/settings.json`에서 추가·제거될 DevKit 규칙(이전 릴리스 경로 → 새 릴리스 경로)을 보여 줍니다. `yes`를 입력하면 새 규칙을 먼저 추가하고, Core 해시를 재고정한 뒤, 설치가 추가했던 이전 릴리스 규칙만 지웁니다. 직접 추가한 규칙은 그대로 둡니다. 이전 파일 사본은 `.vmodel/install/backup/upgrade-<시각>/`에 남습니다.
   2. 플러그인 경로(`--plugin-dir` 또는 마켓플레이스)를 새 릴리스로 바꿉니다. 원장 이력은 유지되고, 기존 PASS는 Core가 바뀌었으므로 모두 STALE이 되어 다시 검증해야 합니다.
   3. 다시 검증할 때 G1~G3은 산출물이 그대로면 리뷰를 새로 받지 않고 `vmodel gate`만으로 통과합니다. **G4는 verifier 리뷰를 다시 받아야 합니다.** 업그레이드가 `.claude/settings.json`의 규칙을 옮기는데, 이 파일이 G4 코드 manifest에 들어 있어 이전 리뷰의 대상 해시와 달라지기 때문입니다(0.1.5에서 확인, TEST_RESULTS §13.4).
   - 중간에 실패하면: 재고정 전 단계의 실패는 settings·설치 기록·lock을 원래대로 되돌립니다. 이전 규칙 제거만 실패하면 이전+새 규칙이 함께 남은 안전한 상태로 끝나므로 같은 명령을 다시 실행하면 됩니다. 같은 명령을 여러 번 실행해도 settings는 한 번만 바뀝니다.

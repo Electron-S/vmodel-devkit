@@ -1,8 +1,8 @@
 {
   "name": "vmodel",
   "version": "0.2.0",
-  "core_hash": "sha256:88edfac2dd33982db9a14a9e6ff854f16e678055ebefb4ce868c0c40ea134932",
-  "created_at": "2026-11-10T14:18:57+00:00",
+  "core_hash": "sha256:2a95adb35aa82abc1ab6380350fd2f3b03ce3d645255d0263f4e48e234228a47",
+  "created_at": "2026-11-11T04:33:19+00:00",
   "files": {
     "README.md": "sha256:5add156517f36d20d887ee2ea596966549eadf8a9620ac63d6d632c700328b37",
     ".claude-plugin/plugin.json": "sha256:e99029bf316725dd8f89428e3e10c9c95a6abf1dd46e4b231b83a1fc80b46750",
@@ -24,9 +24,9 @@
     "validator/vmodel.py": "sha256:8eb280c727eff2b0f4b5bcaacb8197191468ffcd25d7d495db704743c9b40738",
     "validator/vmodel_validator/__init__.py": "sha256:2cebe360466f2438f2996b3512443b6d0ad36dddaeeb4970fdecf9536f713949",
     "validator/vmodel_validator/cli.py": "sha256:f4da84c5a98bea48ace97f23cf544c9dd1a7bf9f44e3cca1f3f7ae2e5cc0bc60",
-    "validator/vmodel_validator/gates.py": "sha256:550e3466541b18d4d2eae2f818975fdb1e6a5803b1f8f69f0d975ca8dff0a8e2",
+    "validator/vmodel_validator/gates.py": "sha256:5469ade1bac96a318b20ecaf375cb1607f03e4afe38e023f6faa3b516dd4711a",
     "validator/vmodel_validator/hashing.py": "sha256:71063153673dc4df8d8564a3caa9ca86afd75ea5dcc5a387a400c1f243883475",
-    "validator/vmodel_validator/hook.py": "sha256:16e5d3a25e662216ec0c1f7e7a199024d517143c428560f3404a779ead9ebff1",
+    "validator/vmodel_validator/hook.py": "sha256:bc6ebb55f43ebeb44b98b4ea4be684abf1d78fd7c09f6765f98c0fb70d7626e4",
     "validator/vmodel_validator/integrity.py": "sha256:57e5856bd372b1873350e5e8849f93b375a4d5dfe10b3809cb359c4f65844e48",
     "validator/vmodel_validator/ledger.py": "sha256:6efb1cd2490ac27560af2e1df83ffdf4485a0c4f0d73025e35d3f26a0bec3872",
     "validator/vmodel_validator/project.py": "sha256:b2f4a0da2f11b623a40c94b1786099bb4d934a78d69e75e868202ce68bab4038",
@@ -48,7 +48,7 @@
     "validator/vmodel_validator/data/schemas/review.schema.json": "sha256:30f9bb5c5954b6143bd425bf3db8e4921d426d9e5eda858e8072fa9036ea51a7",
     "validator/vmodel_validator/data/schemas/tests.schema.json": "sha256:f4b6153e3142d5d88bad2879841d61516709bf3f828020915a2d96020a77b884",
     "validator/vmodel_validator/data/schemas/workitem.schema.json": "sha256:2ccc9c9d065b7bf62fd4cf96740718fd2686d76b0abfa6e363b3fb516c086434",
-    "validator/vmodel_validator/tracer/sitecustomize.py": "sha256:6e84758097557698455510c5ef6ffac98a7050f3b886803a37a9f059475efd34",
+    "validator/vmodel_validator/tracer/sitecustomize.py": "sha256:5fc981e91977e0a4de92e40a08ed2a90edb634418fb069307a63ee82bd849b82",
     "validator/vmodel_validator/tracer/vmodel_trace_plugin.py": "sha256:10619896f73e122866ecadaa589fc0b436892da0ce58ad34a959820d86919397"
   }
 }

@@ -835,9 +835,9 @@ E2E-B (`samples/textstats`, 단일 함수 기능, 37턴, 3.4분)
 |---|---|---|
 | B 거짓 PASS(재현됨, 현재 후보 `20d2139`) | A1 import한 autouse patch fixture, A2 기반 클래스 autouse patch, A3 `pytest_plugins`, A4 루트 conftest autouse patch, A5 `MonkeyPatch.context()`, H4 자식 명령 문자열 patch, H3 autouse 스레드가 요청한 서버로 요청(스레드·프로세스) | `tests/test_g6_residual.py` RED 8/8 → D48 R1(실행 시점 patch 관찰)·R2(출처 불확실하면 메인 스레드 증거만) → 모두 BLOCKED |
 | B 거짓 PASS(분류 중 내가 재현, `86dbf98`) | provider 모듈 수준 인스턴스(provider 정의 클래스)의 메서드를 인스턴스에서 바꾼 patch(autouse fixture·시험 함수 모두) | `tests/test_g6_residual3.py` RED 2/2 → R1 확장(`c399b1a`) → BLOCKED |
-| B 거짓 PASS(검토 26회차 재현, `291d18b`) | provider 모듈 객체를 테스트 정의 가짜나 `MagicMock`으로 통째로 바꾼 autouse patch | `tests/test_g6_residual5.py` RED 2/2 → R1을 provider 모듈 전역 전체로 확장(`8849672`; 설정 상수는 경고 유지) → BLOCKED |
+| B 거짓 PASS(검토 26회차 재현, `291d18b`) | provider 모듈 객체를 테스트 정의 가짜나 `MagicMock`으로 통째로 바꾼 autouse patch | `tests/test_g6_residual5.py` RED 2/2 → R1을 provider 모듈 전역 전체로 확장(`8849672`; 설정 상수는 경고 유지), 가져온 이름은 같은 컴포넌트(상대·절대 import)만(`f3c1cbb`·`f49bc5c`) → BLOCKED |
 | A 증거 부족 BLOCKED(수용) | 조건부 autouse patch(A6), 공유 스레드 풀 예산 소진, autouse fixture가 스레드·프로세스를 띄운 테스트의 스레드·프로세스 경유 연결(R2, 검토 23 R2b·c·d·f), provider 이름을 provider 밖 함수로 정상 재대입(strict 이름), asyncio 작업·제너레이터 전달(N4/N5), 데이터 전달형 테스트, 세션·모듈 범위 서버, pytest가 아닌 러너, 출처 토큰이 닿지 않는 프로세스(Windows `os.spawn*` 등) | 알려진 기능 제약. 사유 메시지에 원인 표시 |
-| 결정에 따른 경고(정책상 G4 리뷰 몫) | provider 모듈의 설정 상수 patch와, 가져온 이름을 라이브러리 함수로 바꾼 patch(D44 2항, 8회차 P1: 시계·한도 같은 의존 설정), 장식·재대입된(weak) 이름을 라이브러리 함수로 바꾼 patch(R1이 보지 않음; 테스트 트리 밖 지원 코드는 G4가 막음), 모듈 수준이 아닌 객체(컨테이너 안·지역 객체)의 인스턴스 patch | G4 patch 경고 + 리뷰. 재현된 거짓 PASS 아님 |
+| 결정에 따른 경고(정책상 G4 리뷰 몫) | provider 모듈의 설정 상수 patch와, provider 컴포넌트 밖(다른 컴포넌트·외부 라이브러리)에서 가져온 이름을 스텁·가짜로 바꾼 patch(D44 2항, 8회차 P1, Case F: 의존 대상 스텁), 장식·재대입된(weak) 이름을 라이브러리 함수로 바꾼 patch(R1이 보지 않음; 테스트 트리 밖 지원 코드는 G4가 막음), 모듈 수준이 아닌 객체(컨테이너 안·지역 객체)의 인스턴스 patch | G4 patch 경고 + 리뷰. 재현된 거짓 PASS 아님 |
 | 신뢰 경계(주장하지 않음) | 테스트 코드가 계측 줄·토큰을 의도적으로 위조, 의도적 구성(테스트가 시작한 스레드를 autouse 코드가 재사용, signal 처리기) | SPEC §5.7·D25 |
 최소 보호의 회귀 확인: 독립 검토 23회차(`733d708`)가 R1 거짓 BLOCKED 2, guard 읽기 명령 거짓 거부, tracer 속도 저하를 찾음 → `tests/test_g6_residual2.py` RED 3/3 → `86dbf98` 수정(스레드 100개×호출 1000회 19.1초 → 1.1초, D48 이전 0.9초). 24회차(`86dbf98`) 확인: 해결, 완화가 A1~A5·H3·H4·`del,`을 다시 열지 않음, 충돌 없음.
 
@@ -856,5 +856,40 @@ E2E-B (`samples/textstats`, 단일 함수 기능, 37턴, 3.4분)
 | (분류 중 내가 재현) | `86dbf98` | provider 인스턴스 메서드 patch 거짓 PASS | `test_g6_residual3` RED 2/2 → `c399b1a` |
 | 25 | `c399b1a` | 인스턴스 확인의 거짓 BLOCKED 2, 예외로 추적이 꺼짐, 약간 느려짐 | `test_g6_residual4` RED 2/2 → `291d18b` |
 | 26 | `291d18b` | 해결. 이전부터 있던 통째 교체 거짓 PASS 재현 | `test_g6_residual5` RED 2/2 → `8849672` |
-| 27 | `8849672` | 해결, 정상 provider 오판 없음, 충돌·속도 저하 없음. 분류 A 2(테스트 경로 모듈을 import하는 provider, 200회 뒤의 patch) | 검토 종료 |
-RED 로그: `red-residual-on-20d2139.log`, `red-guard-cmd-on-20d2139.log`, `red-residual2-on-733d708.log`, `red-residual3-on-86dbf98.log`, `red-residual4-on-c399b1a.log`, `red-residual5-on-291d18b.log`(모두 위반 0). 계측 비용(같은 기계, 회귀가 함께 돌던 같은 시점의 상대 비교): 짧은 스레드 100개×호출 1,000회는 `20d2139` 0.90초, `733d708` 19.07초, `86dbf98` 1.10초(따로 잰 값), 최종 `8849672` 1.65초(같은 시점 `86dbf98` 1.87초). 전역 3,000개 provider의 20만 회 호출/요청 스레드 100개는 `8849672` 2.02초/2.48초, 같은 시점 `86dbf98` 1.81초/2.37초, `291d18b` 2.01초/2.45초.
+| 27 | `8849672` | 해결, 정상 provider 오판 없음, 충돌·속도 저하 없음. 분류 A 2(테스트 경로 모듈을 import하는 provider, 200회 뒤의 patch) | 새 형태 탐색 종료 |
+| (Windows 회귀) | `8849672` | 기존 Case F 시험 실패: 다른 컴포넌트에서 가져온 `report.parse` 스텁을 patch로 봄(D44 2항·P1과 충돌) | `f3c1cbb`: 컴포넌트 밖에서 가져온 이름 제외 |
+| 28 | `f3c1cbb`(이 변경만) | 다시 열린 거짓 PASS 없음. 절대 import(`("dotted", …)`)를 풀지 않아 같은 컴포넌트에서 가져온 이름도 제외됨 | `test_g6_provider_defs` RED 1/1(실제 색인) → `f49bc5c` |
+| 28 확인 | `f49bc5c`(이 변경만) | 같은 컴포넌트의 상대·절대 import 다시 검사, Case F 유지, 다른 변경 없음 | 마지막 코드 변경 |
+RED 로그: `red-residual-on-20d2139.log`, `red-guard-cmd-on-20d2139.log`, `red-residual2-on-733d708.log`, `red-residual3-on-86dbf98.log`, `red-residual4-on-c399b1a.log`, `red-residual5-on-291d18b.log`, `red-provider-defs-on-f3c1cbb.log`(모두 위반 0). 계측 비용(같은 기계, 회귀가 함께 돌던 같은 시점의 상대 비교): 짧은 스레드 100개×호출 1,000회는 `20d2139` 0.90초, `733d708` 19.07초, `86dbf98` 1.10초(따로 잰 값), 최종 `8849672` 1.65초(같은 시점 `86dbf98` 1.87초). 전역 3,000개 provider의 20만 회 호출/요청 스레드 100개는 `8849672` 2.02초/2.48초, 같은 시점 `86dbf98` 1.81초/2.37초, `291d18b` 2.01초/2.45초.
+
+### 17.6 최종 회귀와 릴리스 점검 (최종 코드 `f49bc5c`)
+| 항목 | 결과 |
+|---|---|
+| 전체 회귀 WSL2 Ubuntu 24.04, Python 3.12.3(깨끗한 detached worktree `f49bc5c` + `dist/vmodel-0.1.*`) | **503 통과**, skip 1(xdist 시험 환경 변수 `VMODEL_R7_XDIST_PYTHON` 없음), 1909초 (`wsl-harness-f49bc5c.log`) |
+| 전체 회귀 Windows 11, Python 3.13.14 venv, cp949, 한글·공백 경로(`f49bc5c`) | **503 실행, 실패 0**, skip 55(pty가 필요한 사용자 전용 경로 44, POSIX 전용 fork·fifo·forkserver 6, 심볼릭 링크 권한 2, ruff 없음 1, xdist 1, POSIX 권한 1), 4027초 (`windows-harness-f49bc5c.log`) |
+| 중간 커밋의 Windows 회귀(참고) | `86dbf98`·`c399b1a`·`291d18b` 실패 1(14회차 C5_reused: D48 R2와 충돌한 옛 기대값 → `e581b36`에서 불변 시험으로 이동, 스레드별 예산은 `test_g6_budget`이 tracer 수준에서 확인), `8849672` 실패 2(같은 것 + Case F → `f3c1cbb`), `e581b36` 501 실행 실패 1(Case F만; 옮긴 C5 불변 시험은 통과). `f3c1cbb`는 WSL 502 통과(skip 1)·Windows 502 실행 실패 0(skip 55)이었고, 최종 `f49bc5c`는 그 뒤 28회차 수정(절대 import 해석)만 더했다. 그 밖의 중간 커밋 WSL 전체 회귀는 다음 수정이 나와 중단했다 |
+| 릴리스 사본과 소스 | `release.py --force` 후 `release_check.py` OK(`release-check-f49bc5c.json`): 소스 = 0.2.0 기록 = dist 재계산 core `sha256:2a95adb35aa82abc1ab6380350fd2f3b03ce3d645255d0263f4e48e234228a47`(46 파일), 0.1.0~0.1.5 사본·기록 불변, 태그 `v0.1.2`~`v0.1.5` 불변, `claude plugin validate --strict` 소스·릴리스 통과 |
+| 기존 서명 원장·증거 호환 | 하네스 T17(0.1.5 원장·증거를 새 코어로 검증)·T20(0.1.5 → 0.2.0 재고정)·`test_g6_compat`(G1~G5 판정·manifest 불변) 통과. 드릴 S1·S2 원장(후보 core `88edfac2`가 서명, 13건)의 복사본: 재고정 전 audit는 "running core hash differs"로 실패하고 G1~G6 BLOCKED(설계대로, SPEC §11), 증거 4/4 OK → 사용자 재고정(pty) 뒤 audit OK(14건), G1~G6 STALE, DEFECT-001 REVERIFY_REQUIRED, 기존 기록은 다시 쓰지 않음, 원본 다이제스트 불변(`compat-drill-ledger-f49bc5c.txt`) |
+
+### 17.7 판정
+지시 §5 기준:
+1. CRITICAL·HIGH 결함 없음: 이번에 찾은 재현 가능한 거짓 PASS(분류 B)와 guard 실제 쓰기 우회는 모두 RED 후 고쳤고, 최종 확인(28회차)에서 남은 지적 없음.
+2. 재현 가능한 미해결 G6 거짓 PASS 없음: §17.3의 분류 B는 모두 BLOCKED. 남은 것은 분류 A(보수적 BLOCKED, 기능 제약), 정책상 경고(G4 리뷰 몫), 신뢰 경계(주장하지 않음).
+3. 재현 가능한 보호 파일 쓰기 우회 없음: `del,` 계열 수정. 남은 guard 항목은 정상 명령 차단(제약)과 주장하지 않는 범위(임의 코드 실행, D24·D25).
+4. 전체 회귀를 통과한 최종 코드 `f49bc5c` = 릴리스 사본(core `2a95adb3…`).
+5. 기존 서명 원장·증거 호환: §17.6.
+6. 미검증 항목 문서화: §17.8.
+→ **RELEASE READY.** 단, 릴리스 기록에 "실제 세션의 G6 FAILED → DEFECT → CLOSED 경로는 미관찰(독립 하네스로만 검증)" 한계를 남긴다(§17.2, D47).
+확정 절차: 이 기록 커밋을 `main`에 `--ff-only`로 병합하고 이 커밋에 annotated 태그 `v0.2.0`을 단다(원격 푸시 없음). 태그 뒤 확인(`release_check.py --released`: annotated 태그 = `main`, `v0.1.5`가 조상, 태그 시점 플러그인 트리 = 0.2.0 기록·core)은 태그가 이 커밋을 가리키므로 이 문서에 담지 않고 최종 보고에 남긴다.
+
+### 17.8 미검증 항목
+- 실제 Claude 세션의 G6 FAILED → DEFECT → 수정 → CLOSED 경로(D47). 하네스(F1·T12, §14.6 시연, `test_g6_*`의 FAILED 판정)로만 검증.
+- D48 수정(`733d708`~`f49bc5c`)은 실제 Claude 세션으로 다시 돌리지 않았다(추가 유료 세션 금지). 드릴 S1·S2는 후보 core `88edfac2`로 실행됐고, 최종 core는 하네스와 드릴 원장 복사본 audit로만 확인했다.
+- 분류 A의 보수적 BLOCKED(§17.3): 정상 코드가 막힐 수 있다. 사유 메시지가 원인과 해결(fixture를 autouse 대신 요청 등)을 알려 준다.
+- 정책상 경고(§17.3): 설정 상수, 다른 컴포넌트·외부 라이브러리에서 가져온 이름의 스텁, weak 이름을 라이브러리 함수로 바꾼 patch, 모듈 수준이 아닌 객체의 인스턴스 patch는 R1이 막지 않는다(G4 리뷰 몫). provider가 같은 단계에서 200회 넘게 시작된 뒤에 건 patch도 보지 못한다.
+- 신뢰 경계: 같은 프로세스의 테스트 코드는 계측 줄·토큰을 위조할 수 있다(SPEC §5.7). guard는 모든 셸 문법과 임의 코드 실행을 통제하지 않는다(D24·D25).
+- macOS 미검증, Windows Python 3.12 이하의 실제 실행 미검증(§15.7).
+- 정적 분석·실행 시점 관찰 기반 판정의 본질적 한계: 검토는 28회 반복했고 회차마다 새 형태가 나왔다. 앞으로도 새 우회·오판이 나올 수 있다.
+
+### 17.9 G7 착수 여부
+v0.2.0 확정으로 G7(System Verification, PLAN M6, 제안 0.3.0)의 선행 조건(G6 구현·릴리스)은 갖춰졌다. 착수는 사용자 결정(PLAN M6 "사용자 결정 전 착수 금지")이며, 이번 작업에서는 G7을 구현하지 않았다.

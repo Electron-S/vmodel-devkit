@@ -1,0 +1,18 @@
+Compatibility of the final 0.2.0 release (core sha256:2a95adb35aa82abc1ab6380350fd2f3b03ce3d645255d0263f4e48e234228a47, code f49bc5c)
+with the drill S1/S2 signed ledger (written by the candidate core sha256:88edfac2..., 2026-11-10), on a copy.
+The original sandbox (scratchpad g6drill3/work) was only read: digest of every file before and after is identical.
+
+1. Before re-pin (lock still names 88edfac2):
+   audit: validator 0.2.0 release core 2a95adb35aa8; 13 ledger entries; 4 evidence record(s) checked
+     ! integrity: running core hash differs from devkit.lock.json
+   audit FAILED (1 problem(s))   -> expected: SPEC section 11, a different core needs the user's re-pin
+   status: G1-G6 BLOCKED (core hash does not match the lock; a user must re-pin with 'vmodel lock --accept-current')
+   verify-evidence: G4 lint 2e895a OK, G4 lint aa585f OK, G5 unit 59b930 OK, G6 integration d60704 OK (4/4)
+2. User re-pin on the copy (pty, typed 'yes'):
+   re-pinned core 2a95adb35aa8 (validator 0.2.0); .claude/settings.json: 2 DevKit rule(s) added, 2 removed; your own rules unchanged
+3. After re-pin:
+   audit: validator 0.2.0 release core 2a95adb35aa8; 14 ledger entries; 4 evidence record(s) checked
+   audit OK
+   status: G1-G6 STALE (R00003, R00005, R00007, R00011, R00012, R00013), G7 NOT_IMPLEMENTED,
+           DEFECT-001 REVERIFY_REQUIRED [claimed fixed; previously passed in R00011, G4 is now STALE: re-verify]
+   Existing records keep their validator.version / core_hash; nothing in the signed ledger was rewritten.
