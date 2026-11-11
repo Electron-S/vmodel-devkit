@@ -1,16 +1,21 @@
 # HANDOFF
 
-다음 세션이 이 파일만 읽고 이어갈 수 있게 정리한 인수인계입니다. 마지막 갱신: 2026-11-11(14차, G7 System Verification 구현·v0.3.0 릴리스 후보, 브랜치 `g7-dev`).
+다음 세션이 이 파일만 읽고 이어갈 수 있게 정리한 인수인계입니다. 마지막 갱신: 2026-11-11(15차, 실제 E2E·최종 회귀·v0.3.0 확정, 브랜치 `g7-dev` → `main`).
 
 ## 현재 상태 한 줄
-**v0.3.0 릴리스 후보 준비 완료(TEST_RESULTS §18.9), 확정은 사용자 결정.** 브랜치 `g7-dev`(마지막 판정 코드 `12e3caf`, 릴리스 기록 `8eb93ff`), 후보 릴리스 `dist/vmodel-0.3.0`(core `sha256:8abab9ec86fef66fb6e21b8b13aa29bc27bd29adbb76a2df75608dd1ceee4bb5`, `releases/vmodel-0.3.0.json`). 확정 버전은 여전히 0.2.0(`main` = 태그 `v0.2.0` = `c4b508a`). 결정 D49, 설계 정본 `docs/g7/G7-DESIGN.md`.
+**v0.3.0 확정(RELEASE READY, TEST_RESULTS §19.8).** 태그 `v0.3.0`(annotated) = `main` = 이 문서를 담은 최종 기록 커밋. 플러그인 트리는 `de270aa` 이후 그대로이고 릴리스 `dist/vmodel-0.3.0`(core `sha256:8abab9ec86fef66fb6e21b8b13aa29bc27bd29adbb76a2df75608dd1ceee4bb5`, `releases/vmodel-0.3.0.json`)과 같다. 결정 D49(G7 설계)·D50(확정), 설계 정본 `docs/g7/G7-DESIGN.md`. 알려진 한계: 실제 세션의 G7(그리고 G6) FAILED → DEFECT → CLOSED 경로 미관찰(하네스로만 검증), 나머지는 §19.9.
+
+## 이번 확정의 근거 (TEST_RESULTS §19)
+- 최종 회귀(`101711d`): WSL 559 통과·skip 1, Windows cp949·한글 경로 559 실행·실패 0·오류 0·skip 64(환경 의존). 실행 전후 남은 프로세스 없음(WSL·Windows).
+- 실제 Claude Code E2E 1회(Sonnet `claude-sonnet-5-5`, $1.04, 56턴, `samples/textcli`, 샌드박스): G1 reject → 수정 → G1~G5 → G6 BLOCKED(applicability, 2회) → 리뷰 보완 → G6 N/A → G7 PASSED(R00021, AC 6/6, 서명 증거) → WI COMPLETED, audit OK, guard 거부 0. 사본에서 `vmodel verify` 재평가도 같은 결과.
+- 0.2.0 실제 원장(드릴 S1/S2) 사본을 0.3.0 Core로 verify-evidence·재고정·audit OK. Plugin Validation 통과, release_check OK.
 
 ## Git
-- `main` = 태그 `v0.2.0` = `c4b508a`(이번에 움직이지 않음). 태그 `v0.1.2`~`v0.2.0` 그대로. `v0.3.0` 태그 없음. **원격 푸시 없음.**
-- `g7-dev`: 설계 `cfce1e9` → 테스트 `b3c79b2` → 구현 `68b4d67` → 검토 RED `2c26356` → 수정 `7939f97` → 재검토 RED `172a599` → 수정 `12e3caf` → 버전 `de270aa` → 릴리스 기록 `8eb93ff` → 문서·로그 `1deef79` → 시험 수정 `fa43a03` → 결과 기록.
-- 확정하려면(사용자 승인 후): 이 브랜치 최종 커밋을 `main`에 `--ff-only` 병합, annotated 태그 `v0.3.0`, `python3 -I test-results/v0.3.0/release_check.py <out> --released`. 플러그인 트리가 바뀌면 같은 버전 재빌드는 `release.py --force`(공개 전만).
-- 원격 `origin/main`은 `bbd6a3d`. 푸시는 승인되지 않았다(`test-results/` 로그·데모 출력에 `/home/cyyoo`·`/tmp` 경로). 하려면 `git log origin/main..main`과 민감정보 점검을 먼저 보여 주고 따로 결정.
-- `dist/vmodel-0.2.0` 이하는 확정 릴리스(다시 빌드 금지). `dist/.claude-plugin/marketplace.json`은 0.3.0 후보를 가리킨다(git 제외).
+- `main` = 태그 `v0.3.0` → 최종 기록 커밋(`--ff-only`). 태그 `v0.1.2`~`v0.2.0` 그대로(`v0.2.0` → `c4b508a`). **원격 푸시 없음.**
+- `g7-dev`: 설계 `cfce1e9` → 테스트 `b3c79b2` → 구현 `68b4d67` → 검토 RED `2c26356` → 수정 `7939f97` → 재검토 RED `172a599` → 수정 `12e3caf` → 버전 `de270aa` → 릴리스 기록 `8eb93ff` → 문서·로그 `1deef79` → 시험 수정 `fa43a03` → 후보 기록 `13eb65c` → 점검 `101711d` → 최종 기록(이번, E2E·회귀·확정 문서, 플러그인 변경 없음).
+- 태그 뒤 점검: `python3 -I test-results/v0.3.0/release_check.py <out> --released` (annotated 태그 = `main`, 태그된 플러그인 트리 = 0.3.0 기록, `v0.2.0` 조상, 이전 태그·기록 불변).
+- 원격 `origin/main`은 `bbd6a3d`. 푸시는 승인되지 않았다(`test-results/` 로그·E2E 트랜스크립트·원장 사본에 `/home/cyyoo`·`/tmp` 경로). 하려면 `git log origin/main..main`과 민감정보 점검을 먼저 보여 주고 따로 결정.
+- `dist/vmodel-0.3.0` 이하는 확정 릴리스(git 제외). **다시 빌드하지 마세요**(`release.py --force` 금지). 다음 플러그인 변경은 새 버전으로. `dist/.claude-plugin/marketplace.json`은 0.3.0을 가리킨다.
 - 작업 트리의 `.claude/`(예약 기능 잠금 파일)는 커밋하지 않음.
 
 ## G7 판정 규칙 요약 (D49)
@@ -25,19 +30,21 @@
 변경 없음. 요약은 TEST_RESULTS §17.3과 D48.
 
 ## 다음 작업 (사용자 결정 필요)
-1. **v0.3.0 확정**(병합·태그): 위 Git 절차.
-2. 실제 Claude 세션 E2E(G7 포함 `/vmodel:start`~COMPLETED, G7 FAILED 재작업, 0.2.0 → 0.3.0 업그레이드)는 횟수·상한 승인 후에만.
-3. 원격 푸시: 승인 안 됨.
-4. 이번에 남긴 위험(TEST_RESULTS §18.9): 시스템 테스트의 블랙박스 여부는 리뷰 판단, G5·G6은 여전히 파이프 출력(남은 자식 프로세스 대기 가능성), Windows는 끝난 뒤 남은 자식 프로세스를 종료하지 않음.
+1. 원격 푸시: 승인 안 됨(위 Git 절차).
+2. 실제 세션 미관찰 경로를 볼지: G7(또는 G6) FAILED → DEFECT → 수정 → CLOSED, 0.2.0 → 0.3.0 실제 업그레이드(재고정 → `configure-tests --system` → 재평가). 실제 Claude 실행은 횟수·상한 승인 후에만. G7 실패를 자연스럽게 내려면 시드 버그를 unit 테스트가 닿지 않는 곳(CLI 진입점·HTTP 처리기)에 두되, G4 verifier가 명세·코드 읽기로 잡을 수 있다는 점(D47)을 감안.
+3. 작은 개선 후보(판정 변경 없이 가능): AC 없는 constraint·non-functional REQ를 G7·report에 "리뷰로만 확인"으로 표시(D50 결정 3), Windows 하네스가 남기는 `%TEMP%\vmodel-test-*`(git 읽기 전용 객체) 정리.
+4. 확장(사용자 결정 전 자동 진입 금지): LITE/STRICT 프로파일, CI 연동(별도 사용자/CI에서 `vmodel audit`·`verify`), WorkMind 첫 적용.
 
 ## 바로 쓰는 명령
 ```bash
-cd /home/cyyoo/develop/vmodel-devkit && git switch g7-dev
+cd /home/cyyoo/develop/vmodel-devkit && git switch main
 cd tests && python3 -m unittest discover -s . -p "test_*.py"; cd ..     # 하네스 559개, 약 33분(WSL)
-python3 -I test-results/v0.3.0/release_check.py /tmp/x.json              # 후보 점검(태그 없음, main = v0.2.0)
+python3 -I test-results/v0.3.0/release_check.py /tmp/x.json --released   # 확정 점검(v0.3.0 = main)
 python3 scripts/red_green.py --mode red --plugin dist/vmodel-0.2.0 --marker RED-TARGET --log /tmp/r.log test_g7_gate ...
 python3 -I test-results/v0.3.0/g7_demo.py dist/vmodel-0.3.0 /tmp/demo.txt   # 실제 G7 실행 시연(모델 호출 없음)
 claude plugin validate --strict plugins/vmodel
+python3 scripts/e2e/e2e_run.py --work <새 폴더> --sample textcli --setup-only   # E2E 샌드박스 확인(모델 호출 없음)
+python3 scripts/e2e/e2e_verify.py --work <E2E 폴더> --out <json>             # E2E 판정(모델 호출 없음, G7 요약 포함)
 ```
 
 ## 꼭 알아야 할 것
@@ -47,5 +54,7 @@ claude plugin validate --strict plugins/vmodel
 - 표시 문구에 "verified by"를 쓰면 안 됩니다: CLOSED 결함 전용(D37, 기존 시험이 status 전체 텍스트에서 확인).
 - 시스템 테스트 시나리오의 시드 버그는 unit 테스트가 닿지 않는 곳(CLI 진입점, HTTP 처리기)에 둬야 G7까지 갑니다.
 - 실제 Claude 실행은 비용이 드므로 매번 사용자 승인. `--dangerously-skip-permissions` 금지.
-- Windows 회귀 사본: `%TEMP%\vmodel 한글 테스트\devkit-0.3.0-<커밋>`(git archive + `dist/vmodel-0.1.3`·`0.1.4`·`0.1.5`·`0.2.0`), 스크립트 `win-0.3.0-<커밋>.ps1`(UTF-16 BOM, 기존 `.venv`). 준비 스크립트는 이번 세션 scratchpad의 `prep_windows.sh`(같은 절차).
+- 샌드박스를 판정할 때 `vmodel` 명령은 반드시 그 샌드박스의 `VMODEL_HOME`으로 실행합니다(없으면 서명 키를 못 찾아 전체 BLOCKED로 보이고 `report`는 그 내용으로 보고서 파일을 덮어씁니다, §19.4).
+- 헤드리스 E2E에서 `system_test`·`integration_test`는 샘플의 `tests/system`·`tests/integration`에 테스트가 있어야 install이 등록합니다(`configure-tests`는 TTY 전용).
+- Windows 회귀 사본: `%TEMP%\vmodel 한글 테스트\devkit-0.3.0-<커밋>`(git archive + `dist/vmodel-0.1.3`·`0.1.4`·`0.1.5`·`0.2.0`), 스크립트 `win-0.3.0-<커밋>.ps1`(UTF-16 BOM, 기존 `.venv`). 준비 스크립트 `test-results/v0.3.0/prep_windows.sh <커밋>`(ps1이 실행 전·직후·60초 뒤 Windows python 프로세스 목록도 남김; 스크립트 안 scratchpad 경로는 세션마다 바꿔 쓸 것). 실행: `cd /mnt/c && powershell.exe -NoProfile -ExecutionPolicy Bypass -File '<ps1 Windows 경로>'`(약 70분).
 - `test_integrity.Upgrade.test_upgrade_requires_user_repin…`은 플러그인 사본의 파일을 고치는 시험이라 릴리스 사본 대상(`VMODEL_TEST_PLUGIN=dist/...`)에서는 원래 실패합니다(0.2.0 사본도 같음).

@@ -2,7 +2,7 @@
 
 Claude Code용 V-Model 개발 환경입니다. 요구사항(G1) → 아키텍처(G2) → 상세 설계·테스트 명세(G3) → 구현(G4) → 단위 검증(G5) → 통합 검증(G6) → 시스템 검증(G7)을 Quality Gate로 나누고, **독립 Validator가 직접 실행하고 서명한 증거로만** Gate를 통과시킵니다. AI가 "통과했다"고 쓴 파일이나 보고는 증거로 인정하지 않습니다.
 
-확정 버전은 **0.2.0**(2026-11-11, 태그 `v0.2.0`, G1~G6, core `sha256:2a95adb3…`)입니다. 브랜치 `g7-dev`의 **0.3.0 릴리스 후보**가 G7 시스템 검증을 더합니다(병합·태그 전, TEST_RESULTS §18). 0.3.0에서 STANDARD Work Item은 G1~G7(G6은 통과 또는 확인된 N/A)이 모두 현재 해시로 PASSED일 때 `COMPLETED`입니다. COMPLETED는 자동화된 검증 결과이지 사용자 수용 승인·배포 승인이 아닙니다. LITE·STRICT는 설계만 되어 있습니다. 0.2.0의 알려진 한계(실제 세션의 G6 FAILED 경로 미관찰 등)는 TEST_RESULTS §17.8에 있습니다.
+확정 버전은 **0.3.0**(2026-11-11, 태그 `v0.3.0`, G1~G7, core `sha256:8abab9ec…`)입니다. 0.3.0은 0.2.0(G1~G6)에 G7 시스템 검증을 더했고, 실제 Claude Code 세션 1회에서 요구사항부터 G7 PASSED·COMPLETED까지 확인했습니다(TEST_RESULTS §19). STANDARD Work Item은 G1~G7(G6은 통과 또는 확인된 N/A)이 모두 현재 해시로 PASSED일 때 `COMPLETED`입니다. COMPLETED는 자동화된 검증 결과이지 사용자 수용 승인·배포 승인이 아닙니다. LITE·STRICT는 설계만 되어 있습니다. 알려진 한계(실제 세션에서 G6·G7 FAILED → 결함 → 재검증 경로 미관찰, 시스템 테스트의 블랙박스 여부는 리뷰 판단 등)는 TEST_RESULTS §19.9와 §17.8에 있습니다.
 
 G6은 프로젝트 설정의 별도 `integration_test` 명령을 Validator가 직접 실행합니다. 이 명령이 없으면 단위 테스트로 대신하지 않고 BLOCKED입니다. 인터페이스(IF)마다 통과한 통합 테스트가 provider에 실제로 닿아야 하며, 닿았는지는 Validator의 정적 호출 분석(경로 A) 또는 G4 리뷰가 선언한 실행 경로(subprocess·IPC·API)의 실행 계측(경로 B)으로 확인합니다. 인터페이스가 없는 단일 컴포넌트는 G2·G3 리뷰가 확인했을 때만 N/A이고, N/A는 통합 테스트 통과로 표시하지 않습니다. 정본은 `docs/g6/G6-DESIGN.md`와 `docs/g6/WORKITEM.md`입니다.
 

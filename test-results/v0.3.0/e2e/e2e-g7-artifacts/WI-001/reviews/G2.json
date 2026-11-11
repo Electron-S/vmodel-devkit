@@ -1,0 +1,17 @@
+{"gate": "G2", "work_item": "WI-001", "reviewer": "vmodel:verifier", "target_hash": "sha256:c6faf8a80f5feac5d78c9eb99236a106cae47ab1fc4616ee4a13ffd81a619ecc",
+ "reviewed_at": "2026-11-11T14:00:00Z", "verdict": "approve",
+ "summary": "A single component ARCH-001 realises REQ-001..REQ-004; data flows with EXTERNAL are consistent and the one NFR/constraint (stdlib only, single module) has a credible approach. No interfaces are needed; the trade-off is justified and system-level verification via the CLI is appropriate.",
+ "checklist": [
+  {"item": "Every requirement realised by a component", "result": "ok", "note": "ARCH-001 lists REQ-001..004."},
+  {"item": "Interfaces precise", "result": "na", "note": "No interfaces; single component."},
+  {"item": "Data flows consistent", "result": "ok", "note": "Args and file bytes in; stdout, stderr and exit code out."},
+  {"item": "NFR approach credible", "result": "ok", "note": "REQ-004 mapped to argparse/pathlib/str methods in one module."},
+  {"item": "Trade-offs justified", "result": "ok", "note": "One module vs split; no benefit from an internal interface."},
+  {"item": "Integration test strategy", "result": "ok", "note": "Nothing internal to integrate; the external CLI boundary is covered by system tests."}
+ ],
+ "findings": [
+  {"id": "F-1", "severity": "info", "description": "ASM-002 leaves invalid UTF-8, directories and unreadable files undefined; acceptable as recorded.", "related": ["ASM-002"], "status": "open"}
+ ],
+ "integration_applicability": {"decision": "not_required", "reason": "One component with no internal interfaces; its only boundaries are the external CLI and file, verified by system tests.",
+  "endpoints_reviewed": ["EXTERNAL", "command line arguments", "input text file", "stdout", "stderr", "exit code"]}
+}

@@ -967,3 +967,70 @@ v0.2.0 확정으로 G7(System Verification, PLAN M6, 제안 0.3.0)의 선행 조
 - 지시 §8의 릴리스 후보 조건(VERSION·플러그인 버전, 릴리스 Manifest, 소스·사본 해시, Plugin Validation, 기존 릴리스 호환)과 회귀(WSL 559 통과, Windows 559 실행 실패 0 + 시험 수정 뒤 G7 모듈 56 통과)를 충족 → **v0.3.0 RELEASE CANDIDATE 준비 완료.** 병합·태그·푸시·유료 E2E는 사용자 결정.
 - 미검증: 실제 Claude 세션의 G7 경로 전체(P7 작성·리뷰·G7 FAILED → DEFECT → CLOSED, 0.2.0 → 0.3.0 실제 업그레이드), macOS, Windows의 pty 사용자 전용 경로(`configure-tests`·`lock --accept-current`는 POSIX pty 시험만).
 - 남은 위험(D49 한계): 시스템 테스트의 블랙박스 여부는 리뷰 판단(화이트박스 테스트를 기계로 막지 않음), 같은 프로세스 신뢰 경계, 비기능 AC는 시스템 테스트 없으면 경고만, 설치본을 부르는 시스템 테스트, G5·G6의 파이프 출력(남은 자식 프로세스 대기 가능성, 0.2.0부터), Windows에서 끝난 뒤 남은 자식 프로세스 미종료, AC 문구만 바뀌고 매핑이 같으면 trace는 이전 G7 기록의 "verified"를 G7 STALE 표시와 함께 보임.
+
+## 19. v0.3.0 실제 E2E·최종 회귀·릴리스 확정 (2026-11-11, 사용자 지시 "VModel DevKit v0.3.0 — 실제 E2E 검증 및 정식 릴리스")
+
+승인 범위: Sonnet 헤드리스 세션 1회(추정 상한 $2), `--dangerously-skip-permissions` 금지, 독립 샌드박스, 조건 충족 시 `main` `--ff-only` 병합과 annotated 태그 `v0.3.0`. 원격 푸시는 승인되지 않았다. 신규 기능·Gate·재설계는 하지 않았고 **제품 코드(플러그인 트리) 변경 없음**: 플러그인 트리는 `de270aa`(0.3.0 버전 커밋) 이후 그대로이며 `releases/vmodel-0.3.0.json`(core `sha256:8abab9ec86fef66fb6e21b8b13aa29bc27bd29adbb76a2df75608dd1ceee4bb5`)과 같다. 이번에 바뀐 것은 문서, 결과 기록, E2E 샘플 `samples/textcli`, E2E 스크립트(`e2e_run.py`의 샘플 선택지, `e2e_verify.py`의 G7 요약)뿐이다. 산출물 `test-results/v0.3.0/`.
+
+### 19.1 출발 상태
+`g7-dev` = `101711d`, `main` = 태그 `v0.2.0` = `c4b508a`, 태그 `v0.1.2`~`v0.2.0` 그대로, `v0.3.0` 태그 없음. `release_check.py`(후보 모드) OK: 0.1.0~0.3.0 사본 = 기록, 소스 = 0.3.0 기록. 문서(HANDOFF·SPEC·PLAN·DECISIONS·TEST_RESULTS §18·G7-DESIGN)와 실제 코드·Git 상태가 일치했다.
+
+### 19.2 최종 Windows 회귀 (Windows 11, `.venv` Python 3.13.14, cp949, 경로 `%TEMP%\vmodel 한글 테스트\devkit-0.3.0-101711d`)
+**559 실행, 실패 0, 오류 0, skip 64**, 4158초 (`windows-harness-101711d.log`, 실행 파일·설정 출력 cp949 환경 `preferred=cp949`, 한글·공백 경로). skip 64는 모두 환경 의존: pty 필요 53(재고정 18, 사용자 전용 명령 17, pytest+pty 14, 기타 pty 4), POSIX fork·forkserver·fifo 6, 심볼릭 링크 권한 2, POSIX 권한 1, ruff 미설치 1, pytest-xdist 1. 1deef79 회귀의 ERROR 1(남은 자식의 cwd가 샌드박스라 다음 시험 정리 실패)은 `fa43a03` 시험 수정 뒤 전체 실행에서도 재현되지 않았고 `test_a_process_left_running…`은 통과했다.
+- 남은 자식 프로세스 확인: ps1이 실행 전·직후·60초 뒤 `Win32_Process`의 python·pytest·ruff 프로세스를 기록 → 세 번 모두 2개, 2026-10-29부터 떠 있던 무관한 같은 PID. 하네스나 G7 시스템 테스트 실행이 남긴 프로세스는 없다(남은 프로세스 시험의 자식은 40초 sleep 후 스스로 끝나고 cwd가 프로젝트 밖). 테스트 결과 왜곡·무한 대기·실행 환경 손상은 관찰되지 않았다 → Runner 수정 없음(D50 결정 1).
+- 임시 폴더 잔여: `%TEMP%\vmodel-test-*` 하나(git 객체 읽기 전용 파일 20개)가 `shutil.rmtree(ignore_errors=True)`로 지워지지 않았다. 2026-11-10 이후 모든 Windows 회귀가 같은 모양을 하나씩 남겼다. 하네스 정리 문제이고 제품·자식 프로세스와 무관하다(고치지 않음).
+
+### 19.3 최종 WSL 회귀 (WSL2 Ubuntu 24.04, Python 3.12.3, 깨끗한 detached worktree `101711d`)
+**559 실행, 559 통과(실패 0·오류 0), skip 1**(`test_g6_review7` R3: pytest-xdist가 있는 Python `VMODEL_R7_XDIST_PYTHON` 미설정), 1813초 (`wsl-harness-101711d.log`). 실행 전후 python·pytest 프로세스는 4개로 같은 PID(모두 무관한 상주 서비스) — 하네스가 남긴 프로세스 없음. 이 커밋 이후 이번 기록 커밋까지 `plugins/`·`tests/` 변경 없음.
+
+### 19.4 실제 Claude Code E2E (Sonnet 1회, 승인 상한 $2)
+- 샌드박스: 새 샘플 `samples/textcli`(빈 패키지 + `tests/unit`·`tests/integration`·`tests/system`에 스모크 테스트 하나씩)를 스크래치 `e2e-g7/한글 샘플 프로젝트`로 복사해 git 초기화, 전용 `VMODEL_HOME`, 릴리스 사본 `dist/vmodel-0.3.0`으로 `vmodel install`. `tests/integration`·`tests/system`에 테스트가 있어 install이 `integration_test`·`system_test`를 등록했다(REQ-G7-20, 사용자 전용 설정 단계를 설치 때 한 것. 헤드리스 에이전트는 TTY 전용 `configure-tests`를 실행할 수 없다). 실제 사용자 프로젝트·기존 릴리스·서명 원장은 건드리지 않았다.
+- 실행: `scripts/e2e/e2e_run.py --sample textcli --model sonnet --budget 2 --permission-mode auto` → `claude -p … --model sonnet --max-budget-usd 2.0 --setting-sources project,local --no-session-persistence --plugin-dir dist/vmodel-0.3.0 --permission-mode auto --permission-prompts none --allowedTools <vmodel·pytest·읽기 명령>`. 실제 모델 `claude-sonnet-5-5`, 플러그인 `vmodel` 0.3.0. 요청(`prompt-e2e-g7.txt`): `python -m textcli count <파일>`이 줄·단어·문자 수 출력, 빈 파일 `0 0 0`, 없는 파일은 stderr `error: file not found: <경로>`·종료 코드 2, G7까지 진행.
+- **결과: 1회, 비용 $1.04**(CLI `total_cost_usd` 1.0428574, 추정치), 56턴, 6.4분, 종료 `success`. 추가 실행 없음.
+- 흐름(원장 21건): G1 리뷰 reject(R00002: 에이전트가 AC-001-3 한글 문자 수 기대값을 `1 2 7`로 잘못 씀 → verifier가 지적, `1 2 6`으로 고치고 경계 AC-001-4 추가) → approve → G1~G5 PASSED → **G6 BLOCKED `applicability_unconfirmed` 2회**(R00012: G2·G3 리뷰의 `endpoints_reviewed`에 외부 흐름 끝점 `EXTERNAL` 누락 → 새 리뷰 제출 → R00015: 새 리뷰가 아직 G2·G3 Gate 기록이 받아들인 리뷰가 아님, 메시지대로 G2·G3 재평가) → G2~G5 PASSED → G6 N/A(R00020) → **G7 PASSED(R00021)** → **WI-001 COMPLETED**. Gate FAILED 0회, DEFECT 0건(결함 추적 검사 오류·경고 0).
+- 설계: 컴포넌트 1(ARCH-001), IF 0, REQ 4(functional 3: AC 6개, constraint 1: 표준 라이브러리·단일 컴포넌트, AC 없음), unit 명세 12, system 명세 6(TEST-013~018, normal 1·boundary 4·abnormal 1). 시스템 테스트(`tests/system/test_cli.py`)는 `subprocess`로 `sys.executable -m textcli count <임시 파일>`을 실행하고 `PYTHONPATH`·`PYTHONIOENCODING=utf-8`을 직접 설정해 stdout·stderr·종료 코드를 정확히 비교했다(내부 함수 호출·mock 없음). G4 리뷰 체크리스트에 "System tests black box: ok" 기록. unit 테스트는 `tests/` 바로 아래에 두었다(unit 명령이 `tests`에서 integration·system만 제외하므로 정상).
+- 도구 사용: Bash 66·Write 15·Read 21·Edit 1·Agent 8(verifier 7, test-designer 1). 도구 오류 2건은 모두 G6 BLOCKED 종료 코드 3. **guard 거부 0, `.vmodel/state`·`evidence`·원장 접근 시도 0.**
+- 세션 최종 보고: Gate별 결과, "G6 N/A … 통합 테스트가 통과했다는 뜻이 아닙니다", G7 AC 6/6, 결함 없음과 G1 reject·G6 BLOCKED 처리, audit OK, 확인할 가정(CRLF·잘못된 UTF-8·디렉터리 미정의), 보고서·G5·G7 증거 경로. COMPLETED를 사용자 수용으로 표현하지 않았다.
+- 판정은 모델 호출 없이 릴리스 Validator로 했다(`e2e_verify.py` → `verify-e2e-g7.json`). 내 조작 실수 1건: 판정 중 한 번 샌드박스 `VMODEL_HOME` 없이 `vmodel report`를 실행해 파생 보고서 `.vmodel/reports/WI-001.md`가 서명 키 없음(전체 BLOCKED) 내용으로 덮였다. 원장(마지막 수정 = 세션의 G7 실행 시각)·증거·기본 홈(`~/.vmodel-devkit` 생성 안 됨)은 바뀌지 않았고, 보고서는 manifest 밖 파생 산출물이라 올바른 환경으로 다시 만들었다(보존본 `e2e-g7-artifacts/WI-001-report.md`).
+
+### 19.5 G7 System Test 실행 증거 (E2E 세션, R00021)
+| 항목 | 값 |
+|---|---|
+| 명령(Validator가 직접 실행, `command_source: system_test`) | `/usr/bin/python3 -m pytest -q -p no:cacheprovider tests/system --junitxml=<증거 폴더>/junit.xml` |
+| 종료 코드·시간 | 0, timed_out false, 1.119초 |
+| JUnit | 7 실행, 7 통과(TEST-013~018 + 매핑 없는 샘플 스모크 1건 `unmapped_cases`로 기록만) |
+| 체크 9개 | PREREQ·CONFIG·EXECUTION·RESULTS("7 passed")·SCOPE("no unit or integration test")·TEST_MAPPING("6 system test spec(s) passed")·AC_COVERAGE("6/6")·NO_WEAKENING(첫 실행 기준선)·INPUTS_UNCHANGED 모두 pass |
+| requirements_coverage | REQ-001 AC-001-1~4 → TEST-013~016 passed, REQ-002 AC-002-1 → TEST-017, REQ-003 AC-003-1 → TEST-018, 모두 verified. REQ-004(constraint)는 AC 없음 |
+| 서명 증거 | `.vmodel/evidence/WI-001/G7/20261111T135746091142Z-system-009092/record.json`(sha256 `40e3b8aa…`, `sig` 있음): stdout·stderr·junit 해시, manifest `162977490d83…`(G4·G5와 같음), `config_sha256`·`system_test_sha256`, Git HEAD·dirty, Validator 0.3.0 core `8abab9ec…`. `verify-evidence` OK. 사본 `e2e/e2e-g7-artifacts/g7-evidence/` |
+| basis_records | G5 R00019, G6 R00020 |
+
+### 19.6 G1~G7 최종 상태·COMPLETED·원장
+- `vmodel status`: **WI-001 COMPLETED**, G1 R00004·G2 R00016·G3 R00017·G4 R00018·G5 R00019 PASSED(current), G6 N/A(R00020, 통합 테스트 미실행, 근거 G2·G3 리뷰), G7 PASSED(R00021, AC 6/6). next_action "all gates passed … report COMPLETED (automated verification, not user acceptance or a deployment approval)". 보고서·trace에 REQ → AC → system TEST(passed) → 기록 ID.
+- `audit` OK: 원장 21건, 증거 5건(G4 lint 2, G5 unit 2, G7 system 1) 모두 `verify-evidence` OK. Core 무결성 OK.
+- 독립 재평가(샌드박스 **사본**에서 `vmodel verify WI-001`, 모델 호출 없음, `e2e/reverify-copy.txt`): G1~G7을 처음부터 다시 평가 → G1~G5 PASSED, G6 N/A, G7 PASSED(이번 Validator 실행, AC 6/6), COMPLETED, audit OK(35건, 증거 11건). 원본 샌드박스 원장은 바뀌지 않았다.
+- 0.2.0 실제 데이터 호환(`compat-drill-ledger-0.2.0-on-0.3.0.txt`): 0.2.0 시기 드릴 S1/S2 서명 원장(14건, core `88edfac2` 서명, 0.2.0 확정 core `2a95adb3`로 재고정된 사본)의 **복사본**에서 0.3.0 Core로 증거 4건 `verify-evidence` OK, 재고정 전 audit은 잠금 불일치로 FAILED(SPEC §11 기대대로), 사용자 재고정(pty, `yes`) 뒤 audit OK, G1~G6 STALE(Core 변경)·G7 평가 전·WI IN_PROGRESS·DEFECT-001 REVERIFY_REQUIRED. 원장 앞 14건(38971바이트)은 바이트 동일, 원본 샌드박스는 95개 파일 해시 전후 동일.
+
+### 19.7 릴리스 점검
+- `claude plugin validate --strict`: 소스 `plugins/vmodel`과 릴리스 사본 `dist/vmodel-0.3.0` 모두 통과(경고는 디렉터리 카탈로그용 icon 없음 하나, 판정 무관, `plugin-validate-final.txt`).
+- `release_check.py`(후보 모드, 이 기록 직전): OK (`release-check-pre-tag.json`): 0.1.0~0.3.0 사본 = 기록 = 각 사본 자기 점검(hashlib 독립 재계산), 소스 플러그인 트리 = 0.3.0 기록(core `8abab9ec…`), 버전 문자열 일치, 0.1.x·0.2.0 기록 `v0.2.0` 이후 불변, 태그 `v0.1.2`~`v0.2.0` 그대로(`v0.2.0` → `c4b508a`), `v0.3.0` 태그 없음, `main` = `c4b508a`이고 HEAD의 조상(ff 가능).
+- 태그 뒤 `release_check.py --released`(annotated `v0.3.0` = `main`, 태그된 플러그인 트리 = 0.3.0 기록, `v0.2.0`이 조상, 이전 태그 불변): 결과는 HANDOFF에 기록한 대로 태그 직후 실행(이 커밋에는 담을 수 없음).
+
+### 19.8 판정
+| 조건(지시 §5) | 결과 |
+|---|---|
+| 1. 최종 Windows 회귀 오류 0건 | 559 실행, 실패 0·오류 0, skip 64(환경 의존) (§19.2) |
+| 2. 최종 WSL 회귀 통과 | 559 통과·skip 1 (§19.3) |
+| 3. 실제 Claude Code 세션에서 G7 PASSED·COMPLETED | R00021 G7 PASSED, WI-001 COMPLETED (§19.4~19.6) |
+| 4. G1~G6 기능·Ledger 호환 | E2E에서 G1~G6 정상(G1 reject → 재작업, G6 BLOCKED 안내 → N/A), 하네스 T17·T20, 0.2.0 실제 원장 사본 audit OK (§19.6) |
+| 5. Evidence Ledger·Audit | E2E audit OK 21건·증거 5건, 재평가 사본 OK, 호환 사본 OK |
+| 6. 릴리스 파일 = 소스 해시 | release_check OK (§19.7) |
+| 7. Plugin Validation | 통과 (§19.7) |
+| 8. CRITICAL/HIGH 결함 없음 | 이번 E2E·회귀에서 새 결함 없음. 필수 요구사항이 검증되지 않았는데 COMPLETED가 되는 경로는 찾지 못했다: AC_COVERAGE는 활성 functional REQ의 모든 AC에 system 명세가 하나 이상 있고 그 명세가 모두 이번 실행에서 통과해야 하며, REQ 상태는 `active`/`deleted`뿐이라(삭제는 CR) 빠질 길이 없다 |
+
+→ **v0.3.0 RELEASE READY**: 이 기록 커밋을 `main`에 `--ff-only` 병합하고 같은 커밋에 annotated 태그 `v0.3.0`을 붙였다(SHA는 HANDOFF·태그 뒤 점검). 원격 푸시는 하지 않았다. 알려진 한계는 §19.9와 D49·D50으로 유지한다.
+
+### 19.9 미검증 항목과 남은 한계
+- **실제 세션에서 관찰하지 않은 것**: G7 FAILED → DEFECT(gate G7) → 수정 → FIX_APPLIED → G7 PASSED → CLOSED. 이번 세션에서는 G7 실패가 자연스럽게 나지 않았고, 이를 위한 추가 유료 세션은 돌리지 않았다. 이 경로는 독립 하네스(T02·T11·T12)와 모델 호출 없는 실제 G7 실행 시연(§18.5 B)으로만 검증됐다. 실제 Claude 세션에서 0.2.0 → 0.3.0 업그레이드(재고정 → configure-tests → 재평가)도 관찰하지 않았다(하네스 T20 + 실제 원장 사본 §19.6만). 실제 세션의 `configure-tests --system`도 안 했다(설치 때 자동 등록 경로만).
+- **E2E 범위**: CLI 프로젝트 하나, G6 N/A 경로. HTTP API 시스템 테스트·G6 required + G7 조합은 하네스(T01·T13)로만 확인했다.
+- **알려진 한계(D49, 유지)**: COMPLETED는 자동 검증이지 사용자 수용·배포 승인이 아니다. 시스템 테스트가 외부 인터페이스를 쓰는지(블랙박스 여부)는 G3·G4 리뷰 판단이고 G7은 정적 분석하지 않는다. 비기능 AC에 system 명세가 없으면 경고만 한다. 또 이번 E2E에서 보듯 **AC가 없는 constraint·non-functional REQ는 G7이 경고도 내지 않는다**(G1은 functional REQ에만 AC를 요구, constraint는 G2.NFR 기계 매핑과 리뷰로만 확인). 테스트 코드는 러너와 같은 프로세스에서 돈다. 설치본을 부르는 시스템 테스트. G5·G6의 파이프 출력(남은 자식 프로세스 대기 가능성, 0.2.0부터). Windows에서 끝난 뒤 남은 자식 프로세스는 종료하지 않는다(대기는 하지 않음, §19.2 관찰). macOS 미실행. Windows의 pty 사용자 전용 경로(`configure-tests`·`lock --accept-current`)는 POSIX pty 시험만.
+- E2E 관찰(결함 아님): G6 N/A 확정에 리뷰 재제출 → G2·G3 재평가가 필요해 Gate 실행이 6회 늘었다(REQ-G6-15 설계대로, BLOCKED 메시지가 조치를 정확히 안내).

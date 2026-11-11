@@ -1,0 +1,98 @@
+{
+  "tag": "g7",
+  "auto_trigger_vmodel_start": false,
+  "skill_invocations": [],
+  "subagents": [
+    "vmodel:verifier",
+    "vmodel:verifier",
+    "vmodel:verifier",
+    "vmodel:test-designer",
+    "vmodel:verifier",
+    "vmodel:verifier",
+    "vmodel:verifier",
+    "vmodel:verifier"
+  ],
+  "work_items": [
+    {
+      "id": "WI-001",
+      "status": "COMPLETED",
+      "gates": {
+        "G1": "PASSED",
+        "G2": "PASSED",
+        "G3": "PASSED",
+        "G4": "PASSED",
+        "G5": "PASSED",
+        "G6": "PASSED",
+        "G7": "PASSED"
+      }
+    }
+  ],
+  "review_submissions": [
+    {
+      "record_id": "R00002",
+      "gate": "G1",
+      "verdict": "reject"
+    },
+    {
+      "record_id": "R00003",
+      "gate": "G1",
+      "verdict": "approve"
+    },
+    {
+      "record_id": "R00005",
+      "gate": "G2",
+      "verdict": "approve"
+    },
+    {
+      "record_id": "R00007",
+      "gate": "G3",
+      "verdict": "approve"
+    },
+    {
+      "record_id": "R00009",
+      "gate": "G4",
+      "verdict": "approve"
+    },
+    {
+      "record_id": "R00013",
+      "gate": "G2",
+      "verdict": "approve"
+    },
+    {
+      "record_id": "R00014",
+      "gate": "G3",
+      "verdict": "approve"
+    }
+  ],
+  "guard_denials": [],
+  "audit": {
+    "exit": 0,
+    "tail": [
+      "audit: validator 0.3.0 release core 8abab9ec86fe; 21 ledger entries; 5 evidence record(s) checked",
+      "audit OK"
+    ]
+  },
+  "gate_records": [
+    "R00004 G1 PASSED",
+    "R00006 G2 PASSED",
+    "R00008 G3 PASSED",
+    "R00010 G4 PASSED",
+    "R00011 G5 PASSED",
+    "R00012 G6 BLOCKED",
+    "R00015 G6 BLOCKED",
+    "R00016 G2 PASSED",
+    "R00017 G3 PASSED",
+    "R00018 G4 PASSED",
+    "R00019 G5 PASSED",
+    "R00020 G6 PASSED",
+    "R00021 G7 PASSED"
+  ],
+  "final": {
+    "subtype": "success",
+    "total_cost_usd": 1.0428574,
+    "num_turns": 56,
+    "duration_ms": 384632
+  },
+  "result_tail": " | |\n| G5 단위 검증 | PASSED | 13개 통과 |\n| G6 통합 검증 | **N/A** | 컴포넌트 하나에 인터페이스가 없어 통합 테스트를 실행하지 않았습니다. 통합 테스트가 통과했다는 뜻이 아닙니다. |\n| G7 시스템 검증 | PASSED | 7개 통과 |\n\n## G7에서 시스템 테스트로 검증된 수용 기준\n수용 기준 6/6이 통과했습니다. `python -m textcli`를 subprocess로 실행해 확인했습니다.\n- AC-001-1: `2 3 16`\n- AC-001-2: 마지막 줄에 줄바꿈이 없는 `2 3 5`\n- AC-001-3: 한글 `1 2 6`\n- AC-001-4: `\\n`만 있는 파일 `1 0 1`\n- AC-002-1: 빈 파일 `0 0 0`\n- AC-003-1: 파일이 없으면 stdout은 비고, stderr에 `error: file not found: <경로>`가 나오며 종료 코드 2\n\n비기능 기준 중 시스템 테스트가 없는 것은 없습니다. REQ-004(표준 라이브러리만 사용, 컴포넌트 하나)는 수용 기준 없이 리뷰로만 확인했습니다.\n\n## 결함과 처리\n`defects.json`에 기록된 결함은 없고, 결함 추적 검사는 오류 0건·경고 0건입니다. Gate가 FAILED로 끝난 적도 없습니다. 대신 아래 두 가지가 있었고, 둘 다 해당 단계로 돌아가 고쳤습니다.\n- **G1 리뷰 reject**: 제가 AC-001-3의 기대값을 `1 2 7`로 잘못 적었습니다. `'안녕 세상\\n'`은 6자이므로 `1 2 6`으로 고쳤습니다. 경계 기준 AC-001-4도 추가한 뒤 다시 리뷰받아 통과했습니다.\n- **G6 BLOCKED (`applicability_unconfirmed`)**: G2·G3 리뷰의 `endpoints_reviewed`에 `EXTERNAL`이 빠져 있었습니다. 검증자에게 다시 리뷰를 받고 G2~G6을 재평가해 N/A가 확정됐습니다.\n\n## 감사(audit) 결과\n- 원장(ledger)은 21건 모두 정상입니다.\n- 검증기 무결성은 OK입니다.\n- 리뷰에서 나온 minor/info 지적은 모두 승인 범위 안입니다. 예를 들어 시스템 테스트 일부가 빈 stderr를 검사하지 않는다는 지적이 있었습니다.\n\n## 확인이 필요한 가정\n- 파일은 UTF-8 바이트를 줄바꿈 변환 없이 읽습니다. CRLF는 문자 2개, 줄 1개로 셉니다.\n- 잘못된 UTF-8, 디렉터리, 읽을 수 없는 파일은 동작을 정하지 않았습니다.\n- 사용법 오류는 argparse 기본 동작(종료 코드 2)에 맡겼습니다.\n\n## 경로\n- 보고서: `.vmodel/reports/WI-001.md`\n- 증거: G4·G5·G7은 `.vmodel/evidence/WI-001/` 아래 `G4/20261111T135739436481Z-lint-f6ecc9`, `G5/20261111T135741454990Z-unit-62b56f`, `G7/20261111T135746091142Z-system-009092`입니다. G6은 N/A라 증거가 없습니다."
+}
+exit=0

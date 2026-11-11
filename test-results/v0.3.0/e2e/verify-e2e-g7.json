@@ -1,0 +1,599 @@
+{
+  "release": "/home/cyyoo/develop/vmodel-devkit/dist/vmodel-0.3.0",
+  "status_exit": 0,
+  "audit": {
+    "exit": 0,
+    "tail": [
+      "audit: validator 0.3.0 release core 8abab9ec86fe; 21 ledger entries; 5 evidence record(s) checked",
+      "audit OK"
+    ]
+  },
+  "gate_sequence": [
+    "R00004 WI-001 G1 PASSED",
+    "R00006 WI-001 G2 PASSED",
+    "R00008 WI-001 G3 PASSED",
+    "R00010 WI-001 G4 PASSED",
+    "R00011 WI-001 G5 PASSED",
+    "R00012 WI-001 G6 BLOCKED (applicability_unconfirmed) applicability=unconfirmed",
+    "R00015 WI-001 G6 BLOCKED (applicability_unconfirmed) applicability=unconfirmed",
+    "R00016 WI-001 G2 PASSED",
+    "R00017 WI-001 G3 PASSED",
+    "R00018 WI-001 G4 PASSED",
+    "R00019 WI-001 G5 PASSED",
+    "R00020 WI-001 G6 PASSED applicability=not_applicable",
+    "R00021 WI-001 G7 PASSED"
+  ],
+  "reviews": [
+    "R00002 G1 reject",
+    "R00003 G1 approve",
+    "R00005 G2 approve",
+    "R00007 G3 approve",
+    "R00009 G4 approve",
+    "R00013 G2 approve",
+    "R00014 G3 approve"
+  ],
+  "verify_evidence": [
+    {
+      "record": "R00010",
+      "gate": "G4",
+      "path": ".vmodel/evidence/WI-001/G4/20261111T135621128039Z-lint-2b1d7c/record.json",
+      "exit": 0,
+      "result": "evidence OK"
+    },
+    {
+      "record": "R00011",
+      "gate": "G5",
+      "path": ".vmodel/evidence/WI-001/G5/20261111T135623281565Z-unit-def6bb/record.json",
+      "exit": 0,
+      "result": "evidence OK"
+    },
+    {
+      "record": "R00018",
+      "gate": "G4",
+      "path": ".vmodel/evidence/WI-001/G4/20261111T135739436481Z-lint-f6ecc9/record.json",
+      "exit": 0,
+      "result": "evidence OK"
+    },
+    {
+      "record": "R00019",
+      "gate": "G5",
+      "path": ".vmodel/evidence/WI-001/G5/20261111T135741454990Z-unit-62b56f/record.json",
+      "exit": 0,
+      "result": "evidence OK"
+    },
+    {
+      "record": "R00021",
+      "gate": "G7",
+      "path": ".vmodel/evidence/WI-001/G7/20261111T135746091142Z-system-009092/record.json",
+      "exit": 0,
+      "result": "evidence OK"
+    }
+  ],
+  "g6_records": [
+    {
+      "record": "R00012",
+      "status": "BLOCKED",
+      "applicability": "unconfirmed",
+      "blocked_reason": "applicability_unconfirmed",
+      "if_coverage": null,
+      "interfaces": [],
+      "executed_tests": {},
+      "failed_cases": null,
+      "runtime_trace": {
+        "active": null,
+        "processes": null,
+        "spawned_processes": null,
+        "truncated": null,
+        "test_boundaries": null,
+        "boundary_clock": null,
+        "edges": null,
+        "errors": null
+      }
+    },
+    {
+      "record": "R00015",
+      "status": "BLOCKED",
+      "applicability": "unconfirmed",
+      "blocked_reason": "applicability_unconfirmed",
+      "if_coverage": null,
+      "interfaces": [],
+      "executed_tests": {},
+      "failed_cases": null,
+      "runtime_trace": {
+        "active": null,
+        "processes": null,
+        "spawned_processes": null,
+        "truncated": null,
+        "test_boundaries": null,
+        "boundary_clock": null,
+        "edges": null,
+        "errors": null
+      }
+    },
+    {
+      "record": "R00020",
+      "status": "PASSED",
+      "applicability": "not_applicable",
+      "blocked_reason": null,
+      "if_coverage": {
+        "status": "skip",
+        "detail": "not executed: not applicable (no integration test was run)",
+        "items": []
+      },
+      "interfaces": [],
+      "executed_tests": {},
+      "failed_cases": null,
+      "runtime_trace": {
+        "active": null,
+        "processes": null,
+        "spawned_processes": null,
+        "truncated": null,
+        "test_boundaries": null,
+        "boundary_clock": null,
+        "edges": null,
+        "errors": null
+      }
+    }
+  ],
+  "g7_records": [
+    {
+      "record": "R00021",
+      "work_item": "WI-001",
+      "status": "PASSED",
+      "blocked_reason": null,
+      "checks": [
+        "G7.PREREQ pass: G6 PASSED (or N/A) for the current manifest hash",
+        "G7.CONFIG pass: system_test configured",
+        "G7.EXECUTION pass: exit code 0, junit produced",
+        "G7.RESULTS pass: 7 passed, 0 skipped of 7",
+        "G7.SCOPE pass: no unit or integration test in this run",
+        "G7.TEST_MAPPING pass: 6 system test spec(s) passed",
+        "G7.AC_COVERAGE pass: 6/6 acceptance criteria met (every system test spec naming them passed in this run)",
+        "G7.NO_WEAKENING pass: first G7 run; baseline recorded",
+        "G7.INPUTS_UNCHANGED pass: inputs unchanged during the run"
+      ],
+      "failed_check_items": {},
+      "executed_tests": {
+        "TEST-013": "passed",
+        "TEST-014": "passed",
+        "TEST-015": "passed",
+        "TEST-016": "passed",
+        "TEST-017": "passed",
+        "TEST-018": "passed"
+      },
+      "executed_levels": {
+        "TEST-013": "system",
+        "TEST-014": "system",
+        "TEST-015": "system",
+        "TEST-016": "system",
+        "TEST-017": "system",
+        "TEST-018": "system"
+      },
+      "unmapped_cases": [
+        "tests.system.test_package_system_smoke::test_package_starts_in_a_fresh_interpreter"
+      ],
+      "system_specs": [
+        "TEST-013",
+        "TEST-014",
+        "TEST-015",
+        "TEST-016",
+        "TEST-017",
+        "TEST-018"
+      ],
+      "requirements_coverage": {
+        "REQ-001": {
+          "acceptance_criteria": {
+            "AC-001-1": {
+              "tests": {
+                "TEST-013": "passed"
+              },
+              "verified": true
+            },
+            "AC-001-2": {
+              "tests": {
+                "TEST-014": "passed"
+              },
+              "verified": true
+            },
+            "AC-001-3": {
+              "tests": {
+                "TEST-015": "passed"
+              },
+              "verified": true
+            },
+            "AC-001-4": {
+              "tests": {
+                "TEST-016": "passed"
+              },
+              "verified": true
+            }
+          },
+          "categories": {
+            "boundary": [
+              "TEST-014",
+              "TEST-015",
+              "TEST-016"
+            ],
+            "normal": [
+              "TEST-013"
+            ]
+          },
+          "priority": "must",
+          "type": "functional"
+        },
+        "REQ-002": {
+          "acceptance_criteria": {
+            "AC-002-1": {
+              "tests": {
+                "TEST-017": "passed"
+              },
+              "verified": true
+            }
+          },
+          "categories": {
+            "boundary": [
+              "TEST-017"
+            ]
+          },
+          "priority": "must",
+          "type": "functional"
+        },
+        "REQ-003": {
+          "acceptance_criteria": {
+            "AC-003-1": {
+              "tests": {
+                "TEST-018": "passed"
+              },
+              "verified": true
+            }
+          },
+          "categories": {
+            "abnormal": [
+              "TEST-018"
+            ]
+          },
+          "priority": "must",
+          "type": "functional"
+        },
+        "REQ-004": {
+          "acceptance_criteria": {},
+          "categories": {},
+          "priority": "must",
+          "type": "constraint"
+        }
+      },
+      "basis_records": {
+        "G5": "R00019",
+        "G6": "R00020"
+      },
+      "junit": {
+        "errors": 0,
+        "failures": 0,
+        "passed": 7,
+        "skipped": 0,
+        "tests": 7
+      },
+      "failed_cases": [],
+      "manifest_hash": "sha256:162977490d8359a3f6bce9562eade9e7330ded233279aec3c89ec9b2d9c405ec",
+      "validator": {
+        "core_hash": "sha256:8abab9ec86fef66fb6e21b8b13aa29bc27bd29adbb76a2df75608dd1ceee4bb5",
+        "mode": "release",
+        "version": "0.3.0"
+      },
+      "evidence": [
+        {
+          "path": ".vmodel/evidence/WI-001/G7/20261111T135746091142Z-system-009092/record.json",
+          "sha256": "sha256:40e3b8aa20821b01f95da5607adc5ce03a76b74b916523e3c5432bb0519bdd89",
+          "kind": "system_test",
+          "command_source": "system_test",
+          "command": [
+            "/usr/bin/python3",
+            "-m",
+            "pytest",
+            "-q",
+            "-p",
+            "no:cacheprovider",
+            "tests/system",
+            "--junitxml=/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/1a2fca38-b42f-4f6d-843b-ec75ea8760c9/scratchpad/e2e-g7/한글 샘플 프로젝트/.vmodel/evidence/WI-001/G7/20261111T135746091142Z-system-009092/junit.xml"
+          ],
+          "exit_code": 0,
+          "timed_out": false,
+          "duration_s": 1.119,
+          "junit_summary": {
+            "tests": 7,
+            "passed": 7,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "manifest_hash": "sha256:162977490d8359a3f6bce9562eade9e7330ded233279aec3c89ec9b2d9c405ec",
+          "config_sha256": "sha256:b13b9411eff279ebf6bbf27eb38ccad2e0e593f8673116abee33f10c466e6b70",
+          "system_test_sha256": "sha256:86a3cb945f1209deb6bee102eae6167ad6e840818b4f2a9422133b96c84d2ecf",
+          "git": {
+            "available": true,
+            "head": "cac484e6a7c558d87365f4738099bc64b5c77125",
+            "dirty": true,
+            "note": null
+          },
+          "validator": {
+            "version": "0.3.0",
+            "core_hash": "sha256:8abab9ec86fef66fb6e21b8b13aa29bc27bd29adbb76a2df75608dd1ceee4bb5"
+          },
+          "files": {
+            "stdout.bin": "sha256:5aca16efb287fb5b13d535f45123318879a523ba8807605bb8e3c3006ce4db0b",
+            "stderr.bin": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "junit.xml": "sha256:68787d14bafe5aa6d16a415ab98034b3e5a741bc45a3a6625ead84a6be5f4d8f"
+          },
+          "signed": true
+        }
+      ]
+    }
+  ],
+  "work_items": [
+    {
+      "id": "WI-001",
+      "status": "COMPLETED",
+      "gate_summary": {
+        "passed_current": [
+          "G1",
+          "G2",
+          "G3",
+          "G4",
+          "G5",
+          "G7"
+        ],
+        "na": [
+          "G6"
+        ],
+        "not_evaluated": [],
+        "review_required": [],
+        "in_progress": [],
+        "not_started": [],
+        "stale": [],
+        "failed": [],
+        "blocked": [],
+        "not_implemented": []
+      },
+      "gates": {
+        "G1": "PASSED",
+        "G2": "PASSED",
+        "G3": "PASSED",
+        "G4": "PASSED",
+        "G5": "PASSED",
+        "G6": "N/A",
+        "G7": "PASSED"
+      },
+      "next_action": "all gates passed: G1-G7 verified, G6 N/A (no integration test executed); report COMPLETED (automated verification, not user acceptance or a deployment approval)",
+      "defects": []
+    }
+  ],
+  "architecture": {
+    "WI-001": {
+      "components": [
+        "ARCH-001"
+      ],
+      "interfaces": []
+    }
+  },
+  "tests": {
+    "WI-001": [
+      [
+        "TEST-001",
+        "unit",
+        [
+          "DESIGN-001",
+          "REQ-001"
+        ]
+      ],
+      [
+        "TEST-002",
+        "unit",
+        [
+          "DESIGN-001",
+          "REQ-002"
+        ]
+      ],
+      [
+        "TEST-003",
+        "unit",
+        [
+          "DESIGN-001",
+          "REQ-001"
+        ]
+      ],
+      [
+        "TEST-004",
+        "unit",
+        [
+          "DESIGN-001",
+          "REQ-001"
+        ]
+      ],
+      [
+        "TEST-005",
+        "unit",
+        [
+          "DESIGN-001",
+          "REQ-001"
+        ]
+      ],
+      [
+        "TEST-006",
+        "unit",
+        [
+          "DESIGN-001"
+        ]
+      ],
+      [
+        "TEST-007",
+        "unit",
+        [
+          "DESIGN-002",
+          "REQ-001"
+        ]
+      ],
+      [
+        "TEST-008",
+        "unit",
+        [
+          "DESIGN-002",
+          "REQ-002"
+        ]
+      ],
+      [
+        "TEST-009",
+        "unit",
+        [
+          "DESIGN-002",
+          "REQ-001"
+        ]
+      ],
+      [
+        "TEST-010",
+        "unit",
+        [
+          "DESIGN-002",
+          "REQ-003"
+        ]
+      ],
+      [
+        "TEST-011",
+        "unit",
+        [
+          "DESIGN-002",
+          "REQ-003"
+        ]
+      ],
+      [
+        "TEST-012",
+        "unit",
+        [
+          "DESIGN-002"
+        ]
+      ],
+      [
+        "TEST-013",
+        "system",
+        [
+          "REQ-001"
+        ]
+      ],
+      [
+        "TEST-014",
+        "system",
+        [
+          "REQ-001"
+        ]
+      ],
+      [
+        "TEST-015",
+        "system",
+        [
+          "REQ-001"
+        ]
+      ],
+      [
+        "TEST-016",
+        "system",
+        [
+          "REQ-001"
+        ]
+      ],
+      [
+        "TEST-017",
+        "system",
+        [
+          "REQ-002"
+        ]
+      ],
+      [
+        "TEST-018",
+        "system",
+        [
+          "REQ-003"
+        ]
+      ]
+    ]
+  },
+  "review_keys": {
+    "WI-001": {
+      "G2": {
+        "verdict": "approve",
+        "integration_applicability": {
+          "decision": "not_required",
+          "reason": "One component with no internal interfaces; its only boundaries are the external CLI and file, verified by system tests.",
+          "endpoints_reviewed": [
+            "EXTERNAL",
+            "command line arguments",
+            "input text file",
+            "stdout",
+            "stderr",
+            "exit code"
+          ]
+        },
+        "interfaces": null
+      },
+      "G3": {
+        "verdict": "approve",
+        "integration_applicability": {
+          "decision": "not_required",
+          "reason": "One component with no interfaces; its only boundary is the external CLI, verified by G7 system tests.",
+          "endpoints_reviewed": [
+            "EXTERNAL",
+            "command line arguments",
+            "input file",
+            "stdout",
+            "stderr",
+            "exit code"
+          ]
+        },
+        "interfaces": null
+      },
+      "G4": {
+        "verdict": "approve",
+        "integration_applicability": null,
+        "interfaces": null
+      }
+    }
+  },
+  "trace": {
+    "WI-001": [
+      "   AC-001-2 (REQ-001): TEST-014(passed) verified",
+      "   AC-001-3 (REQ-001): TEST-015(passed) verified",
+      "   AC-001-4 (REQ-001): TEST-016(passed) verified",
+      "   AC-002-1 (REQ-002): TEST-017(passed) verified",
+      "   AC-003-1 (REQ-003): TEST-018(passed) verified",
+      "Reverse (TEST -> REQ):",
+      "   TEST-001 -> REQ-001, REQ-002",
+      "   TEST-002 -> REQ-001, REQ-002",
+      "   TEST-003 -> REQ-001, REQ-002",
+      "   TEST-004 -> REQ-001, REQ-002",
+      "   TEST-005 -> REQ-001, REQ-002",
+      "   TEST-006 -> REQ-001, REQ-002",
+      "   TEST-007 -> REQ-001, REQ-002, REQ-003, REQ-004",
+      "   TEST-008 -> REQ-001, REQ-002, REQ-003, REQ-004",
+      "   TEST-009 -> REQ-001, REQ-002, REQ-003, REQ-004",
+      "   TEST-010 -> REQ-001, REQ-002, REQ-003, REQ-004",
+      "   TEST-011 -> REQ-001, REQ-002, REQ-003, REQ-004",
+      "   TEST-012 -> REQ-001, REQ-002, REQ-003, REQ-004",
+      "   TEST-013 -> REQ-001",
+      "   TEST-014 -> REQ-001",
+      "   TEST-015 -> REQ-001",
+      "   TEST-016 -> REQ-001",
+      "   TEST-017 -> REQ-002",
+      "   TEST-018 -> REQ-003",
+      "Dangling references: none"
+    ]
+  },
+  "report_g6_lines": {
+    "WI-001": []
+  },
+  "session": {
+    "subtype": "success",
+    "total_cost_usd": 1.0428574,
+    "num_turns": 56,
+    "duration_ms": 384632
+  },
+  "session_result_text": "`python -m textcli count <파일경로>`를 구현했고, WI-001은 G1~G7을 거쳐 `COMPLETED`입니다. G6은 N/A입니다. 이 결과는 자동 검증이지 사용자 수용이나 배포 승인이 아닙니다.\n\n## Gate별 결과\n| Gate | 결과 | 비고 |\n|---|---|---|\n| G1 요구사항 | PASSED | 첫 리뷰는 reject였습니다. 아래 결함 참고. |\n| G2 아키텍처 | PASSED | |\n| G3 설계·테스트 명세 | PASSED | |\n| G4 구현 | PASSED | |\n| G5 단위 검증 | PASSED | 13개 통과 |\n| G6 통합 검증 | **N/A** | 컴포넌트 하나에 인터페이스가 없어 통합 테스트를 실행하지 않았습니다. 통합 테스트가 통과했다는 뜻이 아닙니다. |\n| G7 시스템 검증 | PASSED | 7개 통과 |\n\n## G7에서 시스템 테스트로 검증된 수용 기준\n수용 기준 6/6이 통과했습니다. `python -m textcli`를 subprocess로 실행해 확인했습니다.\n- AC-001-1: `2 3 16`\n- AC-001-2: 마지막 줄에 줄바꿈이 없는 `2 3 5`\n- AC-001-3: 한글 `1 2 6`\n- AC-001-4: `\\n`만 있는 파일 `1 0 1`\n- AC-002-1: 빈 파일 `0 0 0`\n- AC-003-1: 파일이 없으면 stdout은 비고, stderr에 `error: file not found: <경로>`가 나오며 종료 코드 2\n\n비기능 기준 중 시스템 테스트가 없는 것은 없습니다. REQ-004(표준 라이브러리만 사용, 컴포넌트 하나)는 수용 기준 없이 리뷰로만 확인했습니다.\n\n## 결함과 처리\n`defects.json`에 기록된 결함은 없고, 결함 추적 검사는 오류 0건·경고 0건입니다. Gate가 FAILED로 끝난 적도 없습니다. 대신 아래 두 가지가 있었고, 둘 다 해당 단계로 돌아가 고쳤습니다.\n- **G1 리뷰 reject**: 제가 AC-001-3의 기대값을 `1 2 7`로 잘못 적었습니다. `'안녕 세상\\n'`은 6자이므로 `1 2 6`으로 고쳤습니다. 경계 기준 AC-001-4도 추가한 뒤 다시 리뷰받아 통과했습니다.\n- **G6 BLOCKED (`applicability_unconfirmed`)**: G2·G3 리뷰의 `endpoints_reviewed`에 `EXTERNAL`이 빠져 있었습니다. 검증자에게 다시 리뷰를 받고 G2~G6을 재평가해 N/A가 확정됐습니다.\n\n## 감사(audit) 결과\n- 원장(ledger)은 21건 모두 정상입니다.\n- 검증기 무결성은 OK입니다.\n- 리뷰에서 나온 minor/info 지적은 모두 승인 범위 안입니다. 예를 들어 시스템 테스트 일부가 빈 stderr를 검사하지 않는다는 지적이 있었습니다.\n\n## 확인이 필요한 가정\n- 파일은 UTF-8 바이트를 줄바꿈 변환 없이 읽습니다. CRLF는 문자 2개, 줄 1개로 셉니다.\n- 잘못된 UTF-8, 디렉터리, 읽을 수 없는 파일은 동작을 정하지 않았습니다.\n- 사용법 오류는 argparse 기본 동작(종료 코드 2)에 맡겼습니다.\n\n## 경로\n- 보고서: `.vmodel/reports/WI-001.md`\n- 증거: G4·G5·G7은 `.vmodel/evidence/WI-001/` 아래 `G4/20261111T135739436481Z-lint-f6ecc9`, `G5/20261111T135741454990Z-unit-62b56f`, `G7/20261111T135746091142Z-system-009092`입니다. G6은 N/A라 증거가 없습니다.",
+  "guard_denials": []
+}

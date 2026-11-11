@@ -1,0 +1,36 @@
+Compatibility of the 0.3.0 release (core sha256:8abab9ec86fef66fb6e21b8b13aa29bc27bd29adbb76a2df75608dd1ceee4bb5) with a real 0.2.0-era signed ledger:
+drill S1/S2 sandbox (records signed by core 88edfac2, lock re-pinned to the final 0.2.0 core 2a95adb3 on 2026-11-11), on a copy.
+
+1. Before re-pin
+audit: validator 0.3.0 release core 8abab9ec86fe; 14 ledger entries; 4 evidence record(s) checked
+  ! integrity: running core hash differs from devkit.lock.json
+audit FAILED (1 problem(s))
+   verify-evidence .vmodel/evidence/WI-001/G4/20261110T142626162730Z-lint-2e895a/record.json: evidence OK
+   verify-evidence .vmodel/evidence/WI-001/G4/20261110T142715716902Z-lint-aa585f/record.json: evidence OK
+   verify-evidence .vmodel/evidence/WI-001/G5/20261110T142717469706Z-unit-59b930/record.json: evidence OK
+   verify-evidence .vmodel/evidence/WI-001/G6/20261110T142720147769Z-integration-d60704/record.json: evidence OK
+
+2. User re-pin on the copy (pty, typed 'yes')
+   re-pinned core 8abab9ec86fe (validator 0.3.0)
+     .claude/settings.json: 5 DevKit rule(s) added, 5 removed; your own rules unchanged
+     previous settings, install record and lock saved in: /tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/1a2fca38-b42f-4f6d-843b-ec75ea8760c9/scratchpad/compat-0.3.0/한글 드릴 프로젝트/.vmodel/install/backup/upgrade-20261111T140142913Z
+     G7 (system verification, 0.3.0): system_test is not configured. Every STANDARD work item needs it to be COMPLETED: 'vmodel configure-tests --system tests/system' (in a terminal, after the system tests exist)
+
+3. After re-pin
+   audit: validator 0.3.0 release core 8abab9ec86fe; 15 ledger entries; 4 evidence record(s) checked
+   audit OK
+   WI-001 [IN_PROGRESS] 주문 가격 계산과 영수증 (profile STANDARD); defect checks: 0 error(s), 0 warning(s)
+     gates: G7 not evaluated, G1-G6 STALE
+     G1 Requirements                     STALE            R00003 @ 2026-11-10T14:20:13.086Z
+     G2 Architecture                     STALE            R00005 @ 2026-11-10T14:20:40.852Z
+     G3 Detailed Design & Test Planning  STALE            R00007 @ 2026-11-10T14:21:55.381Z
+     G4 Implementation                   STALE            R00011 @ 2026-11-10T14:27:15.748Z
+     G5 Unit Verification                STALE            R00012 @ 2026-11-10T14:27:18.071Z
+     G6 Integration Verification         STALE            R00013 @ 2026-11-10T14:27:20.787Z
+     G7 System Verification              IN_PROGRESS     
+     DEFECT-001 REVERIFY_REQUIRED [claimed fixed; previously passed in R00011, G4 is now STALE: re-verify] G4 root cause P4; failing tests (ledger): N/A (G4 does not run tests)
+     next: G1 STALE (inputs changed): re-review if needed and re-run 'vmodel gate WI-001 G1'
+   Implemented gates: G1-G7 (G6 integration verification is N/A only for a confirmed single-component work item without interfaces; G7 runs the system_test command and needs every acceptance criterion of the active functional requirements met: every system test n
+
+The original sandbox (7cecc96f scratchpad compat-f49bc5c/work) was only read: digest of all 95 files before and after is identical. Existing records keep their validator.version / core_hash; nothing in the signed ledger was rewritten (15 entries = 14 + the re-pin record).
+Signed ledger prefix: the copy's first 38971 bytes (the 14 original entries) are byte-identical to the original; the re-pin appended 1 entry.

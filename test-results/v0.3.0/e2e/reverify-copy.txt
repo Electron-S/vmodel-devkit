@@ -1,0 +1,160 @@
+# Independent re-verification of the E2E sandbox (copy), release 0.3.0, no model call
+$ vmodel verify WI-001
+WI-001 G1 PASSED  record R00029  manifest fe377cebb664
+  [pass   ] G1.SCHEMA                    workitem.json, requirements.json valid
+  [pass   ] G1.IDS                       10 ids unique
+  [pass   ] G1.ACCEPTANCE                3 functional requirements have acceptance criteria
+  [pass   ] G1.CONFLICTS                 0 conflict(s), all resolved
+  [pass   ] G1.OPEN_ISSUES               no open critical issues
+  [pass   ] G1.CHANGE_CONTROL            no change since R00022
+  [pass   ] G1.AMBIGUITY                 no vague wording detected
+  [pass   ] G1.REVIEW                    approved by vmodel:verifier (AI review, not machine-verified)
+
+WI-001 G2 PASSED  record R00030  manifest c6faf8a80f5f
+  [pass   ] G2.SCHEMA                    architecture.json valid
+  [pass   ] G2.IDS                       1 ids unique
+  [pass   ] G2.REQ_MAPPING               all functional requirements mapped
+  [pass   ] G2.INTERFACES                0 interface(s) consistent
+  [pass   ] G2.NFR                       1 non-functional/constraint requirement(s) addressed
+  [pass   ] G2.INTEGRATION_STRATEGY      integration test strategy covers all interfaces
+  [pass   ] G2.TRADEOFFS                 1 trade-off(s) recorded
+  [pass   ] G2.REVIEW                    approved by vmodel:verifier (AI review, not machine-verified)
+
+WI-001 G3 PASSED  record R00031  manifest d1d772829b26
+  [pass   ] G3.SCHEMA                    design.json, tests.json valid
+  [pass   ] G3.IDS                       20 ids unique
+  [pass   ] G3.DESIGN_COVERAGE           2 unit(s) cover all components and requirements
+  [pass   ] G3.CONTRACTS                 every unit has signature, contract, errors and boundaries
+  [pass   ] G3.UNIT_TESTS                12 unit test spec(s) cover all units
+  [pass   ] G3.INTEGRATION_SYSTEM_TESTS  integration and system test specs cover interfaces and acceptance criteria
+  [pass   ] G3.TRACE                     requirements, design and tests are linked
+  [pass   ] G3.NO_SILENT_REMOVAL         nothing removed
+  [pass   ] G3.REVIEW                    approved by vmodel:verifier (AI review, not machine-verified)
+
+WI-001 G4 PASSED  record R00032  manifest 162977490d83
+  [pass   ] G4.FILES                     2 source / 6 test file(s)
+  [pass   ] G4.UNEXPECTED_CODE           no Python code outside the configured paths, no symlinks
+  [pass   ] G4.SYNTAX                    8 file(s) parsed by the validator (Python AST)
+  [pass   ] G4.LINT                      ruff passed (exit 0)
+  [pass   ] G4.DESIGN_CONFORMANCE        2 design unit(s) implemented
+  [pass   ] G4.TEST_CODE                 12 unit test spec(s) implemented
+  [pass   ] G4.TEST_INTEGRITY            no result-reporting hooks in test or support code
+  [pass   ] G4.REQ_IMPLEMENTED           every functional requirement reaches implemented code
+  [pass   ] G4.REVIEW                    approved by vmodel:verifier (AI review, not machine-verified)
+  evidence: .vmodel/evidence/WI-001/G4/20261111T140025170784Z-lint-ac14c3/record.json (0697102a5601)
+
+WI-001 G5 PASSED  record R00033  manifest 162977490d83
+  [pass   ] G5.PREREQ                    G4 PASSED for the current manifest hash
+  [pass   ] G5.EXECUTION                 exit code 0, junit produced
+  [pass   ] G5.RESULTS                   13 passed, 0 skipped of 13
+  [pass   ] G5.TEST_MAPPING              12 unit test spec(s) passed
+  [pass   ] G5.SCOPE                     no integration or system test in this run
+  [pass   ] G5.REQ_COVERAGE              every functional requirement has a passed test
+  [pass   ] G5.NO_WEAKENING              no test change since R00026
+  [pass   ] G5.INPUTS_UNCHANGED          inputs unchanged during the run
+  evidence: .vmodel/evidence/WI-001/G5/20261111T140025212995Z-unit-a32b6e/record.json (074b59e60352)
+
+WI-001 G6 N/A  record R00034  manifest 5b58e0b05b6c
+  applicability: N/A (not_applicable): no integration test was executed; recorded as PASSED only so the gate chain continues, never as a verification
+  [pass   ] G6.PREREQ                    G5 PASSED for the current manifest hash
+  [pass   ] G6.APPLICABILITY             N/A: one component (ARCH-001), no interface, no integration test spec; confirmed by the G2 (R00030) and G3 (R00031) reviews
+  [skip   ] G6.CONFIG                    not executed: not applicable (no integration test was run)
+  [skip   ] G6.EXECUTION                 not executed: not applicable (no integration test was run)
+  [skip   ] G6.RESULTS                   not executed: not applicable (no integration test was run)
+  [skip   ] G6.SCOPE                     not executed: not applicable (no integration test was run)
+  [skip   ] G6.TEST_MAPPING              not executed: not applicable (no integration test was run)
+  [skip   ] G6.IF_COVERAGE               not executed: not applicable (no integration test was run)
+  [pass   ] G6.NO_WEAKENING              first G6 run; baseline recorded
+  [pass   ] G6.INPUTS_UNCHANGED          inputs unchanged during the run
+
+WI-001 G7 PASSED  record R00035  manifest 162977490d83
+  [pass   ] G7.PREREQ                    G6 PASSED (or N/A) for the current manifest hash
+  [pass   ] G7.CONFIG                    system_test configured
+  [pass   ] G7.EXECUTION                 exit code 0, junit produced
+  [pass   ] G7.RESULTS                   7 passed, 0 skipped of 7
+  [pass   ] G7.SCOPE                     no unit or integration test in this run
+  [pass   ] G7.TEST_MAPPING              6 system test spec(s) passed
+  [pass   ] G7.AC_COVERAGE               6/6 acceptance criteria met (every system test spec naming them passed in this run)
+  [pass   ] G7.NO_WEAKENING              no system test lost since R00028
+  [pass   ] G7.INPUTS_UNCHANGED          inputs unchanged during the run
+  evidence: .vmodel/evidence/WI-001/G7/20261111T140025897873Z-system-6f6625/record.json (272724584417)
+
+WI-001 work item status: COMPLETED
+next: all gates passed: G1-G7 verified, G6 N/A (no integration test executed); report COMPLETED (automated verification, not user acceptance or a deployment approval)
+exit=0
+
+$ vmodel status WI-001
+Project: /tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/1a2fca38-b42f-4f6d-843b-ec75ea8760c9/scratchpad/e2e-g7-reverify/한글 샘플 프로젝트
+Validator: 0.3.0 (release) core 8abab9ec86fe integrity OK
+Ledger: OK (35 entries)
+
+WI-001 [COMPLETED] textcli count (profile STANDARD); defect checks: 0 error(s), 0 warning(s)
+  gates: G1, G2, G3, G4, G5, G7 PASSED (current), G6 N/A
+  G1 Requirements                     PASSED           R00029 @ 2026-11-11T14:00:25.034Z
+  G2 Architecture                     PASSED           R00030 @ 2026-11-11T14:00:25.101Z
+  G3 Detailed Design & Test Planning  PASSED           R00031 @ 2026-11-11T14:00:25.122Z
+  G4 Implementation                   PASSED           R00032 @ 2026-11-11T14:00:25.187Z
+  G5 Unit Verification                PASSED           R00033 @ 2026-11-11T14:00:25.837Z
+  G6 Integration Verification         N/A              R00034 @ 2026-11-11T14:00:25.863Z
+      - N/A: recorded PASSED R00034, no integration test executed (One component with no internal interfaces; its only boundaries are the external CLI and file, verified by system tests.); external endpoints reviewed: EXTERNAL
+  G7 System Verification              PASSED           R00035 @ 2026-11-11T14:00:27.128Z
+      - AC 6/6 met: all their system tests passed (6 system test(s) passed, 4 requirement(s))
+  next: all gates passed: G1-G7 verified, G6 N/A (no integration test executed); report COMPLETED (automated verification, not user acceptance or a deployment approval)
+
+Implemented gates: G1-G7 (G6 integration verification is N/A only for a confirmed single-component work item without interfaces; G7 runs the system_test command and needs every acceptance criterion of the active functional requirements met: every system test naming it passed in that run). A STANDARD work item is COMPLETED only when G1-G7 are PASSED for the current inputs. COMPLETED is automated verification, not user acceptance or a deployment approval. LITE and STRICT profiles are not implemented.
+
+$ vmodel trace WI-001
+Traceability WI-001 (results from R00033)
+REQ-001 [functional/active] Count lines, words and characters
+   AC: AC-001-1, AC-001-2, AC-001-3, AC-001-4
+   ARCH: ARCH-001   DESIGN: DESIGN-001, DESIGN-002
+   CODE: src/textcli/__main__.py:count_text, src/textcli/__main__.py:main
+   TEST: TEST-001(unit:passed), TEST-002(unit:passed), TEST-003(unit:passed), TEST-004(unit:passed), TEST-005(unit:passed), TEST-006(unit:passed), TEST-007(unit:passed), TEST-008(unit:passed), TEST-009(unit:passed), TEST-010(unit:passed), TEST-011(unit:passed), TEST-012(unit:passed), TEST-013(system:passed), TEST-014(system:passed), TEST-015(system:passed), TEST-016(system:passed)
+REQ-002 [functional/active] Empty file
+   AC: AC-002-1
+   ARCH: ARCH-001   DESIGN: DESIGN-001, DESIGN-002
+   CODE: src/textcli/__main__.py:count_text, src/textcli/__main__.py:main
+   TEST: TEST-001(unit:passed), TEST-002(unit:passed), TEST-003(unit:passed), TEST-004(unit:passed), TEST-005(unit:passed), TEST-006(unit:passed), TEST-007(unit:passed), TEST-008(unit:passed), TEST-009(unit:passed), TEST-010(unit:passed), TEST-011(unit:passed), TEST-012(unit:passed), TEST-017(system:passed)
+REQ-003 [functional/active] Missing file
+   AC: AC-003-1
+   ARCH: ARCH-001   DESIGN: DESIGN-002
+   CODE: src/textcli/__main__.py:main
+   TEST: TEST-007(unit:passed), TEST-008(unit:passed), TEST-009(unit:passed), TEST-010(unit:passed), TEST-011(unit:passed), TEST-012(unit:passed), TEST-018(system:passed)
+REQ-004 [constraint/active] Standard library only, single component
+   AC: -
+   ARCH: ARCH-001   DESIGN: DESIGN-002
+   CODE: src/textcli/__main__.py:main
+   TEST: TEST-007(unit:passed), TEST-008(unit:passed), TEST-009(unit:passed), TEST-010(unit:passed), TEST-011(unit:passed), TEST-012(unit:passed)
+Interfaces (integration results from N/A (no interfaces)):
+Acceptance criteria (system results from R00035):
+   AC-001-1 (REQ-001): TEST-013(passed) verified
+   AC-001-2 (REQ-001): TEST-014(passed) verified
+   AC-001-3 (REQ-001): TEST-015(passed) verified
+   AC-001-4 (REQ-001): TEST-016(passed) verified
+   AC-002-1 (REQ-002): TEST-017(passed) verified
+   AC-003-1 (REQ-003): TEST-018(passed) verified
+Reverse (TEST -> REQ):
+   TEST-001 -> REQ-001, REQ-002
+   TEST-002 -> REQ-001, REQ-002
+   TEST-003 -> REQ-001, REQ-002
+   TEST-004 -> REQ-001, REQ-002
+   TEST-005 -> REQ-001, REQ-002
+   TEST-006 -> REQ-001, REQ-002
+   TEST-007 -> REQ-001, REQ-002, REQ-003, REQ-004
+   TEST-008 -> REQ-001, REQ-002, REQ-003, REQ-004
+   TEST-009 -> REQ-001, REQ-002, REQ-003, REQ-004
+   TEST-010 -> REQ-001, REQ-002, REQ-003, REQ-004
+   TEST-011 -> REQ-001, REQ-002, REQ-003, REQ-004
+   TEST-012 -> REQ-001, REQ-002, REQ-003, REQ-004
+   TEST-013 -> REQ-001
+   TEST-014 -> REQ-001
+   TEST-015 -> REQ-001
+   TEST-016 -> REQ-001
+   TEST-017 -> REQ-002
+   TEST-018 -> REQ-003
+Dangling references: none
+
+$ vmodel audit
+audit: validator 0.3.0 release core 8abab9ec86fe; 35 ledger entries; 11 evidence record(s) checked
+audit OK
+exit=0

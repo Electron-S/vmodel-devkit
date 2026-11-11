@@ -1,0 +1,114 @@
+{
+  "schema": "vmodel.evidence/1",
+  "work_item": "WI-001",
+  "gate": "G7",
+  "kind": "system_test",
+  "command": [
+    "/usr/bin/python3",
+    "-m",
+    "pytest",
+    "-q",
+    "-p",
+    "no:cacheprovider",
+    "tests/system",
+    "--junitxml=/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/1a2fca38-b42f-4f6d-843b-ec75ea8760c9/scratchpad/e2e-g7/한글 샘플 프로젝트/.vmodel/evidence/WI-001/G7/20261111T135746091142Z-system-009092/junit.xml"
+  ],
+  "cwd": ".",
+  "executable": {
+    "requested": "/usr/bin/python3",
+    "resolved": "/usr/bin/python3",
+    "sha256": "sha256:e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f",
+    "version": "Python 3.12.3",
+    "notes": []
+  },
+  "runtime": {
+    "validator_python": "3.12.3",
+    "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+    "machine": "x86_64",
+    "os_name": "posix",
+    "preferred_encoding": "UTF-8"
+  },
+  "started_at": "2026-11-11T13:57:46.096Z",
+  "finished_at": "2026-11-11T13:57:47.215Z",
+  "duration_s": 1.119,
+  "exit_code": 0,
+  "timed_out": false,
+  "start_error": null,
+  "files": {
+    "stdout.bin": {
+      "sha256": "sha256:5aca16efb287fb5b13d535f45123318879a523ba8807605bb8e3c3006ce4db0b",
+      "bytes": 98
+    },
+    "stderr.bin": {
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "junit.xml": {
+      "sha256": "sha256:68787d14bafe5aa6d16a415ab98034b3e5a741bc45a3a6625ead84a6be5f4d8f",
+      "bytes": 958
+    }
+  },
+  "git": {
+    "available": true,
+    "head": "cac484e6a7c558d87365f4738099bc64b5c77125",
+    "dirty": true,
+    "note": null
+  },
+  "manifest_hash": "sha256:162977490d8359a3f6bce9562eade9e7330ded233279aec3c89ec9b2d9c405ec",
+  "validator": {
+    "version": "0.3.0",
+    "core_hash": "sha256:8abab9ec86fef66fb6e21b8b13aa29bc27bd29adbb76a2df75608dd1ceee4bb5"
+  },
+  "command_source": "system_test",
+  "config_sha256": "sha256:b13b9411eff279ebf6bbf27eb38ccad2e0e593f8673116abee33f10c466e6b70",
+  "system_test_sha256": "sha256:86a3cb945f1209deb6bee102eae6167ad6e840818b4f2a9422133b96c84d2ecf",
+  "unit_test_sha256": "sha256:7a626452f0f5be52c8319940e6aa5453f65940b57f539f8ee3dfbb59bed23e7b",
+  "integration_test_sha256": "sha256:ef26a058183d0e2c1febc715a7b19d50ef8ef665b0ce4e02a0ecb31b76a396bb",
+  "junit_summary": {
+    "tests": 7,
+    "passed": 7,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "junit_error": null,
+  "verified_files": {
+    ".claude/settings.json": "sha256:45e256ffe93d92637a316c314f65608d973fbcfb7295d044ad769e53645163ec",
+    ".vmodel/config.json": "sha256:b13b9411eff279ebf6bbf27eb38ccad2e0e593f8673116abee33f10c466e6b70",
+    ".vmodel/work-items/WI-001/architecture.json": "sha256:2e595cdadb937597b44d1008cc9c3f92a31ebddafca0492dc5e8db4242c43179",
+    ".vmodel/work-items/WI-001/change-requests.json": "MISSING",
+    ".vmodel/work-items/WI-001/defects.json": "MISSING",
+    ".vmodel/work-items/WI-001/design.json": "sha256:ea596308973fb9f2fad1524aabb4f7140771b11130dd401d6140172dc08843e7",
+    ".vmodel/work-items/WI-001/requirements.json": "sha256:2e035e2c723db8769eac3d9c706eaf3d2287f3fef7a543f92e5754d804b095d0",
+    ".vmodel/work-items/WI-001/tests.json": "sha256:133ad091d0ae4d9b6eba3315eff46aee76d2a62d74e14fbef9fcb21828a5bed2",
+    ".vmodel/work-items/WI-001/workitem.json": "sha256:9c073cb1d863c8dcafc710c1831a9c4b5f17965ed8ab4616cb9d6da368a90940",
+    "README.md": "sha256:f4610f3cfe382d3755c94cd47d264c95004402270334b67fb7b9a3e91e327a7b",
+    "pyproject.toml": "sha256:1b275b05d053fd08909108abe7ee9c66dbdbb74a75153a96a52c5bbb3c961e4b",
+    "src/textcli/__init__.py": "sha256:d415433a5cfb003e649debe876037acd97b753f404e6e7a93ca522688392a622",
+    "src/textcli/__main__.py": "sha256:1035c78a2d56c3fdac004b3a77664cfe6b2332ea19ada2c48bcdee38cc45ef86",
+    "tests/integration/test_package_integration_smoke.py": "sha256:2903b1a5b354a1ea82d5e5590ced08ff313cb400c29cc59975ef54acdc2fedcc",
+    "tests/system/test_cli.py": "sha256:bd1e406fd38c7e18e6def1fb94553aed00d68d86c4ec9924e05e6d27e9632128",
+    "tests/system/test_package_system_smoke.py": "sha256:c949427ffccf305582af875ac562bfc45f4cb1c50db6a1ca24311cc54f527c05",
+    "tests/test_count_text.py": "sha256:2edca5eb76fc97ca59e1f83c1e44abe25feed9de3e38a29b13e19f77e6e7cce8",
+    "tests/test_main.py": "sha256:8db84c39e98a2e1389fcea3f0a89ca25a15db7fa9cd3386a168fba1da0ccf4e0",
+    "tests/unit/test_smoke.py": "sha256:b92046a4bd267c105efdbdf07867a883f5769333023696a80b90ef7d14dae474"
+  },
+  "environment": {
+    "scrubbed": [
+      "VMODEL_GUARD_LOG",
+      "VMODEL_HOME"
+    ],
+    "set": {
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONPYCACHEPREFIX": "<validator temp>",
+      "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"
+    },
+    "output_capture": "files; POSIX: own session, process group killed after the run",
+    "distributions": {
+      "count": 0,
+      "sha256": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "items": []
+    }
+  },
+  "sig": "hmac-sha256:5e49ae9c63118f8680f536cdb819c4ef9e46a4d837eb567e90bf29d72c8199d3"
+}

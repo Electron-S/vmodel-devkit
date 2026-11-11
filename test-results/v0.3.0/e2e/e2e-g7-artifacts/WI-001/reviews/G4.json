@@ -1,0 +1,14 @@
+{"gate": "G4", "work_item": "WI-001", "reviewer": "vmodel:verifier", "target_hash": "sha256:162977490d8359a3f6bce9562eade9e7330ded233279aec3c89ec9b2d9c405ec",
+ "reviewed_at": "2026-11-11T00:00:00Z", "verdict": "approve",
+ "summary": "count_text and main match DESIGN-001/002 (signatures, TypeError, exit 2 with exact stderr, UTF-8 byte decoding without newline translation). TEST-001..018 are implemented under their tokens with exact-value assertions; system tests drive python -m textcli via subprocess with nothing mocked. No defects or change requests exist; only minor remarks.",
+ "checklist": [
+  {"item": "Code matches design contracts", "result": "ok", "note": "Signatures, TypeError, return codes, output format and boundaries match; stdlib only (REQ-004)."},
+  {"item": "No unrequested behaviour / dead code", "result": "ok", "note": "Only the specified subcommand; stderr reconfigure is specified in DESIGN-002."},
+  {"item": "Unit TEST specs implemented faithfully", "result": "ok", "note": "TEST-001..012 present with token names and the specified concrete expected values."},
+  {"item": "Assertion quality", "result": "ok", "note": "Exact equality on stdout/stderr/return code; no skips or swallowed exceptions; no conftest."},
+  {"item": "System tests black box", "result": "ok", "note": "TEST-013..018 use subprocess python -m textcli, assert acceptance results; system_test config runs tests/system only."},
+  {"item": "Interfaces", "result": "na", "note": "Single component, no interfaces; integration smoke test is a placeholder-level package test, not tied to an IF."},
+  {"item": "Defects / test_changes", "result": "na", "note": "No defects.json or change-requests.json."}],
+ "findings": [
+  {"id": "F-1", "severity": "minor", "description": "System tests TEST-014..017 do not assert empty stderr, although only TEST-013 spec requires it; harmless relative to specs.", "related": ["TEST-014", "TEST-017"], "status": "open"},
+  {"id": "F-2", "severity": "info", "description": "TEST-018 compares stderr with strip() while the spec says exact line; trailing newline tolerance is negligible.", "related": ["TEST-018"], "status": "open"}]}

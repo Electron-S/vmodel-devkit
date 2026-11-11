@@ -1,0 +1,33 @@
+{
+  "work_item": "WI-001",
+  "requirements": [
+    {"id": "REQ-001", "type": "functional", "title": "Count lines, words and characters", "priority": "must", "status": "active",
+     "description": "`python -m textcli count <path>` reads the UTF-8 file and prints 'lines words chars' separated by single spaces on one stdout line, exit code 0. Lines: number of newline-terminated lines, plus one for a final line without a trailing newline. Words: whitespace-separated tokens (str.split). Chars: number of Unicode characters including newline characters (no newline translation).",
+     "source": "user request",
+     "acceptance_criteria": [
+       {"id": "AC-001-1", "criterion": "A file containing 'hello world\\nfoo\\n' prints '2 3 16' and exits 0"},
+       {"id": "AC-001-2", "criterion": "A file 'a b\\nc' (no trailing newline) prints '2 3 5' and exits 0"},
+       {"id": "AC-001-3", "criterion": "A Korean UTF-8 file '안녕 세상\\n' prints '1 2 6' (characters, not bytes) and exits 0"},
+       {"id": "AC-001-4", "criterion": "A file containing only '\\n' prints '1 0 1' and exits 0"}]},
+    {"id": "REQ-002", "type": "functional", "title": "Empty file", "priority": "must", "status": "active",
+     "description": "An empty file prints '0 0 0' and exits 0.",
+     "source": "user request",
+     "acceptance_criteria": [
+       {"id": "AC-002-1", "criterion": "An empty file prints '0 0 0' and exits 0"}]},
+    {"id": "REQ-003", "type": "functional", "title": "Missing file", "priority": "must", "status": "active",
+     "description": "If the path does not exist, nothing is written to stdout, stderr gets 'error: file not found: <path>', and the exit code is 2.",
+     "source": "user request",
+     "acceptance_criteria": [
+       {"id": "AC-003-1", "criterion": "A nonexistent path gives empty stdout, stderr 'error: file not found: <path>' and exit code 2"}]},
+    {"id": "REQ-004", "type": "constraint", "title": "Standard library only, single component", "priority": "must", "status": "active",
+     "description": "Implemented with the Python standard library only, as one component in the textcli package.",
+     "source": "user request", "acceptance_criteria": []}
+  ],
+  "conflict_analysis": {"performed": true, "method": "pairwise review of all four requirements", "conflicts": []},
+  "open_issues": [],
+  "assumptions": [
+    {"id": "ASM-001", "description": "Files are read as raw UTF-8 bytes decoded without newline translation, so CRLF counts as 2 characters and 1 line.", "impact": "chars follow the file content exactly"},
+    {"id": "ASM-002", "description": "Invalid UTF-8, directories and unreadable files are unspecified; they are out of scope and not handled specially.", "impact": "no defined behaviour for those inputs"},
+    {"id": "ASM-003", "description": "Only the 'count' subcommand with exactly one path argument is specified; other usage errors fall to argparse defaults.", "impact": "argparse exit code 2 for usage errors"}
+  ]
+}

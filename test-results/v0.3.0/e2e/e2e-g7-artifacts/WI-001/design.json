@@ -1,0 +1,19 @@
+{
+  "work_item": "WI-001",
+  "units": [
+    {"id": "DESIGN-001", "component": "ARCH-001", "module": "src/textcli/__main__.py", "name": "count_text",
+     "kind": "function", "signature": "def count_text(text: str) -> tuple[int, int, int]",
+     "description": "Return (lines, words, chars). lines = text.count('\\n') plus 1 when text is non-empty and does not end with '\\n'; words = len(text.split()); chars = len(text).",
+     "requirements": ["REQ-001", "REQ-002"],
+     "contract": {"preconditions": ["text is a str"], "postconditions": ["returns (lines, words, chars), all non-negative ints", "chars counts newline characters and Unicode characters, not bytes", "empty text returns (0, 0, 0)"]},
+     "errors": [{"exception": "TypeError", "condition": "text is not a str"}],
+     "boundary_conditions": ["'' -> (0, 0, 0)", "'\\n' -> (1, 0, 1)", "no trailing newline: 'a b\\nc' -> (2, 3, 5)", "Korean text counts characters: '안녕 세상\\n' -> (1, 2, 6)"]},
+    {"id": "DESIGN-002", "component": "ARCH-001", "module": "src/textcli/__main__.py", "name": "main",
+     "kind": "function", "signature": "def main(argv: list[str] | None = None) -> int",
+     "description": "Parse argv (subcommand 'count' with one path). Read the file as bytes and decode as UTF-8 (no newline translation). Print 'lines words chars' to stdout and return 0. If the file does not exist, print nothing to stdout, write 'error: file not found: <path>' to stderr (stderr reconfigured to UTF-8 when possible) and return 2. The module calls sys.exit(main()) when run with -m.",
+     "requirements": ["REQ-001", "REQ-002", "REQ-003", "REQ-004"],
+     "contract": {"preconditions": ["argv is a list of str or None (then sys.argv[1:] is used)"], "postconditions": ["returns 0 after printing exactly one line to stdout for an existing file", "returns 2 with empty stdout and the exact error line on stderr when the file is missing"]},
+     "errors": [{"exception": "SystemExit", "condition": "invalid command line (unknown subcommand or missing path): argparse exits with code 2"}],
+     "boundary_conditions": ["empty file -> '0 0 0', return 0", "missing path -> return 2, stdout empty", "file without trailing newline counts its last line", "path containing Korean characters in the error message"]}
+  ]
+}

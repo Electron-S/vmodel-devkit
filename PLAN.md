@@ -1,6 +1,6 @@
 # PLAN
 
-현재 목표: **v0.3.0 릴리스 후보(2026-11-11, 브랜치 `g7-dev`, G7 System Verification)** — 사용자 지시("VModel DevKit v0.3.0 — G7 System Verification 개발")로 G7을 설계·RED·구현·GREEN·독립 검토(설계·구현·재검토)·전체 회귀(WSL·Windows)·릴리스 후보까지 진행했다(D49, TEST_RESULTS §18, `docs/g7/G7-DESIGN.md`). core `8abab9ec…`. `main` 병합·`v0.3.0` 태그·푸시·유료 E2E는 하지 않았다(사용자 결정). 확정 버전은 여전히 0.2.0(`main` = `v0.2.0`).
+현재 목표: **v0.3.0 확정(2026-11-11, 태그 `v0.3.0` = `main`, G7 System Verification)** — 사용자 지시("VModel DevKit v0.3.0 — 실제 E2E 검증 및 정식 릴리스")로 최종 회귀(WSL 559 통과, Windows 559 실행 실패·오류 0), 실제 Claude Code 세션 1회(Sonnet, $1.04, G1~G7 → COMPLETED), 0.2.0 실제 원장 호환, 릴리스 점검을 마치고 `main`에 ff 병합·annotated 태그(D50, TEST_RESULTS §19). core `8abab9ec…`. 원격 푸시는 하지 않았다. 다음 단계는 사용자 결정(HANDOFF).
 
 | 마일스톤 | 내용 | 완료 기준 (테스트) | 상태 |
 |---|---|---|---|
@@ -13,7 +13,7 @@
 | R0.1.4 | 결함 검증 상태 표시, guard 읽기 오탐, 실패 TEST 추적·증거 참조 (아래 §v0.1.4), 표시 상태 6종(D37), 실제 세션 1회 | 재현 테스트 RED 확인 후 수정, 기존 하네스 포함 전체 통과, Gate 판정 불변, 새 릴리스, 실제 세션에서 guard 우회 0 | 완료(2026-11-09, TEST_RESULTS §10·§11, DECISIONS D36·D37), 태그 `v0.1.4`, main fast-forward. 푸시는 미승인 |
 | R0.1.5 | 업그레이드 시 DevKit 권한 규칙 이동(D38) | 0.1.4 릴리스 대상 RED, GREEN, 전체 회귀, 독립 검토, 실제 릴리스 사본 0.1.4 → 0.1.5 재현 | 완료(2026-11-09, TEST_RESULTS §12·§13, D38·D40), 태그 `v0.1.5`, main fast-forward. 푸시는 미승인 |
 | M5 | G6 Integration Verification (아래 §확장) | 하네스 + 새 픽스처(IF 있는 2컴포넌트 `pipeline`, 단일 `single`) + 실제 E2E | 완료(2026-11-11, D41~D48, TEST_RESULTS §14~§17), 태그 `v0.2.0`. 한계: 실제 세션의 G6 FAILED → DEFECT → CLOSED 미관찰(D47), 분류 A 보수적 BLOCKED(§17.3) |
-| M6 | G7 System Verification, STANDARD WI의 COMPLETED | 하네스 + 새 샘플 | 릴리스 후보(2026-11-11, `g7-dev`, D49, TEST_RESULTS §18). 확정(병합·태그)은 사용자 결정. 실제 세션 미관찰 |
+| M6 | G7 System Verification, STANDARD WI의 COMPLETED | 하네스 + 새 샘플 + 실제 E2E | 완료(2026-11-11, D49·D50, TEST_RESULTS §18·§19), 태그 `v0.3.0`. 실제 세션 1회에서 G7 PASSED·COMPLETED 확인. 한계: 실제 세션의 G7 FAILED → DEFECT → CLOSED 미관찰(하네스로만) |
 | M7 | Extension 실제 세션 E2E | 실제 Claude 세션(비용 승인 후) | 계획 |
 
 ## 환경 사실 (M0 조사, 2026-11-08)
@@ -165,10 +165,11 @@ D35에 따라 바꿀 것(Gate 판정은 바꾸지 않는다)
 ### M7. Extension 실제 세션 E2E
 2026-11-10: G6 부분 실행(E2E-A: G6 BLOCKED → 아키텍처 수정 → PASSED, E2E-B: G6 N/A). G6 FAILED → DEFECT → CLOSED는 실제 세션에서 아직 관찰되지 않음(시딩 함정 미발동).
 새 샘플로 `/vmodel:start`부터 G7 COMPLETED까지 1회, G6 실패에서 시작하는 재작업 1회. 실제 Claude 실행이라 횟수와 상한을 정해 사용자 승인을 받은 뒤에만 한다.
+2026-11-11: 새 샘플 `samples/textcli`로 `/vmodel:start`부터 G7 PASSED·COMPLETED까지 1회 완료(Sonnet, $1.04, TEST_RESULTS §19.4). 남은 것: 실제 세션의 G6·G7 FAILED → DEFECT → CLOSED, 0.2.0 → 0.3.0 실제 업그레이드 세션(각각 별도 승인).
 
 ## 버전 이력
-- 0.3.0 후보 (releases/vmodel-0.3.0.json, core `sha256:8abab9ec…`, 브랜치 `g7-dev`, 태그 없음, 2026-11-11): G7 System Verification(블랙박스 `system_test` 실행, REQ → AC → system TEST 추적, AC 커버리지, G5/G6 범위 분리, 결함 G7/P7, G1~G7 → COMPLETED, `init`/`configure-tests --system`, 출력 파일 방식 실행). 검증: TEST_RESULTS §18(WSL 559 통과·skip 1, Windows 559 실행 실패 0 — ERROR 1은 시험 수정 후 G7 모듈 56 통과, 릴리스 사본 대상 93/94 — 실패 1은 릴리스 사본에서 원래 실패하는 하네스 제약).
-- 0.2.0 (releases/vmodel-0.2.0.json, core `sha256:2a95adb3…`, 태그 `v0.2.0`(annotated) = `main`, 2026-11-11 확정): G6 Integration Verification(D41~D44), 보수 정책 A·B(D45), guard 따옴표 텍스트(D46), 실행 시점 patch 관찰·출처 불확실 시 메인 스레드 증거만(D48 R1·R2), guard cmd 내장 쓰기 `del,` 우회 수정(D48). **현재 기준 버전.** 검증: TEST_RESULTS §17.6 (WSL 503 통과·skip 1, Windows cp949 503 실행·실패 0·skip 55), 드릴 원장 재고정 후 audit OK. 알려진 한계 §17.8(실제 세션의 G6 FAILED 경로 미관찰 포함).
+- 0.3.0 (releases/vmodel-0.3.0.json, core `sha256:8abab9ec…`, 태그 `v0.3.0`(annotated) = `main`, 2026-11-11 확정): **현재 기준 버전.** G7 System Verification(블랙박스 `system_test` 실행, REQ → AC → system TEST 추적, AC 커버리지, G5/G6 범위 분리, 결함 G7/P7, G1~G7 → COMPLETED, `init`/`configure-tests --system`, 출력 파일 방식 실행). 검증: TEST_RESULTS §18(WSL 559 통과·skip 1, Windows 559 실행 실패 0 — ERROR 1은 시험 수정 후 G7 모듈 56 통과, 릴리스 사본 대상 93/94 — 실패 1은 릴리스 사본에서 원래 실패하는 하네스 제약). 확정 검증: TEST_RESULTS §19(최종 코드 `101711d` 플러그인 트리 = `de270aa`, WSL 559 통과·skip 1, Windows cp949 559 실행·실패 0·오류 0·skip 64, 실제 세션 1회 G1~G7 → COMPLETED·audit OK, 0.2.0 실제 원장 사본 audit OK). 알려진 한계 §19.9.
+- 0.2.0 (releases/vmodel-0.2.0.json, core `sha256:2a95adb3…`, 태그 `v0.2.0`(annotated) → `c4b508a`, 2026-11-11 확정): G6 Integration Verification(D41~D44), 보수 정책 A·B(D45), guard 따옴표 텍스트(D46), 실행 시점 patch 관찰·출처 불확실 시 메인 스레드 증거만(D48 R1·R2), guard cmd 내장 쓰기 `del,` 우회 수정(D48). 검증: TEST_RESULTS §17.6 (WSL 503 통과·skip 1, Windows cp949 503 실행·실패 0·skip 55), 드릴 원장 재고정 후 audit OK. 알려진 한계 §17.8(실제 세션의 G6 FAILED 경로 미관찰 포함).
 - 0.1.5 (releases/vmodel-0.1.5.json, core `sha256:37071459…`, 태그 `v0.1.5`, 2026-11-09 확정): 업그레이드 시 DevKit 권한 규칙 이동(D38). Gate 판정·원장 형식·manifest·guard 불변. 검증: WSL 225/225, Windows cp949 225 실행·실패 0·skip 40, 확정 검증 TEST_RESULTS §13(D40). 알려진 비용: 업그레이드마다 G4 재리뷰.
 - 0.1.0 (releases/vmodel-0.1.0.json): 최초 고정 릴리스. E2E-1에서 사용.
 - 0.1.1 (releases/vmodel-0.1.1.json): 스킬/에이전트가 프로젝트 밖 플러그인 파일을 Read하지 않도록 `vmodel guide <topic>` 추가. E2E-2에서 사용.

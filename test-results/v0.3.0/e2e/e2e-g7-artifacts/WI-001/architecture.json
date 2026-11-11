@@ -1,0 +1,20 @@
+{
+  "work_item": "WI-001",
+  "components": [
+    {"id": "ARCH-001", "name": "textcli-count", "responsibility": "Parse the 'count' command, read the UTF-8 file, compute lines/words/chars, print the result or the not-found error with the right exit code",
+     "requirements": ["REQ-001", "REQ-002", "REQ-003", "REQ-004"], "location": "src/textcli/__main__.py"}
+  ],
+  "interfaces": [],
+  "data_flows": [
+    {"from": "EXTERNAL", "to": "ARCH-001", "data": "command line arguments (count <path>) and file bytes"},
+    {"from": "ARCH-001", "to": "EXTERNAL", "data": "stdout 'lines words chars', stderr error message, exit code"}
+  ],
+  "nfr_mapping": [
+    {"requirement": "REQ-004", "approach": "argparse, pathlib and built-in str methods only; one module", "components": ["ARCH-001"]}
+  ],
+  "tradeoffs": [
+    {"topic": "component split", "options": ["one module", "separate counter and CLI modules"], "decision": "one module",
+     "rationale": "the user asked for a single simple component; an internal split would add an interface for no benefit"}
+  ],
+  "integration_test_strategy": {"approach": "Single component without internal interfaces; its only boundary is the external CLI, which is verified by G7 system tests. Integration verification is not applicable.", "interfaces_covered": []}
+}

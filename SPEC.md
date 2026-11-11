@@ -1,6 +1,6 @@
 # VModel DevKit — SPEC
 
-버전: 0.1 (MVP 범위 확정본, 2026-11-08) + 0.2.0(G6 구현, D42~D48) + 0.3.0 후보(G7 구현, 2026-11-11, D49)
+버전: 0.1 (MVP 범위 확정본, 2026-11-08) + 0.2.0(G6 구현, D42~D48) + 0.3.0(G7 구현, D49, 2026-11-11 확정, D50)
 상태 표기: **[MVP]** = 이번에 구현·검증, **[EXT]** = 설계만 하고 확장 단계로 남김
 
 ## 1. 목적과 범위
@@ -143,7 +143,7 @@ Claude Code 위에서 ASPICE V-Model을 따르는 개발 절차(요구사항 →
 5. **최신성**: Gate별 manifest = 해당 Gate 산출물 + 모든 상위 산출물 (+ G4/G5는 VCS·도구 캐시·가상환경·`build/`·`dist/`·`__pycache__` 바이트코드를 뺀 **프로젝트 전체 파일**, `.vmodel/config.json`, `defects.json`, `change-requests.json`). 파일 하나라도 바뀌면 PASSED → STALE. Validator Core가 바뀌거나 상위 Gate가 PASSED가 아니게 되어도 STALE. dirty 작업 트리도 검증 가능하며 그 시점 파일 해시를 저장한다. 테스트 인터프리터의 설치 패키지 목록은 증거에 기록만 한다(STALE 판정 미포함 — 한계).
 5-1. **리뷰 진위**: guard 훅이 `vmodel review-submit`을 `agent_type == vmodel:verifier`에게만 허용하고, Gate는 원장에 등록된 해시와 같은 리뷰만 인정한다.
 6. **Validator 보호**: Core 해시를 프로젝트 `.vmodel/devkit.lock.json`에 고정. 실행 시 자기 파일 해시를 다시 계산해 lock과 다르면 BLOCKED. 릴리스 사본은 `RELEASE_MANIFEST.json`으로 파일별 대조. 쓰기 보호는 PreToolUse Hook(`onFailure: block`으로 fail-closed) + 프로젝트 권한 deny 규칙의 이중 장치. guard는 Bash 명령에서 쓸 수 없는 리디렉션(정확히 `/dev/null`로 가는 출력, fd 복제·닫기, 단순 입력)을 지운 뒤 쓰기 여부를 판정하고, 해석이 불확실하면 쓰기로 본다(0.1.4, D36).
-7. **한계 (주장하지 않는 것)**: G7은 시스템 테스트가 외부 인터페이스를 쓰는지 기계로 판정하지 않는다(G3·G4 리뷰 몫, D49). G6의 실행 계측 파일은 테스트 대상 프로세스 안에서 쓰이므로 테스트 코드가 위조할 수 있다(JUnit과 같은 경계; G4.TEST_INTEGRITY의 `VMODEL_TRACE` 문자열 검사는 우발적 언급만 잡는다, D42). 정적 호출 분석은 Python 근사이며 "provider 모듈에 닿음"이 인터페이스 의미 검증을 뜻하지는 않는다(G4 리뷰 몫). 같은 OS 사용자로 임의 코드를 실행할 수 있는 에이전트(자기가 쓴 스크립트 실행, pty로 TTY 흉내)는 이론상 키를 읽고 원장·앵커를 위조하거나 사용자 전용 명령을 실행할 수 있다. 테스트 코드는 테스트 러너와 같은 프로세스에서 돌기 때문에 G4.TEST_INTEGRITY가 못 잡는 방식으로 결과를 조작할 수 있다. 사용자 결정 기록(`decided_by: "user"`)은 자기 증명이다. Hook과 권한 규칙은 우발적·일반적 우회를 막는 장치이지 OS 수준 격리가 아니다. 최종 신뢰 경계는 별도 사용자/CI에서 신뢰 사본으로 `vmodel audit` 및 전체 재검증(`vmodel verify`)을 돌리는 것이다 [EXT: CI 연동].
+7. **한계 (주장하지 않는 것)**: G7은 시스템 테스트가 외부 인터페이스를 쓰는지 기계로 판정하지 않는다(G3·G4 리뷰 몫, D49). AC가 없는 constraint·non-functional REQ는 G7이 실행으로 검증하지 않고 경고도 내지 않는다(G1은 functional REQ에만 AC를 요구, constraint·non-functional은 G2.NFR 매핑과 리뷰로만 확인, D50). G6의 실행 계측 파일은 테스트 대상 프로세스 안에서 쓰이므로 테스트 코드가 위조할 수 있다(JUnit과 같은 경계; G4.TEST_INTEGRITY의 `VMODEL_TRACE` 문자열 검사는 우발적 언급만 잡는다, D42). 정적 호출 분석은 Python 근사이며 "provider 모듈에 닿음"이 인터페이스 의미 검증을 뜻하지는 않는다(G4 리뷰 몫). 같은 OS 사용자로 임의 코드를 실행할 수 있는 에이전트(자기가 쓴 스크립트 실행, pty로 TTY 흉내)는 이론상 키를 읽고 원장·앵커를 위조하거나 사용자 전용 명령을 실행할 수 있다. 테스트 코드는 테스트 러너와 같은 프로세스에서 돌기 때문에 G4.TEST_INTEGRITY가 못 잡는 방식으로 결과를 조작할 수 있다. 사용자 결정 기록(`decided_by: "user"`)은 자기 증명이다. Hook과 권한 규칙은 우발적·일반적 우회를 막는 장치이지 OS 수준 격리가 아니다. 최종 신뢰 경계는 별도 사용자/CI에서 신뢰 사본으로 `vmodel audit` 및 전체 재검증(`vmodel verify`)을 돌리는 것이다 [EXT: CI 연동].
 8. **순환 검증 금지**: Validator 자체의 정확성은 독립 하네스(`tests/`, unittest)로만 판정한다. DevKit 개발 자체를 DevKit Validator로 승인하지 않는다.
 
 ## 6. Work Item과 추적성

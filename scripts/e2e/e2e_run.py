@@ -106,7 +106,7 @@ def main() -> int:
     ap.add_argument("--continue", dest="cont", action="store_true")
     ap.add_argument("--tag", default="run")
     ap.add_argument("--permission-mode", default="acceptEdits", choices=["acceptEdits", "auto"])
-    ap.add_argument("--sample", default="textstats", choices=["textstats", "scorepipe"])
+    ap.add_argument("--sample", default="textstats", choices=["textstats", "scorepipe", "textcli"])
     ap.add_argument("--setup-only", action="store_true", help="install only, print the config (no model call)")
     args = ap.parse_args()
     work = Path(args.work)

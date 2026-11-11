@@ -1,0 +1,9 @@
+[project]
+name = "textcli"
+version = "0.0.1"
+description = "VModel DevKit sample project for the G7 E2E (Python CLI + pytest)"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

@@ -1,0 +1,14 @@
+{"gate": "G1", "work_item": "WI-001", "reviewer": "vmodel:verifier", "target_hash": "sha256:fe377cebb6645c86a0d299ac7a6217687e6472ebfd2c0b030b4e0f6c79a76f38",
+ "reviewed_at": "2026-11-11T14:00:00Z", "verdict": "approve",
+ "summary": "Requirements cover the request (count lines/words/chars via python -m textcli count). All acceptance-criteria counts were recomputed by hand and are correct, including the fixed AC-001-3 (1 2 6) and new AC-001-4 (1 0 1). Empty-file and missing-file behaviour are specified, and assumptions are recorded.",
+ "checklist": [
+  {"item": "Request fully covered", "result": "ok", "note": "lines, words, chars, CLI form covered by REQ-001..003"},
+  {"item": "Atomic, unambiguous, testable requirements", "result": "ok", "note": "counting rules defined precisely (newline handling, str.split, chars incl. newlines)"},
+  {"item": "Acceptance criteria concrete and correct", "result": "ok", "note": "16/5/6/1 chars and line/word counts verified by hand"},
+  {"item": "Non-functional needs and constraints", "result": "ok", "note": "REQ-004 stdlib only, single component"},
+  {"item": "Conflict analysis", "result": "ok", "note": "performed, no conflicts apparent"},
+  {"item": "Critical decisions to user", "result": "na", "note": "no security or data-loss concerns"},
+  {"item": "Assumptions reasonable and recorded", "result": "ok", "note": "ASM-001..003 cover CRLF, invalid input, usage errors"}],
+ "findings": [
+  {"id": "F-1", "severity": "info", "description": "Behaviour for invalid UTF-8, directories and unreadable files is explicitly out of scope (ASM-002); acceptable for this scope.", "related": ["ASM-002"], "status": "open"},
+  {"id": "F-2", "severity": "info", "description": "REQ-004 has no acceptance criteria; it is a constraint and can be checked by review.", "related": ["REQ-004"], "status": "open"}]}

@@ -85,6 +85,36 @@ def main() -> int:
                                          for k in ("active", "processes", "spawned_processes", "truncated",
                                                    "test_boundaries", "boundary_clock", "edges", "errors")}})
     out["g6_records"] = g6
+    g7 = []  # 0.3.0: G7 system verification records and their signed evidence
+    for r in records:
+        if r.get("type") == "gate" and r.get("gate") == "G7":
+            item = {"record": r.get("record_id"), "work_item": r.get("work_item"), "status": r.get("status"),
+                    "blocked_reason": r.get("blocked_reason"),
+                    "checks": [f"{c.get('id')} {c.get('status')}: {c.get('detail')}" for c in r.get("checks") or []],
+                    "failed_check_items": {c.get("id"): (c.get("items") or [])[:10] for c in r.get("checks") or []
+                                           if c.get("status") in ("fail", "blocked", "warn") and c.get("items")},
+                    "executed_tests": r.get("executed_tests"), "executed_levels": r.get("executed_levels"),
+                    "unmapped_cases": r.get("unmapped_cases"), "system_specs": r.get("system_specs"),
+                    "requirements_coverage": r.get("requirements_coverage"),
+                    "basis_records": r.get("basis_records"), "junit": r.get("junit"),
+                    "failed_cases": r.get("failed_cases"), "manifest_hash": (r.get("manifest") or {}).get("hash"),
+                    "validator": r.get("validator"), "evidence": []}
+            for e in r.get("evidence") or []:
+                p = proj / e["path"]
+                try:
+                    rec = json.loads(p.read_text("utf-8"))
+                except (OSError, json.JSONDecodeError) as exc:
+                    item["evidence"].append({"path": e["path"], "error": str(exc)})
+                    continue
+                item["evidence"].append({"path": e["path"], "sha256": e.get("sha256"),
+                                         **{k: rec.get(k) for k in ("kind", "command_source", "command", "exit_code",
+                                                                    "timed_out", "duration_s", "junit_summary",
+                                                                    "manifest_hash", "config_sha256",
+                                                                    "system_test_sha256", "git", "validator")},
+                                         "files": {n: (v or {}).get("sha256") for n, v in (rec.get("files") or {}).items()},
+                                         "signed": "sig" in rec})
+            g7.append(item)
+    out["g7_records"] = g7
     wis = status.get("work_items") or []
     out["work_items"] = [{"id": w["id"], "status": w["status"], "gate_summary": w.get("gate_summary"),
                           "gates": {g["gate"]: g.get("display_status") or g["status"] for g in w["gates"]},
