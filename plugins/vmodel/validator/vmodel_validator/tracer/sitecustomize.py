@@ -321,15 +321,26 @@ def _vmodel_trace_install():
 
     code_files = {}
     inst_names = {}  # provider file -> (size of its module dict, names of module-level provider-class instances)
+    gvals = {}  # provider file -> {global name: (value, replaced?)}: judged again only when the value changes
+    patch_limit = min(scan_limit, 200)  # patch checks per (test, phase, provider); patches are applied before use
     missing = object()
 
+    tree_mods = {}
+
+    def module_in_tests(name):
+        """Is the module named `name` a file of the project's test tree (fakes live there)?"""
+        hit = tree_mods.get(name)
+        if hit is None:
+            mf = getattr(sys.modules.get(name), "__file__", None) if isinstance(name, str) else None
+            hit = tree_mods[name] = bool(mf) and (norm(mf) in test_files or label_of(mf) in test_labels)
+        return hit
+
     def replaced(obj, strict, pfile, modname):
-        """D48 (policy A at run time): is this provider-module binding something else than the provider defined?"""
+        """D48 (policy A at run time): is this provider-module binding something else than the provider defined?
+        strict: anything not from the provider; weak: a mock, test-tree or string code, a test-tree class or an
+        instance of one."""
         if isinstance(obj, type):
-            if strict:
-                return obj.__module__ != modname
-            mf = getattr(sys.modules.get(obj.__module__), "__file__", None) or ""  # weak: only a test-tree class
-            return bool(mf) and (norm(mf) in test_files or label_of(mf) in test_labels)
+            return obj.__module__ != modname if strict else module_in_tests(obj.__module__)
         if type(obj).__module__ == "unittest.mock":
             return True
         f = obj
@@ -340,7 +351,7 @@ def _vmodel_trace_install():
             f = nxt
         code = getattr(f, "__code__", None)
         if code is None:
-            return strict
+            return strict or module_in_tests(type(obj).__module__)
         fn = code.co_filename or ""
         if fn.startswith("<"):
             return True  # code from a string (exec, python -c): not the provider's
@@ -364,7 +375,7 @@ def _vmodel_trace_install():
         if k in state["xdone"]:
             return
         n = state["xscans"].get(k, 0)  # one budget for all threads (review 23: short-lived threads multiplied it)
-        if n >= scan_limit:
+        if n >= patch_limit:
             return
         state["xscans"][k] = n + 1
         g = frame.f_globals
@@ -382,6 +393,19 @@ def _vmodel_trace_install():
                         bad.append(name)
                 except Exception:
                     continue
+        known = defs[0] | defs[1]
+        cache = gvals.setdefault(lab, {})
+        for gname, val in list(g.items()):  # review 26: any other global replaced by a mock or test-tree object
+            if gname in known or gname.startswith("__"):
+                continue
+            try:
+                hit = cache.get(gname)
+                if hit is None or hit[0] is not val:
+                    hit = cache[gname] = (val, replaced(val, False, pfile, modname))
+                if hit[1]:
+                    bad.append(gname)
+            except Exception:
+                continue
         methods = cls_methods.get(lab)
         if methods:  # module-level instances of provider classes: a method replaced on the instance (weak rule:
             size = len(g)  # only a mock, test-tree or string code; the provider's own per-instance rebinding is not)
