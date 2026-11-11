@@ -120,7 +120,7 @@ def _overlap(a: str, b: str) -> bool:
 # pytest options whose value is the next argument (the value is not a test path)
 _VALUE_OPTIONS = {"-p", "-k", "-m", "-c", "-o", "-W", "-n", "-r", "--rootdir", "--basetemp", "--confcutdir",
                   "--deselect", "--ignore", "--ignore-glob", "--maxfail", "--tb", "--junitxml", "--override-ini",
-                  "--log-file", "--durations", "--import-mode", "--capture", "--pyargs", "--cov", "--timeout"}
+                  "--log-file", "--durations", "--import-mode", "--capture", "--cov", "--timeout"}
 
 
 def _argv_paths(argv: Any) -> list[str] | None:
@@ -318,14 +318,16 @@ def plan_configure_tests(project: Project, integration: str | None = None, timeo
     if not isinstance(timeout_s, int) or timeout_s <= 0:
         raise SetupError("--timeout must be a positive number of seconds")
     # the folders must not overlap, also with the command the user configured earlier (design review: G6/G7 split)
+    notes: list[str] = []
     for label, key in (("integration", "integration_test"), ("system", "system_test")):
         if label in rels or not isinstance(cfg.get(key), dict):
             continue
         paths = _argv_paths(cfg[key].get("argv"))
         for other, rel in rels.items():
-            if paths is None:
-                raise SetupError(f"the configured {key} is not a pytest command, so it cannot be told whether it also "
-                                 f"runs {rel}; edit .vmodel/config.json by hand")
+            if paths is None:  # cannot be told here; G6/G7.SCOPE judge what really runs (re-review S1)
+                notes.append(f"the configured {key} is not a pytest command, so whether it also runs {rel} could not "
+                             f"be checked; G6/G7.SCOPE fail if a command runs another level's tests")
+                continue
             hit = [x for x in (paths or ["."]) if _overlap(x, rel)]
             if hit:
                 raise SetupError(f"{other} test path {rel} and the configured {key} ({', '.join(hit)}"
@@ -357,7 +359,7 @@ def plan_configure_tests(project: Project, integration: str | None = None, timeo
             "integration_test": new.get("integration_test") if "integration" in rels else None,
             "system_test": new.get("system_test") if "system" in rels else None,
             "replaces": cfg.get("integration_test") if "integration" in rels else None,
-            "replaces_system": cfg.get("system_test") if "system" in rels else None}
+            "replaces_system": cfg.get("system_test") if "system" in rels else None, "notes": notes}
 
 
 def apply_configure_tests(project: Project, plan: dict) -> dict:

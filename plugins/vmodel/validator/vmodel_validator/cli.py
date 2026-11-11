@@ -471,6 +471,8 @@ def cmd_configure_tests(args) -> int:
             out(f"  {key + ':':<17} {' '.join(plan[key]['argv'])} (timeout {plan[key]['timeout_s']}s)")
             if plan.get(rep) is not None:
                 out(f"  (replaces {key}: {json.dumps(plan[rep])})")
+    for note in plan.get("notes") or []:
+        out(f"  note: {note}")
     out("  The config is part of the G4-G7 inputs: G4 needs a new verifier review, then G4, G5, G6 and G7 run again.")
     if not _require_tty(action):
         return 3
