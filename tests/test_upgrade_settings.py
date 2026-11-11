@@ -349,6 +349,9 @@ class UpgradeSettingsInvariant(Base):
                 now = now.replace('|unblock|configure-tests)\\b|accept-current",\n                       re.IGNORECASE)',
                                   '|unblock)\\b|accept-current", re.IGNORECASE)')
                 now = now.replace("init/install/uninstall/unblock/configure-tests and", "init/install/uninstall/unblock and")
+            now = now.replace('    r"(^|[\\s;&|(@])(del|erase|rd|ren|move|copy|xcopy|robocopy)(?=[\\s,;=/+(]|$)", re.IGNORECASE)\n'
+                              "# (D48: cmd.exe also ends a builtin's name at , ; = / + ( - e.g. \"del,file\" deletes file)\n",
+                              '    r"(^|[\\s;&|])(del|erase|rd|ren|move|copy|xcopy|robocopy)\\s", re.IGNORECASE)\n', 1)
             if "# --- D46 " in now:
                 def func(text: str, name: str) -> str:  # a top-level def up to the next top-level statement
                     i = text.index(f"\ndef {name}(")

@@ -1889,6 +1889,28 @@ def _phase_in(runs: list[dict], ts: float) -> str:
     return "detached"
 
 
+def _provider_defs(ix, rel: str) -> dict:
+    """D48: the names a provider module defines, for the tracer's run-time patch check. "strict": a plain def or a
+    class that is the name's last module-level binding (anything else bound there is a replacement); "weak": decorated
+    or rebound names (only a mock, test-tree code or code from a string counts as a replacement)."""
+    m = ix.modules.get(rel)
+    strict, weak = [], []
+    if m is None:
+        return {"strict": strict, "weak": weak}
+    for name, node in m.functions.items():
+        decos = {d.id if isinstance(d, ast.Name) else d.attr if isinstance(d, ast.Attribute) else ""
+                 for d in getattr(node, "decorator_list", [])}
+        if "." in name:
+            (strict if decos <= {"staticmethod", "classmethod"} else weak).append(name)
+        else:
+            b = m.bindings.get(name)
+            (strict if not decos and b and b[0] == "def" and b[1] is node else weak).append(name)
+    for name in m.classes:
+        b = m.bindings.get(name)
+        (strict if b and b[0] == "class" else weak).append(name)
+    return {"strict": sorted(strict), "weak": sorted(weak)}
+
+
 def read_runtime_trace(trace_dir: Path, prior_errors: list[str] | None = None, prior_oversized: int = 0) -> dict:
     """The tracer files (written inside the processes under test, hashed into the signed evidence). In memory:
     `_events` (pytest node id, phase, process file, watched file, function), `_edges` (node id, phase, process file,
@@ -1911,6 +1933,8 @@ def read_runtime_trace(trace_dir: Path, prior_errors: list[str] | None = None, p
     capped: set[str] = set()
     spawn_lines: dict[str, tuple[tuple[str, ...], str]] = {}  # D45: token -> (anchors of the starting stack, file)
     raw_cons: list[tuple] = []  # consumer runs with their stack anchors (review 12 H2)
+    raw_patched: list[tuple] = []  # D48: provider names replaced at run time
+    raw_starts: list[tuple] = []  # D48: threads, pool work items and processes started during a test, with anchors
     file_origin: dict[str, str] = {}  # process file -> the spawn token it was started with (subprocess.Popen)
     spawned_files = 0
     windows_complete = oversized == 0  # a lost or truncated pytest-process file may have lost test boundaries
@@ -1949,8 +1973,20 @@ def read_runtime_trace(trace_dir: Path, prior_errors: list[str] | None = None, p
                     capped.add(t)
             elif isinstance(r.get("spawn"), str):
                 a = r.get("a")
-                spawn_lines.setdefault(r["spawn"], (tuple(sorted(x for x in a if isinstance(x, str)))
-                                                    if isinstance(a, list) else (), f.name))
+                sa = tuple(sorted(x for x in a if isinstance(x, str))) if isinstance(a, list) else ()
+                spawn_lines.setdefault(r["spawn"], (sa, f.name))
+                if isinstance(t, str) and sa:
+                    raw_starts.append((t, str(r.get("p") or ""), f.name, "process", sa, ts, spawned))
+            elif isinstance(r.get("fs"), str):  # D48: a thread or pool work item started during a test
+                a = r.get("a")
+                sa = tuple(sorted(x for x in a if isinstance(x, str))) if isinstance(a, list) else ()
+                if isinstance(t, str) and sa:
+                    raw_starts.append((t, str(r.get("p") or ""), f.name, r["fs"], sa, ts, spawned))
+            elif isinstance(r.get("x"), str):  # D48: provider-defined names replaced when a provider function started
+                n = r.get("n")
+                names = tuple(sorted(x for x in n if isinstance(x, str))) if isinstance(n, list) else ()
+                if isinstance(t, str) and names:
+                    raw_patched.append((t, str(r.get("p") or ""), f.name, r["x"], names, ts, spawned))
             elif isinstance(r.get("origin"), str):  # a multiprocessing child names its start (overrides the header)
                 file_origin[f.name] = r["origin"]
             elif isinstance(r.get("k"), str):  # a consumer ran, with the anchors of its stack (review 12 H2)
@@ -1958,7 +1994,7 @@ def read_runtime_trace(trace_dir: Path, prior_errors: list[str] | None = None, p
                 if isinstance(t, str):
                     raw_cons.append((t, str(r.get("p") or ""), f.name, r["k"],
                                      tuple(sorted(x for x in a if isinstance(x, str))) if isinstance(a, list) else (),
-                                     ts, spawned))
+                                     ts, spawned, r.get("mt") == 1))
             elif isinstance(r.get("e"), str):  # a provider function ran (c absent) or a consumer called it (c)
                 c, anchor = r.get("c"), r.get("a")
                 anchors = (anchor,) if isinstance(anchor, str) else tuple(
@@ -1966,7 +2002,7 @@ def read_runtime_trace(trace_dir: Path, prior_errors: list[str] | None = None, p
                 if isinstance(t, str) and (c is None or isinstance(c, str)):
                     start = r.get("s") if isinstance(r.get("s"), str) else str(r.get("f") or "")
                     raw_edges.append((t, str(r.get("p") or ""), f.name, r["e"], str(r.get("f") or ""), c, anchors, start,
-                                      ts, spawned))
+                                      ts, spawned, r.get("mt") == 1))
             elif isinstance(r.get("m"), str):
                 ran_files.add(r["m"])
                 ran.add((r["m"], str(r.get("f"))))
@@ -2008,17 +2044,20 @@ def read_runtime_trace(trace_dir: Path, prior_errors: list[str] | None = None, p
 
     origins = {fn: origin_of(fn) for fn in file_origin}
     events = [(t, phase_of(t, ph, ts, sp), fn, m, func) for t, ph, fn, m, func, ts, sp in raw_events]
-    edges = [(t, phase_of(t, ph, ts, sp), fn, e, func, c, a, st, origins.get(fn, ()))
-             for t, ph, fn, e, func, c, a, st, ts, sp in raw_edges]
-    cons = [(t, phase_of(t, ph, ts, sp), fn, lab, tuple(sorted(set(a) | set(origins.get(fn, ())))))
-            for t, ph, fn, lab, a, ts, sp in raw_cons]
+    edges = [(t, phase_of(t, ph, ts, sp), fn, e, func, c, a, st, origins.get(fn, ()), mt)
+             for t, ph, fn, e, func, c, a, st, ts, sp, mt in raw_edges]
+    cons = [(t, phase_of(t, ph, ts, sp), fn, lab, tuple(sorted(set(a) | set(origins.get(fn, ())))), mt)
+            for t, ph, fn, lab, a, ts, sp, mt in raw_cons]
+    patched = [(t, phase_of(t, ph, ts, sp), fn, lab, names) for t, ph, fn, lab, names, ts, sp in raw_patched]
+    starts = [(t, phase_of(t, ph, ts, sp), fn, kind, tuple(sorted(set(a) | set(origins.get(fn, ())))))
+              for t, ph, fn, kind, a, ts, sp in raw_starts]
     return {"active": procs > 0, "processes": procs, "spawned_processes": spawned_files, "methods": sorted(methods),
             "truncated": truncated, "ran_files": sorted(ran_files),
             "tests": {t: sorted(v) for t, v in sorted(tests.items())}, "edges": len(edges),
             "edge_scan_capped": sorted(capped)[:20], "test_boundaries": sum(len(v) for v in boundaries.values()),
             "boundary_clock": "perf_counter_ns" if use_tc else "wall",
             "spawned_lines_reattributed": moved, "errors": errors[:20], "_events": events, "_edges": edges,
-            "_cons": cons, "_capped": sorted(capped), "_ran": ran}
+            "_cons": cons, "_capped": sorted(capped), "_patched": patched, "_starts": starts, "_ran": ran}
 
 
 def test_function_of(nodeid: str) -> str:
@@ -2044,7 +2083,10 @@ def trace_by_test(rt: dict) -> dict[str, dict]:
         if len(ids) != 1:
             return None
         return out.setdefault(next(iter(ids)), {"functions": {}, "call": {}, "ran": set(), "edges": set(),
-                                                "prov_runs": set(), "prov_calls": {}, "cons_calls": set()})
+                                                "prov_runs": set(), "prov_calls": {}, "cons_calls": set(),
+                                                "mt": {"edges": set(), "prov_runs": set(), "prov_calls": {},
+                                                       "cons_calls": set()},
+                                                "rpatched": set(), "starts": set()})
 
     for nodeid, phase, proc, label, func in rt.get("_events") or []:
         d = entry(nodeid)
@@ -2055,21 +2097,31 @@ def trace_by_test(rt: dict) -> dict[str, dict]:
             d["ran"].add((label, func))
         if phase == "call":
             d["call"].setdefault((label, func), set()).add(proc)
-    for nodeid, phase, proc, provider, func, consumer, anchors, start, origin in rt.get("_edges") or []:
+    for nodeid, phase, proc, provider, func, consumer, anchors, start, origin, mt in rt.get("_edges") or []:
         d = entry(nodeid)
         if d is None or phase == "detached":
             continue
-        if consumer is None:
-            d["prov_runs"].add((provider, func, anchors, start))
-            if phase == "call":
-                d["prov_calls"].setdefault((provider, func, start), set()).add(
-                    (proc, tuple(sorted(set(anchors) | set(origin)))))
-        else:
-            d["edges"].add((provider, func, consumer, anchors))
-    for nodeid, phase, proc, label, anchors in rt.get("_cons") or []:
+        for view in ((d, d["mt"]) if mt else (d,)):  # D48: "mt" keeps what ran in the test's main thread only
+            if consumer is None:
+                view["prov_runs"].add((provider, func, anchors, start))
+                if phase == "call":
+                    view["prov_calls"].setdefault((provider, func, start), set()).add(
+                        (proc, tuple(sorted(set(anchors) | set(origin)))))
+            else:
+                view["edges"].add((provider, func, consumer, anchors))
+    for nodeid, phase, proc, label, anchors, mt in rt.get("_cons") or []:
         d = entry(nodeid)
         if d is not None and phase == "call":
-            d["cons_calls"].add((proc, label, anchors))
+            for view in ((d, d["mt"]) if mt else (d,)):
+                view["cons_calls"].add((proc, label, anchors))
+    for nodeid, phase, proc, label, names in rt.get("_patched") or []:
+        d = entry(nodeid)
+        if d is not None and phase in ("setup", "call"):
+            d["rpatched"].add((label, names))
+    for nodeid, phase, proc, kind, anchors in rt.get("_starts") or []:
+        d = entry(nodeid)
+        if d is not None and phase in ("setup", "call"):
+            d["starts"].add((kind, anchors))
     return out
 
 
@@ -2194,9 +2246,13 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
             if prov in watch_rels:
                 prov_map.setdefault(prov, set()).update(c for c in iv["consumer_modules"] or []
                                                         if c in watch_rels and c != prov)
+    test_tree = {str(f.resolve()) for f in p.test_files()}
+    test_tree |= {str(f.resolve()) for f in p.root.glob("conftest.py") if f.is_file()}
     write_json(spec_path, {"out": str(live_dir), "watch": {str((p.root / r).resolve()): r for r in sorted(watch_rels)},
                            "providers": {k: sorted(v) for k, v in sorted(prov_map.items())},
-                           "tests": sorted(test_labels & watch_rels)})
+                           "tests": sorted(test_labels & watch_rels),
+                           "provider_defs": {k: _provider_defs(ix, k) for k in sorted(prov_map)},
+                           "test_files": sorted(test_tree)})
     argv = _substitute(cfg["argv"], {"{python}": p.python_exe(), "{junit}": str(junit)})
     exe = runner.executable_info(argv[0])
     if exe["resolved"]:
@@ -2302,7 +2358,7 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
     if_view = []
     levels_data: dict[str, dict] = {}
     ran_all: set[tuple[str, str]] = set(rt.get("_ran") or set())
-    ran_entries = {(e, fn, st) for _t, _ph, _f, e, fn, c, _a, st, _o in rt.get("_edges") or [] if c is None}
+    ran_entries = {(e, fn, st) for _t, _ph, _f, e, fn, c, _a, st, _o, _mt in rt.get("_edges") or [] if c is None}
     # TEST ids of the capped pytest node ids (review 13: the node ids were compared with TEST ids, so the "not certain"
     # note never showed)
     capped = {i for n in rt.get("_capped") or rt.get("edge_scan_capped") or []
@@ -2312,7 +2368,8 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
                       "-I/-E/-S, PYTHONPATH replaced, or the trace removed): which test functions ran and whether the "
                       "providers ran cannot be shown")
     empty = {"functions": {}, "call": {}, "ran": set(), "edges": set(), "prov_runs": set(), "prov_calls": {},
-             "cons_calls": set()}
+             "cons_calls": set(), "mt": {"edges": set(), "prov_runs": set(), "prov_calls": {}, "cons_calls": set()},
+             "rpatched": set(), "starts": set()}
     for iid, iv in sorted(wd["interfaces"].items()):
         prov_rels = set(iv["provider_modules"])
         # review 4 H4: the provider is the interface's own symbols (the signature's def/class and the accepted G4
@@ -2357,12 +2414,22 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
             # must be the test function or a fixture / setUp it requested, never an autouse or unrequested fixture
             own_fns = {fv["name"] for fv in tv["functions"]}
             anchors = {a for fv in tv["functions"] for a in (fv.get("anchors") or [fv["name"]])}
+            # D48 (policy B): a thread, pool work item or process that code the test did not request (an autouse or
+            # unrequested fixture) started in this test may be what drove the connection (a request over a socket,
+            # work handed to a server): then only what ran in the test's own main thread counts
+            foreign_starts = sorted({f"{k} started by {'/'.join(a)}" for k, a in seen["starts"] if not set(a) & anchors})
+            if foreign_starts:
+                seen = {**seen, **seen["mt"]}
             # review 8 P1 / review 9 Q1: a patch of an interface symbol or of any def/class/method defined in a
             # provider module is a mock of the provider; a constant or an imported name there (a limit, a clock) is not
             # (G4 still warns about every provider patch)
             patch_targets = sorted({t for fv in tv["functions"] for t in fv.get("patched_provider") or []
                                     if isinstance(t, str) and (_patches_symbol(t, syms) or any(
                                         ".".join(t.split(".")[-k:]) in prov_defined for k in (1, 2)))})
+            # D48 (policy A at run time): provider-defined names found replaced when the provider ran in this test
+            # (a patch from any fixture, plugin, MonkeyPatch.context or the child's own code)
+            patch_targets += [f"{n} (replaced at run time)" for n in sorted(
+                {n for lab, names in seen["rpatched"] if lab in prov_rels for n in names})]
             patched = bool(patch_targets)
             if needs_edge:
                 linked = [a for e, fn, c, a in seen["edges"] if is_prov(e, fn) and c in cons_rels]
@@ -2472,6 +2539,9 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
                 else:
                     fails.append(msg + ": the passing case is another function")
             level, reason, path_used = pick[:3] if pick else ("insufficient", None, None)
+            if foreign_starts and level != "test_level" and reason:
+                reason += (f"; code the test did not request started work in it ({', '.join(foreign_starts[:3])}), so "
+                           "only the test's own main-thread evidence was counted")
             if not rt["active"]:
                 level, reason = "insufficient", "no runtime trace"
             elif st != "passed":

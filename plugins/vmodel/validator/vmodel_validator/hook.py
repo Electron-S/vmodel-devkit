@@ -30,7 +30,8 @@ WRITE_VERBS = re.compile(
     r"unlink|shred|rsync|tar|unzip)\b|sed\s+(-[a-zA-Z]*i|--in-place)|python[0-9.]*(\.exe)?\s+-c|\bperl\b|"
     r"\bfind\b[^|;&]*-(delete|exec)|git\s+(clean|checkout|restore|stash|reset|rm|mv|apply|am|switch)\b|"
     r"Remove-Item|Set-Content|Out-File|Add-Content|New-Item|Move-Item|Copy-Item|Clear-Content|Rename-Item|"
-    r"(^|[\s;&|])(del|erase|rd|ren|move|copy|xcopy|robocopy)\s", re.IGNORECASE)
+    r"(^|[\s;&|(@])(del|erase|rd|ren|move|copy|xcopy|robocopy)(?=[\s,;=/+(]|$)", re.IGNORECASE)
+# (D48: cmd.exe also ends a builtin's name at , ; = / + ( - e.g. "del,file" deletes file)
 REPO_WIDE_DESTRUCTIVE = re.compile(
     r"git\s+clean\b|\bfind\b[^|;&]*-delete|\brm\s+(-[a-zA-Z]+\s+)*(\.|\./|\*|\./\*|\.\*)(\s|$)", re.IGNORECASE)
 USER_ONLY = re.compile(r"vmodel(\.cmd)?[\"']?\s+(init|install|uninstall|unblock|configure-tests)\b|accept-current",

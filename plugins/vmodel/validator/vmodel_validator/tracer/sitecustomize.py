@@ -68,6 +68,12 @@ def _vmodel_trace_install():
     byte_limit = int(spec.get("byte_limit", 24 * 1024 * 1024))  # below the validator's per-file reading limit
     scan_limit = int(spec.get("edge_scan_limit", 2000))
     stack_depth = int(spec.get("stack_depth", 256))
+    # D48: provider module names to watch for run-time replacement ("strict": plain def/class, "weak": decorated or
+    # rebound) and the project's test-tree files (code from there replacing a provider name is a patch)
+    pdefs = {k: (frozenset(v.get("strict") or ()), frozenset(v.get("weak") or ()))
+             for k, v in (spec.get("provider_defs") or {}).items() if isinstance(v, dict)}
+    test_files = frozenset(norm(x) for x in spec.get("test_files") or () if isinstance(x, str))
+    prov_path = {lab: path for path, lab in watch.items() if lab in providers}
     mon = getattr(sys, "monitoring", None)
     tool = None
     if mon is not None and not spec.get("force_setprofile"):
@@ -93,6 +99,7 @@ def _vmodel_trace_install():
         state["out"] = open(os.path.join(spec["out"], state["name"] + ".jsonl"), "a", encoding="utf-8", buffering=1)
         state["spawns"] = 0
         state["kdone"] = set()
+        state["xdone"] = set()
         state["seen"] = set()
         state["full"] = False
         state["bytes"] = 0
@@ -264,12 +271,13 @@ def _vmodel_trace_install():
             cons[c] = entry  # a consumer that started this thread / submitted this work item
         anchors = tuple(sorted(set(anchors) | inh_a))
         a = list(anchors)
-        write(("r", test, phase, lab, entry, func, anchors), {"t": test, "p": phase, "e": lab, "f": entry, "s": func,
-                                                              "a": a})
+        mt = main_thread_here()
+        write(("r", test, phase, lab, entry, func, anchors, mt), {"t": test, "p": phase, "e": lab, "f": entry,
+                                                                  "s": func, "a": a, "mt": mt})
         for c, c_entry in cons.items():
             if c in want:
-                write(("e", test, phase, lab, c_entry, c, anchors), {"t": test, "p": phase, "e": lab, "f": c_entry,
-                                                                     "c": c, "a": a})
+                write(("e", test, phase, lab, c_entry, c, anchors, mt), {"t": test, "p": phase, "e": lab,
+                                                                         "f": c_entry, "c": c, "a": a, "mt": mt})
                 if own in anchors and c_entry == func:  # entered directly by the consumer within the test itself
                     done.add(c)
         if own in anchors and entry == func:
@@ -292,12 +300,89 @@ def _vmodel_trace_install():
         scans[("k", k)] = n + 1
         _c, _e, anchors = stack_info(frame)
         anchors = tuple(sorted(set(anchors) | inherited()[1]))
-        write(("k", test, phase, lab, anchors), {"t": test, "p": phase, "k": lab, "a": list(anchors)})
+        mt = main_thread_here()
+        write(("k", test, phase, lab, anchors, mt), {"t": test, "p": phase, "k": lab, "a": list(anchors), "mt": mt})
         if own_anchor(test) in anchors:
             state["kdone"].add(k)
         elif n + 1 == scan_limit:
             write(("kcap", test, phase, lab),
                   {"edge_scan_capped": True, "t": test, "p": phase, "k": lab})
+
+    def main_thread_here():
+        """1 when running in the pytest process's main thread (D48: the test body's own direct evidence), else 0."""
+        return int(threading.get_ident() == threading.main_thread().ident and not state.get("spawned"))
+
+    code_files = {}
+    missing = object()
+
+    def replaced(obj, strict, pfile, modname):
+        """D48 (policy A at run time): is this provider-module binding something else than the provider defined?"""
+        if isinstance(obj, type):
+            return obj.__module__ != modname
+        if type(obj).__module__ == "unittest.mock":
+            return True
+        f = obj
+        for _ in range(10):  # decorators (functools.wraps), staticmethod/classmethod, property
+            nxt = getattr(f, "__wrapped__", None) or getattr(f, "__func__", None) or getattr(f, "fget", None)
+            if nxt is None or nxt is f:
+                break
+            f = nxt
+        code = getattr(f, "__code__", None)
+        if code is None:
+            return strict
+        fn = code.co_filename or ""
+        if fn.startswith("<"):
+            return True  # code from a string (exec, python -c): not the provider's
+        nf = code_files.get(fn)
+        if nf is None:
+            nf = code_files[fn] = norm(fn)
+        if nf == pfile:
+            return False
+        if nf in test_files or label_of(fn) in test_labels:
+            return True
+        return strict
+
+    def check_patched(test, phase, lab, frame):
+        """D48: when a provider function starts, the provider-defined names of its module that were replaced (a
+        patch made anywhere: any fixture, plugin, MonkeyPatch.context, a child's own code). One line per (test, phase,
+        provider, names); checks per thread up to the scan limit."""
+        defs = pdefs.get(lab)
+        if not defs or frame is None:
+            return
+        k = (test, phase, lab)
+        if k in state["xdone"]:
+            return
+        scans = scan_counts()
+        n = scans.get(("x", k), 0)
+        if n >= scan_limit:
+            return
+        scans[("x", k)] = n + 1
+        g = frame.f_globals
+        pfile, modname, bad = prov_path.get(lab), g.get("__name__"), []
+        for strict, names in ((True, defs[0]), (False, defs[1])):
+            for name in names:
+                if "." in name:
+                    cname, m = name.split(".", 1)
+                    c = g.get(cname)
+                    obj = c.__dict__.get(m, missing) if isinstance(c, type) else missing
+                else:
+                    obj = g.get(name, missing)
+                if obj is not missing and replaced(obj, strict, pfile, modname):
+                    bad.append(name)
+        if bad:
+            state["xdone"].add(k)
+            write(("x", test, phase, lab, tuple(sorted(bad))), {"t": test, "p": phase, "x": lab, "n": sorted(bad)})
+
+    def note_start(kind, frame):
+        """D48 (policy B): a thread or pool work item started during a test, with the anchors of the starting stack;
+        one started by an autouse or unrequested fixture makes the test's thread/process evidence uncertain."""
+        test, phase = context()
+        if test is None:
+            return
+        _c, _e, anchors = stack_info(frame)
+        a = tuple(sorted(set(anchors) | set(inherited()[1])))
+        if a:
+            write(("fs", test, phase, kind, a), {"fs": kind, "t": test, "p": phase, "a": list(a)})
 
     def record(code, frame=None):
         """None: not watched; True: watched (recorded when it is a function)."""
@@ -311,6 +396,7 @@ def _vmodel_trace_install():
         write((test, phase, lab, func), {"t": test, "p": phase, "m": lab, "f": func})
         if lab in providers:
             note_provider(test, phase, lab, func, frame)
+            check_patched(test, phase, lab, frame)
         if lab in consumers and frame is not None:
             note_consumer(test, phase, lab, frame)
         return True
@@ -341,6 +427,7 @@ def _vmodel_trace_install():
         def init(self, *args, **kwargs):
             try:
                 self._vmodel_ctx = (context()[0], via_here(sys._getframe(1)))
+                note_start("work", sys._getframe(1))
             except Exception:
                 pass
             original_init(self, *args, **kwargs)
@@ -371,6 +458,7 @@ def _vmodel_trace_install():
         try:
             self._vmodel_owner = context()[0]
             self._vmodel_via = via_here(sys._getframe(1))
+            note_start("thread", sys._getframe(1))
             patch_pool()
         except Exception:
             pass
