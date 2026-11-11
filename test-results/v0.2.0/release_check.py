@@ -1,6 +1,8 @@
 """v0.2.0 release candidate check (no model calls, read-only).
 
-    python3 -I test-results/v0.2.0/release_check.py <out.json>
+    python3 -I test-results/v0.2.0/release_check.py <out.json>               # candidate: no v0.2.0 tag, main = v0.1.5
+    python3 -I test-results/v0.2.0/release_check.py <out.json> --released    # after release: annotated v0.2.0 = main,
+                                                                             # and the tagged plugin tree = the record
 
 Independent of the validator's own integrity module: hashes are recomputed here with hashlib
 (same definition as the record: sha256 over raw bytes, core hash = sha256 of canonical JSON of
@@ -14,6 +16,8 @@ import json
 import os
 import subprocess
 import sys
+import tarfile
+import tempfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
@@ -61,6 +65,7 @@ def load(p: Path) -> dict:
 
 def main() -> int:
     out_path = Path(sys.argv[1])
+    released = "--released" in sys.argv[2:]
     problems: list[str] = []
     result: dict = {"head": git("rev-parse", "HEAD"), "releases": {}}
 
@@ -132,15 +137,38 @@ def main() -> int:
     result["tags"] = tags
     if tags != EXPECTED_TAGS:
         problems.append("an existing tag moved")
-    result["tag_v0.2.0_exists"] = git("tag", "-l", "v0.2.0") == "v0.2.0"  # must stay False: no tag for a candidate
-    if result["tag_v0.2.0_exists"]:
-        problems.append("a v0.2.0 tag exists (not allowed for the candidate)")
+    result["tag_v0.2.0_exists"] = git("tag", "-l", "v0.2.0") == "v0.2.0"
     result["main"] = git("rev-parse", "--short", "main")
-    result["main_is_ancestor_of_head"] = subprocess.run(
-        ["git", "-C", str(REPO), "merge-base", "--is-ancestor", "main", "HEAD"]).returncode == 0
-    result["main_still_v0.1.5"] = result["main"] == "78517d5"
-    if not result["main_still_v0.1.5"]:
-        problems.append("main moved (no merge for the candidate)")
+    if not released:  # candidate: no tag, main untouched
+        if result["tag_v0.2.0_exists"]:
+            problems.append("a v0.2.0 tag exists (not allowed for the candidate)")
+        result["main_is_ancestor_of_head"] = subprocess.run(
+            ["git", "-C", str(REPO), "merge-base", "--is-ancestor", "main", "HEAD"]).returncode == 0
+        result["main_still_v0.1.5"] = result["main"] == "78517d5"
+        if not result["main_still_v0.1.5"]:
+            problems.append("main moved (no merge for the candidate)")
+    elif not result["tag_v0.2.0_exists"]:
+        problems.append("--released, but there is no v0.2.0 tag")
+    else:  # released: annotated tag on main, v0.1.5 an ancestor, and the tagged plugin tree equals the 0.2.0 record
+        result["tag_v0.2.0_type"] = git("cat-file", "-t", "v0.2.0")
+        result["tag_v0.2.0_commit"] = git("rev-parse", "--short", "v0.2.0^{commit}")
+        result["main_is_tag"] = result["main"] == result["tag_v0.2.0_commit"]
+        result["v0.1.5_is_ancestor_of_main"] = subprocess.run(
+            ["git", "-C", str(REPO), "merge-base", "--is-ancestor", "v0.1.5", "main"]).returncode == 0
+        with tempfile.TemporaryDirectory() as tmp:
+            arc = Path(tmp) / "a.tar"
+            with open(arc, "wb") as fh:
+                subprocess.run(["git", "-C", str(REPO), "archive", "v0.2.0", "plugins/vmodel"], stdout=fh, check=True)
+            with tarfile.open(arc) as tf:
+                tf.extractall(tmp, filter="data")
+            tagged = Path(tmp) / "plugins" / "vmodel"
+            tagged_files = walk(tagged, tagged)
+            tagged_files.pop("RELEASE_MANIFEST.json", None)
+            result["tagged_tree_matches_record"] = tagged_files == rec_new["files"]
+            result["tagged_core_hash"] = core_hash(tagged)
+        if not (result["tag_v0.2.0_type"] == "tag" and result["main_is_tag"] and result["v0.1.5_is_ancestor_of_main"]
+                and result["tagged_tree_matches_record"] and result["tagged_core_hash"] == rec_new["core_hash"]):
+            problems.append("v0.2.0 tag / main / tagged plugin tree do not match the 0.2.0 record")
     result["plugin_tree_v0.1.5_to_head_changed_files"] = git(
         "diff", "--name-only", "v0.1.5", "HEAD", "--", "plugins/vmodel").splitlines()
 

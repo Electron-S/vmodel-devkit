@@ -835,8 +835,9 @@ E2E-B (`samples/textstats`, 단일 함수 기능, 37턴, 3.4분)
 |---|---|---|
 | B 거짓 PASS(재현됨, 현재 후보 `20d2139`) | A1 import한 autouse patch fixture, A2 기반 클래스 autouse patch, A3 `pytest_plugins`, A4 루트 conftest autouse patch, A5 `MonkeyPatch.context()`, H4 자식 명령 문자열 patch, H3 autouse 스레드가 요청한 서버로 요청(스레드·프로세스) | `tests/test_g6_residual.py` RED 8/8 → D48 R1(실행 시점 patch 관찰)·R2(출처 불확실하면 메인 스레드 증거만) → 모두 BLOCKED |
 | B 거짓 PASS(분류 중 내가 재현, `86dbf98`) | provider 모듈 수준 인스턴스(provider 정의 클래스)의 메서드를 인스턴스에서 바꾼 patch(autouse fixture·시험 함수 모두) | `tests/test_g6_residual3.py` RED 2/2 → R1 확장(`c399b1a`) → BLOCKED |
+| B 거짓 PASS(검토 26회차 재현, `291d18b`) | provider 모듈 객체를 테스트 정의 가짜나 `MagicMock`으로 통째로 바꾼 autouse patch | `tests/test_g6_residual5.py` RED 2/2 → R1을 provider 모듈 전역 전체로 확장(`8849672`; 설정 상수는 경고 유지) → BLOCKED |
 | A 증거 부족 BLOCKED(수용) | 조건부 autouse patch(A6), 공유 스레드 풀 예산 소진, autouse fixture가 스레드·프로세스를 띄운 테스트의 스레드·프로세스 경유 연결(R2, 검토 23 R2b·c·d·f), provider 이름을 provider 밖 함수로 정상 재대입(strict 이름), asyncio 작업·제너레이터 전달(N4/N5), 데이터 전달형 테스트, 세션·모듈 범위 서버, pytest가 아닌 러너, 출처 토큰이 닿지 않는 프로세스(Windows `os.spawn*` 등) | 알려진 기능 제약. 사유 메시지에 원인 표시 |
-| 결정에 따른 경고(정책상 G4 리뷰 몫) | provider 모듈의 설정 상수·가져온 이름 patch(D44 2항, 8회차 P1: 시계·한도 같은 의존 설정), 장식·재대입된(weak) 이름을 라이브러리 함수로 바꾼 patch(R1이 보지 않음; 테스트 트리 밖 지원 코드는 G4가 막음), 모듈 수준이 아닌 객체(컨테이너 안·지역 객체)의 인스턴스 patch | G4 patch 경고 + 리뷰. 재현된 거짓 PASS 아님 |
+| 결정에 따른 경고(정책상 G4 리뷰 몫) | provider 모듈의 설정 상수 patch와, 가져온 이름을 라이브러리 함수로 바꾼 patch(D44 2항, 8회차 P1: 시계·한도 같은 의존 설정), 장식·재대입된(weak) 이름을 라이브러리 함수로 바꾼 patch(R1이 보지 않음; 테스트 트리 밖 지원 코드는 G4가 막음), 모듈 수준이 아닌 객체(컨테이너 안·지역 객체)의 인스턴스 patch | G4 patch 경고 + 리뷰. 재현된 거짓 PASS 아님 |
 | 신뢰 경계(주장하지 않음) | 테스트 코드가 계측 줄·토큰을 의도적으로 위조, 의도적 구성(테스트가 시작한 스레드를 autouse 코드가 재사용, signal 처리기) | SPEC §5.7·D25 |
 최소 보호의 회귀 확인: 독립 검토 23회차(`733d708`)가 R1 거짓 BLOCKED 2, guard 읽기 명령 거짓 거부, tracer 속도 저하를 찾음 → `tests/test_g6_residual2.py` RED 3/3 → `86dbf98` 수정(스레드 100개×호출 1000회 19.1초 → 1.1초, D48 이전 0.9초). 24회차(`86dbf98`) 확인: 해결, 완화가 A1~A5·H3·H4·`del,`을 다시 열지 않음, 충돌 없음.
 
@@ -846,3 +847,14 @@ E2E-B (`samples/textstats`, 단일 함수 기능, 37턴, 3.4분)
 | 보호 대상 실제 쓰기 허용(릴리스 차단) | PowerShell `vmodel status 'x|del,.vmodel/state/ledger.jsonl'`(vmodel.cmd → cmd.exe가 `del,`를 `del`로 실행), Git Bash의 `vmodel.cmd` 호출도 같음(0.1.x부터, 검토 21회차가 Windows에서 실제 삭제 확인) | `tests/test_guard_cmd_builtin.py` RED 1/1 → 수정(cmd 내장 쓰기 명령 뒤 `, ; = /`도 쓰기). **해결** |
 | 정상 명령 차단(알려진 제약) | PowerShell 도구의 따옴표 안 `& | < > ^ %` Validator 호출, 허용 목록 문법 밖 Validator 호출(따옴표 밖 줄바꿈·주석·`$'`), 쓰기 동사 단어가 따옴표 없이 들어간 `.vmodel` 대상 명령 | 기록 |
 | 주장하지 않음 | 모든 셸 문법·임의 코드 실행(프로젝트에 쓴 스크립트 실행 등)의 통제, 이미 있는 변수를 쓰는 `${x@P}`·산술 간접 참조 | 서명 원장·외부 앵커·Core 해시가 audit에서 변조를 드러냄(D24·D25) |
+
+### 17.5 최소 보호의 검토 (같은 검토자, 별도 컨텍스트, 읽기 전용 worktree, 지적은 검토 빌드 대상 RED 후 수정)
+| 회차 | 대상 | 결과 | 처리 |
+|---|---|---|---|
+| 23 | `733d708`(D48) | 새 거짓 PASS 없음. 회귀: R1 거짓 BLOCKED 2, guard 읽기 명령 거짓 거부, 스레드 많은 테스트 20배 느려짐, R2 거짓 BLOCKED | `test_g6_residual2` RED 3/3 → `86dbf98`. R2는 분류 A |
+| 24 | `86dbf98` | 해결, 다시 열린 것 없음 | — |
+| (분류 중 내가 재현) | `86dbf98` | provider 인스턴스 메서드 patch 거짓 PASS | `test_g6_residual3` RED 2/2 → `c399b1a` |
+| 25 | `c399b1a` | 인스턴스 확인의 거짓 BLOCKED 2, 예외로 추적이 꺼짐, 약간 느려짐 | `test_g6_residual4` RED 2/2 → `291d18b` |
+| 26 | `291d18b` | 해결. 이전부터 있던 통째 교체 거짓 PASS 재현 | `test_g6_residual5` RED 2/2 → `8849672` |
+| 27 | `8849672` | 해결, 정상 provider 오판 없음, 충돌·속도 저하 없음. 분류 A 2(테스트 경로 모듈을 import하는 provider, 200회 뒤의 patch) | 검토 종료 |
+RED 로그: `red-residual-on-20d2139.log`, `red-guard-cmd-on-20d2139.log`, `red-residual2-on-733d708.log`, `red-residual3-on-86dbf98.log`, `red-residual4-on-c399b1a.log`, `red-residual5-on-291d18b.log`(모두 위반 0). 계측 비용(같은 기계, 회귀가 함께 돌던 같은 시점의 상대 비교): 짧은 스레드 100개×호출 1,000회는 `20d2139` 0.90초, `733d708` 19.07초, `86dbf98` 1.10초(따로 잰 값), 최종 `8849672` 1.65초(같은 시점 `86dbf98` 1.87초). 전역 3,000개 provider의 20만 회 호출/요청 스레드 100개는 `8849672` 2.02초/2.48초, 같은 시점 `86dbf98` 1.81초/2.37초, `291d18b` 2.01초/2.45초.

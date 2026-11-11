@@ -82,6 +82,23 @@ class R14PartialOverlapRed(SandboxClass):
 
 
 class R14ScanBudgetRed(PolicyBase):
+    def test_C5_provider_noise_from_an_autouse_thread(self):
+        replace_function(self.itest, "test_TEST_010_report_uses_real_parser",
+                         "@pytest.fixture(autouse=True)\ndef heartbeat():\n"
+                         "    import threading\n    from pipeline import parser\n    stop = threading.Event()\n\n"
+                         "    def beat():\n        while not stop.is_set():\n            parser.parse('a,1')\n\n"
+                         "    t = threading.Thread(target=beat, daemon=True)\n    t.start()\n    yield\n"
+                         "    stop.set()\n    t.join()\n\n\n"
+                         "def test_TEST_010_report_uses_real_parser():\n"
+                         "    import importlib\n    import time\n    time.sleep(0.5)\n"
+                         "    assert importlib.import_module('pipeline.report').summarize('a,1')['count'] == 1\n")
+        r6, rec = g6_with_runtime(self, "dynamic_import", "IF-001", ("TEST-010",))
+        self.assertEqual(level(rec, "IF-001", "TEST-010"), "test_level", f"{RED} {iface(rec, 'IF-001')}")
+
+
+class R14ScanBudgetD48Invariant(PolicyBase):
+    """Moved out of R14ScanBudgetRed: its expectation changed with D48 R2."""
+
     def test_C5_reused_thread_id_after_an_autouse_thread_exits(self):
         add_label(self.sb)
         replace_function(self.itest, "test_TEST_010_report_uses_real_parser",
@@ -97,20 +114,11 @@ class R14ScanBudgetRed(PolicyBase):
                          "    t.start()\n    t.join()\n"
                          "    assert out['r']['count'] == 1\n")
         r6, rec = g6_with_runtime(self, "dynamic_import", "IF-001", ("TEST-010",))
-        self.assertEqual(level(rec, "IF-001", "TEST-010"), "test_level", f"{RED} {iface(rec, 'IF-001')}")
-
-    def test_C5_provider_noise_from_an_autouse_thread(self):
-        replace_function(self.itest, "test_TEST_010_report_uses_real_parser",
-                         "@pytest.fixture(autouse=True)\ndef heartbeat():\n"
-                         "    import threading\n    from pipeline import parser\n    stop = threading.Event()\n\n"
-                         "    def beat():\n        while not stop.is_set():\n            parser.parse('a,1')\n\n"
-                         "    t = threading.Thread(target=beat, daemon=True)\n    t.start()\n    yield\n"
-                         "    stop.set()\n    t.join()\n\n\n"
-                         "def test_TEST_010_report_uses_real_parser():\n"
-                         "    import importlib\n    import time\n    time.sleep(0.5)\n"
-                         "    assert importlib.import_module('pipeline.report').summarize('a,1')['count'] == 1\n")
-        r6, rec = g6_with_runtime(self, "dynamic_import", "IF-001", ("TEST-010",))
-        self.assertEqual(level(rec, "IF-001", "TEST-010"), "test_level", f"{RED} {iface(rec, 'IF-001')}")
+        # D48 R2 (2026-11-11) supersedes the round-14 expectation (test_level): an autouse fixture started a thread in
+        # this test, so only the test's main-thread evidence counts and the connection made in the test's own thread
+        # is not credited (accepted conservative BLOCKED, category A). Not test-level on 9497d14 either (the budget
+        # bug), so this is an invariant now; the per-thread budget itself is checked by test_g6_budget at tracer level.
+        self.assertNotEqual(level(rec, "IF-001", "TEST-010"), "test_level", iface(rec, "IF-001"))
 
 
 class R14CappedRed(unittest.TestCase):
