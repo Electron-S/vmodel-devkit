@@ -70,12 +70,12 @@ def _vmodel_trace_install():
     stack_depth = int(spec.get("stack_depth", 256))
     # D48: provider module names to watch for run-time replacement ("strict": plain def/class, "weak": decorated or
     # rebound) and the project's test-tree files (code from there replacing a provider name is a patch)
-    pdefs = {k: (frozenset(v.get("strict") or ()), frozenset(v.get("weak") or ()))
+    pdefs = {k: (frozenset(v.get("strict") or ()), frozenset(v.get("weak") or ()), frozenset(v.get("imported") or ()))
              for k, v in (spec.get("provider_defs") or {}).items() if isinstance(v, dict)}
     test_files = frozenset(norm(x) for x in spec.get("test_files") or () if isinstance(x, str))
     prov_path = {lab: path for path, lab in watch.items() if lab in providers}
     cls_methods = {}  # provider file -> {class name: method names} (instance shadowing, D48)
-    for _lab, (_s, _w) in pdefs.items():
+    for _lab, (_s, _w, _i) in pdefs.items():
         for _name in _s | _w:
             if "." in _name:
                 _c, _m = _name.split(".", 1)
@@ -393,9 +393,9 @@ def _vmodel_trace_install():
                         bad.append(name)
                 except Exception:
                     continue
-        known = defs[0] | defs[1]
+        known = defs[0] | defs[1] | defs[2]  # imported names (dependencies) are not checked
         cache = gvals.setdefault(lab, {})
-        for gname, val in list(g.items()):  # review 26: any other global replaced by a mock or test-tree object
+        for gname, val in list(g.items()):  # review 26: any other own global replaced by a mock or test-tree object
             if gname in known or gname.startswith("__"):
                 continue
             try:

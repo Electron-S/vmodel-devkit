@@ -1889,14 +1889,14 @@ def _phase_in(runs: list[dict], ts: float) -> str:
     return "detached"
 
 
-def _provider_defs(ix, rel: str) -> dict:
+def _provider_defs(ix, rel: str, component: set | frozenset = frozenset()) -> dict:
     """D48: the names a provider module defines, for the tracer's run-time patch check. "strict": a plain def or a
     class that is the name's last module-level binding (anything else bound there is a replacement); "weak": decorated
     or rebound names (only a mock, test-tree code or code from a string counts as a replacement)."""
     m = ix.modules.get(rel)
     strict, weak = [], []
     if m is None:
-        return {"strict": strict, "weak": weak}
+        return {"strict": strict, "weak": weak, "imported": []}
     # names a function rebinds through `global` (lazy initialisation) are rebound by the provider itself (review 23)
     rebound = {n for node in ast.walk(m.tree) if isinstance(node, ast.Global) for n in node.names}
     for name, node in m.functions.items():
@@ -1910,7 +1910,12 @@ def _provider_defs(ix, rel: str) -> dict:
     for name in m.classes:
         b = m.bindings.get(name)
         (strict if b and b[0] == "class" and name not in rebound else weak).append(name)
-    return {"strict": sorted(strict), "weak": sorted(weak)}
+    # names imported from outside the provider component are its dependencies: replacing one (stubbing an external
+    # service or another component) stays a G4 warning (D44 item 2 / review 8 P1); names the module binds itself and
+    # names imported from the same component's modules are checked for a test-tree replacement
+    imported = sorted(n for n, b in m.bindings.items() if b and b[0] == "import"
+                      and not (isinstance(b[1], tuple) and len(b[1]) > 1 and b[1][0] == "src" and b[1][1] in component))
+    return {"strict": sorted(strict), "weak": sorted(weak), "imported": imported}
 
 
 def read_runtime_trace(trace_dir: Path, prior_errors: list[str] | None = None, prior_oversized: int = 0) -> dict:
@@ -2248,12 +2253,16 @@ def eval_g6(ctx: Ctx, files: dict, mhash: str) -> tuple[list[Check], dict, list[
             if prov in watch_rels:
                 prov_map.setdefault(prov, set()).update(c for c in iv["consumer_modules"] or []
                                                         if c in watch_rels and c != prov)
+    comp_of: dict[str, set[str]] = {}  # provider module -> the modules of its provider component(s)
+    for iv in wd["interfaces"].values():
+        for prov in iv["provider_modules"]:
+            comp_of.setdefault(prov, set()).update(iv["provider_modules"])
     test_tree = {str(f.resolve()) for f in p.test_files()}
     test_tree |= {str(f.resolve()) for f in p.root.glob("conftest.py") if f.is_file()}
     write_json(spec_path, {"out": str(live_dir), "watch": {str((p.root / r).resolve()): r for r in sorted(watch_rels)},
                            "providers": {k: sorted(v) for k, v in sorted(prov_map.items())},
                            "tests": sorted(test_labels & watch_rels),
-                           "provider_defs": {k: _provider_defs(ix, k) for k in sorted(prov_map)},
+                           "provider_defs": {k: _provider_defs(ix, k, comp_of.get(k, frozenset())) for k in sorted(prov_map)},
                            "test_files": sorted(test_tree)})
     argv = _substitute(cfg["argv"], {"{python}": p.python_exe(), "{junit}": str(junit)})
     exe = runner.executable_info(argv[0])
