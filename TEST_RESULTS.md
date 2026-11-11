@@ -819,3 +819,29 @@ E2E-B (`samples/textstats`, 단일 함수 기능, 37턴, 3.4분)
 2. 보수 정책의 남은 공백(D45 8항): 정적 patch 탐지가 닿지 않는 fixture 경로 A1~A5(거짓 PASS 가능), 조건부 autouse patch의 보수적 BLOCKED(A6), 요청 주체(H3)·자식 명령 문자열 patch(H4), 공유 스레드 풀 작업자의 예산 소진(거짓 BLOCKED, "확실하지 않음" 표시).
 3. guard의 남은 제약·공백(D46): PowerShell 도구에서 따옴표 안 `& | < > ^ %`가 있는 Validator 호출은 거부될 수 있음, PowerShell `del,` 형태 쓰기 미탐지(0.1.x부터).
 4. §15.7의 이전 항목(데이터 전달형 테스트 등 문서화한 보수적 BLOCKED, 같은 프로세스 신뢰 경계, macOS 미검증).
+
+## 17. 최종 위험 판단과 릴리스 확정 (2026-11-11, 사용자 지시 "최종 위험 판단 및 릴리스 확정")
+
+추가 유료 세션 없이 알려진 위험을 분류하고 릴리스 여부를 정했다. 결정은 D48, 로그는 `test-results/v0.2.0/`.
+
+### 17.1 출발 상태 확인
+`g6-dev` = `e4aaaf5`, 마지막 제품 코드 `20d2139`(이후 플러그인 트리 변경 없음), 릴리스 core `88edfac2…` = 소스 = 기록(`release_check` OK), `main` = 태그 `v0.1.5` = `78517d5`, `v0.2.0` 태그 없음, WSL 474 통과(skip 1), Windows 474 실행 실패 0(skip 55). §16과 같았다.
+
+### 17.2 G6 FAILED 실전 경로 (기록만, 추가 드릴 없음)
+실제 세션(§16.7)에서 G4가 코드 결함을 찾았고, 에이전트가 DEFECT-001을 만들고 고쳤으며, G4 재검증과 G5·G6 실행이 통과했고, DEFECT-001은 CLOSED였다. **G6 FAILED → DEFECT → CLOSED 경로는 실제 세션에서 관찰되지 않았다.** 이 경로는 독립 하네스(F1·T12, §14.6 시연, `test_g6_*`의 FAILED 판정 시험)에서만 검증됐다. G4의 조기 검출은 검증 실패로 취급하지 않는다.
+
+### 17.3 D45 위험 분류와 최소 보호 (D48)
+| 분류 | 경로 | 처리 |
+|---|---|---|
+| B 거짓 PASS(재현됨, 현재 후보 `20d2139`) | A1 import한 autouse patch fixture, A2 기반 클래스 autouse patch, A3 `pytest_plugins`, A4 루트 conftest autouse patch, A5 `MonkeyPatch.context()`, H4 자식 명령 문자열 patch, H3 autouse 스레드가 요청한 서버로 요청(스레드·프로세스) | `tests/test_g6_residual.py` RED 8/8 → D48 R1(실행 시점 patch 관찰)·R2(출처 불확실하면 메인 스레드 증거만) → 모두 BLOCKED |
+| A 증거 부족 BLOCKED(수용) | 조건부 autouse patch(A6), 공유 스레드 풀 예산 소진, autouse fixture가 스레드·프로세스를 띄운 테스트의 스레드·프로세스 경유 연결(R2, 검토 23 R2b·c·d·f), provider 이름을 provider 밖 함수로 정상 재대입(strict 이름), asyncio 작업·제너레이터 전달(N4/N5), 데이터 전달형 테스트, 세션·모듈 범위 서버, pytest가 아닌 러너, 출처 토큰이 닿지 않는 프로세스(Windows `os.spawn*` 등) | 알려진 기능 제약. 사유 메시지에 원인 표시 |
+| 결정에 따른 경고(정책상 G4 리뷰 몫) | provider 모듈의 상수·모듈 수준 객체 속성(인스턴스 속성) patch(D44 2항, 8회차 P1), 장식·재대입된(weak) 이름을 라이브러리 함수로 바꾼 patch(R1이 보지 않음; 테스트 트리 밖 지원 코드는 G4가 막음) | G4 patch 경고 + 리뷰. 재현된 거짓 PASS 아님 |
+| 신뢰 경계(주장하지 않음) | 테스트 코드가 계측 줄·토큰을 의도적으로 위조, 의도적 구성(테스트가 시작한 스레드를 autouse 코드가 재사용, signal 처리기) | SPEC §5.7·D25 |
+최소 보호의 회귀 확인: 독립 검토 23회차(`733d708`)가 R1 거짓 BLOCKED 2, guard 읽기 명령 거짓 거부, tracer 속도 저하를 찾음 → `tests/test_g6_residual2.py` RED 3/3 → `86dbf98` 수정(스레드 100개×호출 1000회 19.1초 → 1.1초, D48 이전 0.9초). 24회차(`86dbf98`) 확인: 해결, 완화가 A1~A5·H3·H4·`del,`을 다시 열지 않음, 충돌 없음.
+
+### 17.4 guard(D46) 위험 분류
+| 분류 | 경로 | 처리 |
+|---|---|---|
+| 보호 대상 실제 쓰기 허용(릴리스 차단) | PowerShell `vmodel status 'x|del,.vmodel/state/ledger.jsonl'`(vmodel.cmd → cmd.exe가 `del,`를 `del`로 실행), Git Bash의 `vmodel.cmd` 호출도 같음(0.1.x부터, 검토 21회차가 Windows에서 실제 삭제 확인) | `tests/test_guard_cmd_builtin.py` RED 1/1 → 수정(cmd 내장 쓰기 명령 뒤 `, ; = /`도 쓰기). **해결** |
+| 정상 명령 차단(알려진 제약) | PowerShell 도구의 따옴표 안 `& | < > ^ %` Validator 호출, 허용 목록 문법 밖 Validator 호출(따옴표 밖 줄바꿈·주석·`$'`), 쓰기 동사 단어가 따옴표 없이 들어간 `.vmodel` 대상 명령 | 기록 |
+| 주장하지 않음 | 모든 셸 문법·임의 코드 실행(프로젝트에 쓴 스크립트 실행 등)의 통제, 이미 있는 변수를 쓰는 `${x@P}`·산술 간접 참조 | 서명 원장·외부 앵커·Core 해시가 audit에서 변조를 드러냄(D24·D25) |

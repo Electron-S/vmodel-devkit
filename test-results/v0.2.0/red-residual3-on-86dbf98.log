@@ -1,0 +1,21 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/7cecc96f-20f2-42ed-ab37-b71618f25fbb/scratchpad/red-86dbf98/plugins/vmodel",
+    "release_manifest": null
+  },
+  "git_head": "86dbf98",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "marker": "RED-TARGET",
+  "tests": 3,
+  "expectations_met": 3,
+  "violations": 0,
+  "seconds": 17.8
+}
+
+OK  expect=ok   got=ok      test_g6_residual3.InstanceControlChar.test_unpatched_instance_stays_test_level
+OK  expect=FAIL got=FAIL    test_g6_residual3.InstancePatchRed.test_autouse_fixture_replaces_a_method_on_the_providers_instance
+      AssertionError: 'test_level' == 'test_level' : RED-TARGET {'consumer_modules': None, 'consumers': ['EXTERNAL'], 'covered': True, 'covered_by': ['TEST-012'], 'id': 'IF-002', 'provider': 'ARCH-002', 'provider_modules': ['src/pipeline/report.py'], 'provider_symbols': ['main'], 'tests': {'TEST-012': {'evidence_level': 'test_level', 'evidence_reason': None, 'function': 'tests/integration/test_pipeline.
+OK  expect=FAIL got=FAIL    test_g6_residual3.InstancePatchRed.test_the_test_replaces_a_method_on_the_providers_instance
+      AssertionError: 'test_level' == 'test_level' : RED-TARGET {'consumer_modules': None, 'consumers': ['EXTERNAL'], 'covered': True, 'covered_by': ['TEST-012'], 'id': 'IF-002', 'provider': 'ARCH-002', 'provider_modules': ['src/pipeline/report.py'], 'provider_symbols': ['main'], 'tests': {'TEST-012': {'evidence_level': 'test_level', 'evidence_reason': None, 'function': 'tests/integration/test_pipeline.
