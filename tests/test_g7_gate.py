@@ -157,10 +157,13 @@ class GateRed(G7Class):
         self.assertEqual(self.check(res, "G7.AC_COVERAGE")["status"], "fail")
 
     def test_a_process_left_running_by_a_system_test_neither_hangs_nor_times_out_g7(self):
-        # design review M1: a child that inherited the test run's stdout/stderr (a server a test forgot to stop)
+        # design review M1: a child that inherited the test run's stdout/stderr (a server a test forgot to stop).
+        # Its cwd is outside the project: on Windows the validator does not kill leftovers (documented, D49), and a
+        # process whose cwd is the sandbox would keep the next test from restoring it (Windows run of 1deef79)
         (self.sb.root / "tests/system/conftest.py").write_text(
-            "import subprocess\nimport sys\n\n"
-            "LEFTOVER = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(40)'])\n", encoding="utf-8")
+            "import subprocess\nimport sys\nimport tempfile\n\n"
+            "LEFTOVER = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(40)'], "
+            "cwd=tempfile.gettempdir())\n", encoding="utf-8")
         self.set_system_argv([*PYTEST, "tests/system", "--junitxml={junit}"], timeout_s=20)
         self.regate("G4", "G5", "G6")
         res = self.g7()
