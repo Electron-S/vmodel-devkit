@@ -2823,14 +2823,14 @@ def _ac_coverage(ctx: Ctx, specs: list[str], executed: dict[str, str]) -> tuple[
                 continue
             label = f"{a['id']} ({rid})" if functional else f"{a['id']} ({rid}, {rtype})"
             if not tests and not functional:
-                warns.append(f"{label}: no system test spec; not verified by an executed system test (G3 does not "
+                warns.append(f"{label}: no system test spec, so no executed system test checks it (G3 does not "
                              "require one for non-functional/constraint requirements)")
             elif not tests:
                 fails.append(f"{label}: no system test spec")
             else:
                 fails.append(f"{label}: " + ", ".join(f"{t} {s}" for t, s in sorted(tests.items()) if s != "passed"))
         coverage[rid] = entry
-    head = f"{verified_n}/{total} acceptance criteria verified by system tests that passed in this run"
+    head = f"{verified_n}/{total} acceptance criteria met (every system test spec naming them passed in this run)"
     if fails:
         return coverage, Check("G7.AC_COVERAGE", "mechanical", "fail", f"acceptance criteria not verified ({head})",
                                fails + warns)

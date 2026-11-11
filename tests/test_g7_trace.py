@@ -35,7 +35,7 @@ class TraceRed(G7Class):
         self.assertEqual(req1["tests"]["TEST-001"]["result"], "passed")  # unit: from G5
         acc = {a["ac"]: a for a in tv["acceptance"]}
         self.assertEqual(acc["AC-001-2"], {"req": "REQ-001", "ac": "AC-001-2", "tests": {"TEST-102": "passed"},
-                                           "verified": True, "g7_record": res["record_id"]})
+                                           "verified": True, "state": "verified", "g7_record": res["record_id"]})
         text = self.sb.vm("trace", "WI-001")[1]
         self.assertIn("AC-001-2 (REQ-001): TEST-102(passed) verified", text)
         report = self.sb.vm("report", "WI-001", "--stdout")[1]

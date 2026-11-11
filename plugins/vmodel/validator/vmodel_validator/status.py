@@ -17,7 +17,7 @@ from .trace import item_hashes
 
 MVP_NOTE = ("Implemented gates: G1-G7 (G6 integration verification is N/A only for a confirmed single-component work "
             "item without interfaces; G7 runs the system_test command and needs every acceptance criterion of the active "
-            "functional requirements verified by a system test that passed in that run). A STANDARD work item is "
+            "functional requirements met: every system test naming it passed in that run). A STANDARD work item is "
             "COMPLETED only when G1-G7 are PASSED for the current inputs. COMPLETED is automated verification, not user "
             "acceptance or a deployment approval. LITE and STRICT profiles are not implemented.")
 
@@ -386,6 +386,9 @@ def project_status(project: Project, wi: str | None = None) -> dict:
         elif not gates_def()["profiles"].get(profile, {}).get("implemented", False):
             item["profile_note"] = (f"profile {profile} is not implemented in this DevKit version; gates follow STANDARD "
                                     "G1-G7 and the work item cannot be COMPLETED")
+            if item["next_action"].startswith("all gates passed"):  # review of 68b4d67, R2
+                item["next_action"] = (f"all gates passed (G1-G7), but profile {profile} is not implemented: report "
+                                       f"{item['status']}, not COMPLETED")
         out["work_items"].append(item)
     return out
 
@@ -512,10 +515,10 @@ def render_status(st: dict) -> str:
                 lines.append(f"      - not evaluated yet: no {what} verification has run")
             elif g.get("acceptance") and g["status"] == "PASSED":
                 a = g["acceptance"]
-                lines.append(f"      - AC {a['verified']}/{a['acceptance_criteria']} verified by passed system tests "
+                lines.append(f"      - AC {a['verified']}/{a['acceptance_criteria']} met: all their system tests passed "
                              f"({a['system_tests_passed']} system test(s) passed, {a['requirements']} requirement(s))")
                 if a.get("not_system_tested"):
-                    lines.append(f"      - not verified by a system test (non-functional, warning): "
+                    lines.append(f"      - no system test (non-functional, warning): "
                                  f"{', '.join(a['not_system_tested'])}")
             elif g.get("coverage") and g["status"] == "PASSED":
                 c = g["coverage"]
@@ -575,6 +578,10 @@ def trace_view(project: Project, wi: str) -> dict:
             executed.pop(tid, None)
             if tid in g7_exec:
                 executed[tid] = g7_exec[tid]
+    # acceptance rows (review of 68b4d67, R1): verified only as the signed G7 record says, and only while the current
+    # spec mapping of the criterion is the one that run judged; anything else is "not evaluated" by that run
+    cov = (last_g7.record.get("requirements_coverage") if last_g7 else None)
+    cov = cov if isinstance(cov, dict) else {}
     acceptance = []
     for rid in sorted(g.reqs):
         r = g.reqs[rid]
@@ -583,11 +590,21 @@ def trace_view(project: Project, wi: str) -> dict:
         for a in r.get("acceptance_criteria") or []:
             if not isinstance(a, dict) or not isinstance(a.get("id"), str):
                 continue
-            tests = {tid: g7_exec.get(tid, "not run") for tid, x in sorted(g.tests.items())
-                     if x.get("level") == "system" and a["id"] in _str_list(x.get("acceptance_criteria"))}
-            acceptance.append({"req": rid, "ac": a["id"], "tests": tests,
-                               "verified": bool(tests) and all(s == "passed" for s in tests.values()),
+            current = sorted(tid for tid, x in g.tests.items()
+                             if x.get("level") == "system" and a["id"] in _str_list(x.get("acceptance_criteria")))
+            rec_r = cov.get(rid) if isinstance(cov.get(rid), dict) else {}
+            rec_acs = rec_r.get("acceptance_criteria") if isinstance(rec_r.get("acceptance_criteria"), dict) else {}
+            rec = rec_acs.get(a["id"]) if isinstance(rec_acs.get(a["id"]), dict) else None
+            rec_tests = rec.get("tests") if rec is not None and isinstance(rec.get("tests"), dict) else None
+            if rec_tests is None or sorted(rec_tests) != current:
+                tests, verified, state = (rec_tests if rec_tests else {t: "not run" for t in current}), False, \
+                    "not evaluated"
+            else:
+                tests, verified = rec_tests, rec.get("verified") is True
+                state = "verified" if verified else "not verified"
+            acceptance.append({"req": rid, "ac": a["id"], "tests": tests, "verified": verified, "state": state,
                                "g7_record": last_g7.id if last_g7 else None})
+    g7_now = gate_state(ctx, "G7")["status"] if last_g7 else None
     rows = []
     for rid in sorted(g.reqs):
         r = g.reqs[rid]
@@ -620,7 +637,8 @@ def trace_view(project: Project, wi: str) -> dict:
             "results_from": last_g5.id if last_g5 else None,
             "integration_results_from": last_g6.id if last_g6 else None, "interfaces": ifaces,
             "g6": "N/A (no interfaces)" if na else None,
-            "system_results_from": last_g7.id if last_g7 else None, "acceptance": acceptance}
+            "system_results_from": last_g7.id if last_g7 else None, "system_results_gate_status": g7_now,
+            "acceptance": acceptance}
 
 
 def render_trace(tv: dict) -> str:
@@ -643,10 +661,14 @@ def render_trace(tv: dict) -> str:
                  for t, v in i["tests"].items()]
         lines.append(f"   TEST: {', '.join(tests) or '-'}")
     if tv.get("acceptance"):
-        lines.append(f"Acceptance criteria (system results from {tv.get('system_results_from') or 'no G7 run'}):")
+        now = tv.get("system_results_gate_status")
+        lines.append(f"Acceptance criteria (system results from {tv.get('system_results_from') or 'no G7 run'}"
+                     f"{f' (G7 now {now})' if now and now != 'PASSED' else ''}):")
     for a in tv.get("acceptance") or []:
         tests = ", ".join(f"{t}({r})" for t, r in a["tests"].items()) or "no system test spec"
-        lines.append(f"   {a['ac']} ({a['req']}): {tests} {'verified' if a['verified'] else 'NOT verified'}")
+        word = {"verified": "verified", "not verified": "NOT verified"}.get(
+            a.get("state"), f"not evaluated in {a.get('g7_record') or 'any G7 run'}")
+        lines.append(f"   {a['ac']} ({a['req']}): {tests} {word}")
     lines.append("Reverse (TEST -> REQ):")
     for t, reqs in tv["reverse"].items():
         lines.append(f"   {t} -> {', '.join(reqs) or '(none)'}")
@@ -786,11 +808,11 @@ def report_markdown(project: Project, wi: str) -> str:
         md += ["", "G7 is not evaluated yet: no system verification has run."]
     elif g7.get("acceptance") and g7.get("status") == "PASSED":
         a = g7["acceptance"]
-        md += ["", f"G7: {a['verified']}/{a['acceptance_criteria']} acceptance criteria verified by system tests that "
-               f"passed in that run ({a['system_tests_passed']} system test(s) passed; black-box run of the "
+        md += ["", f"G7: {a['verified']}/{a['acceptance_criteria']} acceptance criteria met: every system test naming "
+               f"them passed in that run ({a['system_tests_passed']} system test(s) passed; black-box run of the "
                "system_test command, not user acceptance)."]
         if a.get("not_system_tested"):
-            md.append(f"- not verified by a system test (non-functional, warning): {', '.join(a['not_system_tested'])}")
+            md.append(f"- no system test (non-functional, warning): {', '.join(a['not_system_tested'])}")
     for wn in w.get("scope_warnings") or []:
         md += ["", f"Scope warning: {wn}"]
     md += ["", f"Next action: {w['next_action']}", "", "## Checks (latest evaluation per gate)", ""]
@@ -828,12 +850,16 @@ def report_markdown(project: Project, wi: str) -> str:
                   f"{', '.join(r['design_units']) or '-'} | {tests} |")
     if tv["dangling"]:
         md += ["", "Dangling references:", ""] + [f"- {d}" for d in tv["dangling"]]
+    now = tv.get("system_results_gate_status")
     md += ["", "## Acceptance (system verification)", "",
-           f"System test results from {tv.get('system_results_from') or 'no G7 run yet'}.", "",
+           f"System test results from {tv.get('system_results_from') or 'no G7 run yet'}"
+           f"{f' (G7 is now {now}: re-run it before relying on these results)' if now and now != 'PASSED' else ''}. "
+           "'not evaluated' means that run did not judge the criterion with its current system test specs.", "",
            "| REQ | AC | System tests (result) | Verified |", "|---|---|---|---|"]
     for a in tv.get("acceptance") or []:
         tests = ", ".join(f"{t} ({r})" for t, r in a["tests"].items()) or "no system test spec"
-        md.append(f"| {a['req']} | {a['ac']} | {tests} | {'yes' if a['verified'] else 'no'} |")
+        word = {"verified": "yes", "not verified": "no"}.get(a.get("state"), "not evaluated")
+        md.append(f"| {a['req']} | {a['ac']} | {tests} | {word} |")
     defects = _items(ctx.arts.get("defects.json"), "defects")
     crs = _items(ctx.arts.get("change-requests.json"), "change_requests")
     views = w["defects"]  # the same derivation as `vmodel status`

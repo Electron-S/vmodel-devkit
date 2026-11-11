@@ -112,14 +112,36 @@ def integration_path_problems(root: Path, given: str, test_globs: list[str]) -> 
 
 
 def _overlap(a: str, b: str) -> bool:
+    if a in ("", ".") or b in ("", "."):  # the project root holds every test folder
+        return True
     return a == b or a.startswith(b + "/") or b.startswith(a + "/")
 
 
-def _argv_paths(argv: Any) -> list[str]:
-    """Positional path-like arguments of a configured test command (what it runs), normalised."""
-    out = []
-    for a in argv if isinstance(argv, list) else []:
-        if not isinstance(a, str) or a.startswith("-") or "{" in a or a in ("pytest", "py.test"):
+# pytest options whose value is the next argument (the value is not a test path)
+_VALUE_OPTIONS = {"-p", "-k", "-m", "-c", "-o", "-W", "-n", "-r", "--rootdir", "--basetemp", "--confcutdir",
+                  "--deselect", "--ignore", "--ignore-glob", "--maxfail", "--tb", "--junitxml", "--override-ini",
+                  "--log-file", "--durations", "--import-mode", "--capture", "--pyargs", "--cov", "--timeout"}
+
+
+def _argv_paths(argv: Any) -> list[str] | None:
+    """Test paths a configured pytest command runs, normalised; [] = none named (pytest's whole default scope);
+    None = not a pytest command (cannot tell). Review of 68b4d67 (R3): option values (-p no:cacheprovider) are not
+    paths, and a command without a path runs everything."""
+    if not isinstance(argv, list) or not _is_pytest(argv):
+        return None
+    start = 1 if Path(str(argv[0])).name.lower().split(".")[0] in ("pytest", "py.test") else \
+        next(i + 2 for i, a in enumerate(argv) if a == "-m" and i + 1 < len(argv) and argv[i + 1] == "pytest")
+    out, skip = [], False
+    for a in argv[start:]:
+        if skip:
+            skip = False
+            continue
+        if not isinstance(a, str) or "{" in a:
+            continue
+        if a in _VALUE_OPTIONS:
+            skip = True
+            continue
+        if a.startswith("-"):
             continue
         out.append(posixpath.normpath(a.replace("\\", "/")))
     return out
@@ -296,14 +318,19 @@ def plan_configure_tests(project: Project, integration: str | None = None, timeo
     if not isinstance(timeout_s, int) or timeout_s <= 0:
         raise SetupError("--timeout must be a positive number of seconds")
     # the folders must not overlap, also with the command the user configured earlier (design review: G6/G7 split)
-    targets = dict(rels)
     for label, key in (("integration", "integration_test"), ("system", "system_test")):
-        if label not in targets and isinstance(cfg.get(key), dict):
-            for a in _argv_paths(cfg[key].get("argv")):
-                for other, rel in rels.items():
-                    if other != label and _overlap(a, rel):
-                        raise SetupError(f"{other} test path {rel} and the configured {key} ({a}) overlap: each "
-                                         "command must run its own folder")
+        if label in rels or not isinstance(cfg.get(key), dict):
+            continue
+        paths = _argv_paths(cfg[key].get("argv"))
+        for other, rel in rels.items():
+            if paths is None:
+                raise SetupError(f"the configured {key} is not a pytest command, so it cannot be told whether it also "
+                                 f"runs {rel}; edit .vmodel/config.json by hand")
+            hit = [x for x in (paths or ["."]) if _overlap(x, rel)]
+            if hit:
+                raise SetupError(f"{other} test path {rel} and the configured {key} ({', '.join(hit)}"
+                                 f"{'' if paths else ': no folder, so every test'}) overlap: each command must run "
+                                 "its own folder")
     if len(rels) == 2 and _overlap(rels["integration"], rels["system"]):
         raise SetupError(f"integration test path {rels['integration']} and system test path {rels['system']} overlap: "
                          "each command must run its own folder")

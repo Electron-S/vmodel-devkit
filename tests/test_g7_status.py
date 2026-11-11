@@ -37,7 +37,8 @@ class StatusRed(G7Class):
         self.assertIn("not user acceptance", st["mvp_note"])
         text = self.sb.vm("status")[1]
         self.assertIn("WI-001 [COMPLETED]", text)
-        self.assertIn("AC 6/6 verified by passed system tests", text)
+        self.assertIn("AC 6/6 met: all their system tests passed", text)
+        self.assertNotIn("verified by", text)  # D37: "verified by" is reserved for CLOSED defects
         report = self.sb.vm("report", "WI-001", "--stdout")[1]
         self.assertIn("Status: **COMPLETED**", report)
         self.assertNotIn("G7, LITE and STRICT profiles are not implemented", report)
