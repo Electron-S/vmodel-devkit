@@ -1,0 +1,19 @@
+{
+  "mode": "red",
+  "plugin": {
+    "path": "/tmp/claude-1000/-home-cyyoo-develop-vmodel-devkit/7cecc96f-20f2-42ed-ab37-b71618f25fbb/scratchpad/red-20d2139/plugins/vmodel",
+    "release_manifest": null
+  },
+  "git_head": "65d3cc6",
+  "worktree_dirty": true,
+  "python": "3.12.3",
+  "marker": "RED-TARGET",
+  "tests": 2,
+  "expectations_met": 2,
+  "violations": 0,
+  "seconds": 2.3
+}
+
+OK  expect=ok   got=ok      test_guard_cmd_builtin.GuardCmdBuiltinChar.test_plain_calls_and_quoted_words_stay_allowed
+OK  expect=FAIL got=FAIL    test_guard_cmd_builtin.GuardCmdBuiltinRed.test_cmd_builtins_with_comma_semicolon_or_equals
+      AssertionError: Lists differ: ["vmodel status 'x|del,.vmodel/state/ledge[472 chars],y'"] != []
