@@ -11,10 +11,10 @@
 - 0.2.0 실제 원장(드릴 S1/S2) 사본을 0.3.0 Core로 verify-evidence·재고정·audit OK. Plugin Validation 통과, release_check OK.
 
 ## Git
-- `main` = 태그 `v0.3.0` → 최종 기록 커밋(`--ff-only`). 태그 `v0.1.2`~`v0.2.0` 그대로(`v0.2.0` → `c4b508a`). **원격 푸시 없음.**
+- 태그 `v0.3.0` → `645bf7a`(최종 기록 커밋). `main`은 그 위에 MIT 라이선스 커밋 하나(플러그인 트리 변경 없음). 태그 `v0.1.2`~`v0.2.0` 그대로(`v0.2.0` → `c4b508a`).
 - `g7-dev`: 설계 `cfce1e9` → 테스트 `b3c79b2` → 구현 `68b4d67` → 검토 RED `2c26356` → 수정 `7939f97` → 재검토 RED `172a599` → 수정 `12e3caf` → 버전 `de270aa` → 릴리스 기록 `8eb93ff` → 문서·로그 `1deef79` → 시험 수정 `fa43a03` → 후보 기록 `13eb65c` → 점검 `101711d` → 최종 기록(이번, E2E·회귀·확정 문서, 플러그인 변경 없음).
 - 태그 뒤 점검: `python3 -I test-results/v0.3.0/release_check.py <out> --released` (annotated 태그 = `main`, 태그된 플러그인 트리 = 0.3.0 기록, `v0.2.0` 조상, 이전 태그·기록 불변).
-- 원격 `origin/main`은 `bbd6a3d`. 푸시는 승인되지 않았다(`test-results/` 로그·E2E 트랜스크립트·원장 사본에 `/home/cyyoo`·`/tmp` 경로). 하려면 `git log origin/main..main`과 민감정보 점검을 먼저 보여 주고 따로 결정.
+- 원격 `github.com/Electron-S/vmodel-devkit`는 **공개(public)**, MIT(2026-11-12, 사용자 지시). `main`과 태그 `v0.1.2`~`v0.3.0`을 푸시했다(force·태그 변경 없음). 공개 전 점검: 비밀·키 없음. `test-results/`의 로그·트랜스크립트·원장 사본에 로컬 경로(`/home/cyyoo`·`/tmp/claude-1000`·`C:\Users\cyyoo`), 세션 ID, `transcript-a.jsonl`의 claude.ai 커넥터 이름 목록이 있고, 커밋 메타데이터에 작성자 이메일이 있다. 다른 브랜치(`g6-dev`·`g7-dev`·`v0.1.x-dev`·`rework-drill-0.1.3`)는 푸시하지 않았다. 앞으로도 푸시할 때마다 `git log origin/main..main`을 보여 주고 대상을 명시해 올린다(`--force`·`--all`·`--mirror` 금지).
 - `dist/vmodel-0.3.0` 이하는 확정 릴리스(git 제외). **다시 빌드하지 마세요**(`release.py --force` 금지). 다음 플러그인 변경은 새 버전으로. `dist/.claude-plugin/marketplace.json`은 0.3.0을 가리킨다.
 - 작업 트리의 `.claude/`(예약 기능 잠금 파일)는 커밋하지 않음.
 
@@ -30,7 +30,7 @@
 변경 없음. 요약은 TEST_RESULTS §17.3과 D48.
 
 ## 다음 작업 (사용자 결정 필요)
-1. 원격 푸시: 승인 안 됨(위 Git 절차).
+1. 플러그인 매니페스트 `"license": "UNLICENSED"`를 `"MIT"`로 맞추기: 확정 0.3.0 트리는 불변이라 다음 릴리스(0.3.1 이상)에서. 공개 저장소 설명이 아직 "MVP G1~G5"라 갱신 여부도 사용자 결정.
 2. 실제 세션 미관찰 경로를 볼지: G7(또는 G6) FAILED → DEFECT → 수정 → CLOSED, 0.2.0 → 0.3.0 실제 업그레이드(재고정 → `configure-tests --system` → 재평가). 실제 Claude 실행은 횟수·상한 승인 후에만. G7 실패를 자연스럽게 내려면 시드 버그를 unit 테스트가 닿지 않는 곳(CLI 진입점·HTTP 처리기)에 두되, G4 verifier가 명세·코드 읽기로 잡을 수 있다는 점(D47)을 감안.
 3. 작은 개선 후보(판정 변경 없이 가능): AC 없는 constraint·non-functional REQ를 G7·report에 "리뷰로만 확인"으로 표시(D50 결정 3), Windows 하네스가 남기는 `%TEMP%\vmodel-test-*`(git 읽기 전용 객체) 정리.
 4. 확장(사용자 결정 전 자동 진입 금지): LITE/STRICT 프로파일, CI 연동(별도 사용자/CI에서 `vmodel audit`·`verify`), WorkMind 첫 적용.

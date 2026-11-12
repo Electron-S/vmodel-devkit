@@ -105,3 +105,9 @@ Validator의 정확성은 이 하네스로만 판정합니다. DevKit 개발 자
 - 코드 Gate는 프로젝트 전체 파일을 해시합니다. 무엇이든 바뀌면 PASS는 STALE이 됩니다.
 - Gate 리뷰는 verifier 서브에이전트만 원장에 등록할 수 있습니다(훅이 `agent_type`으로 확인).
 - **한계**: 같은 OS 사용자 권한으로 임의 코드를 실행하는 에이전트를 완전히 막지는 못합니다(키 읽기, 스크립트를 통한 우회, 테스트 코드의 같은 프로세스 내 조작). 훅과 권한 규칙은 OS 격리가 아닙니다. 최종 신뢰 경계는 CI나 별도 사용자가 신뢰 사본으로 `vmodel audit`와 `vmodel verify`를 돌리는 것입니다(Extension).
+
+## 라이선스
+
+MIT License — [LICENSE](LICENSE). 저장소 전체(플러그인 `plugins/vmodel` 포함)에 적용됩니다. 확정 릴리스 0.3.0의 플러그인 매니페스트(`plugins/vmodel/.claude-plugin/plugin.json`)에는 공개 전 값 `"license": "UNLICENSED"`가 고정돼 있습니다. 릴리스 트리는 불변이라 다음 릴리스에서 `"MIT"`로 맞춥니다. 그 전까지는 이 LICENSE 파일이 우선합니다.
+
+`test-results/`의 로그·트랜스크립트·원장 사본은 개발 검증 기록입니다. 개발 환경의 로컬 경로와 세션 정보가 그대로 들어 있습니다.
